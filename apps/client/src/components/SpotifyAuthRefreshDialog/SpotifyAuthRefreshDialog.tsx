@@ -26,9 +26,9 @@ export default function SpotifyAuthRefreshDialog() {
     return null;
   }
 
-  // The server discards the tokens when Spotify rejects a refresh, no
-  // matter how recent the authorization is.
-  const tokenDiscarded = !user.accessToken;
+  // The server discards the tokens and sets this flag when Spotify rejects
+  // a refresh, no matter how recent the authorization is.
+  const tokenDiscarded = Boolean(user.spotifyReauthRequired);
 
   const authAgeDays = user.spotifyAuthDate
     ? Math.floor(

@@ -104,6 +104,7 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
     await storeInUser("_id", user._id, {
       ...infos,
       spotifyAuthDate: new Date(),
+      spotifyReauthRequired: false,
     });
     const privateData = await getPrivateData();
     if (!privateData?.jwtPrivateKey) {
