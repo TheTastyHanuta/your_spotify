@@ -2,6 +2,7 @@ import { AxiosError, AxiosInstance } from "axios";
 import { Types } from "mongoose";
 import { getUserFromField, storeInUser } from "../../database";
 import { SpotifyTrack } from "../../database/schemas/track";
+import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
 import { chunk, wait } from "../misc";
 import { Spotify } from "../oauth/Provider";
@@ -48,7 +49,28 @@ export class SpotifyAPI {
 			if (!token) {
 				return;
 			}
-			const infos = await Spotify.refresh(token);
+			let infos;
+			try {
+				infos = await Spotify.refresh(token);
+			} catch (e) {
+				if (
+					e instanceof AxiosError &&
+					e.response?.status === 400 &&
+					e.response.data?.error === "invalid_grant"
+				) {
+					// The refresh token is expired or revoked. Spotify asks us to
+					// discard it without retrying, the user has to sign in again.
+					await storeInUser("_id", user._id, {
+						accessToken: null,
+						refreshToken: null,
+					});
+					logger.error(
+						`Spotify refresh token for ${user.username} is expired or revoked, discarding it. The user has to re-log to Spotify from the settings page.`,
+					);
+					throw new SpotifyReauthRequiredError(user.username);
+				}
+				throw e;
+			}
 
 			await storeInUser("_id", user._id, infos);
 			logger.info(`Refreshed token for ${user.username}`);

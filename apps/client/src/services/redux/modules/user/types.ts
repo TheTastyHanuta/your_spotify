@@ -9,6 +9,7 @@ export interface User {
   expiresIn: number;
   accessToken: string;
   refreshToken: string;
+  spotifyAuthDate?: string;
   lastTimestamp: number;
   tracks: string[];
   settings: {
