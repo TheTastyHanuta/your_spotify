@@ -11,6 +11,7 @@ export interface User {
   accessToken: string | null;
   refreshToken: string | null;
   spotifyAuthDate?: Date;
+  spotifyReauthRequired?: boolean;
   lastTimestamp: number;
   tracks: Schema.Types.ObjectId[];
   settings: {
@@ -37,6 +38,7 @@ export const UserSchema = new Schema<User>(
     accessToken: { type: String, default: null },
     refreshToken: { type: String, default: null },
     spotifyAuthDate: { type: Date },
+    spotifyReauthRequired: { type: Boolean },
     lastTimestamp: { type: Number, default: 0 },
     tracks: {
       type: [Schema.Types.ObjectId],
