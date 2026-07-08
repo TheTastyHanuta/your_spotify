@@ -4,6 +4,7 @@ import { getUserFromField, storeInUser } from "../../database";
 import { SpotifyAlbum } from "../../database/schemas/album";
 import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
+import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
 import { chunk } from "../misc";
 import { spotifyProvider } from "../oauth/Provider";
@@ -42,7 +43,28 @@ export class SpotifyAPI {
       if (!token) {
         throw new Error("User has no refresh token");
       }
-      const infos = await spotifyProvider.refresh(token);
+      let infos;
+      try {
+        infos = await spotifyProvider.refresh(token);
+      } catch (e) {
+        if (
+          e instanceof HttpError &&
+          e.status === 400 &&
+          e.body.includes("invalid_grant")
+        ) {
+          // The refresh token is expired or revoked. Spotify asks us to
+          // discard it without retrying, the user has to sign in again.
+          await storeInUser("_id", user._id, {
+            accessToken: null,
+            refreshToken: null,
+          });
+          logger.error(
+            `Spotify refresh token for ${user.username} is expired or revoked, discarding it. The user has to re-log to Spotify from the settings page.`,
+          );
+          throw new SpotifyReauthRequiredError(user.username);
+        }
+        throw e;
+      }
 
       await storeInUser("_id", user._id, infos);
       logger.info(`Refreshed token for ${user.username}`);
