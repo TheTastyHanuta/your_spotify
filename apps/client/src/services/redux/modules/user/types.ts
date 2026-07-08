@@ -7,8 +7,8 @@ export interface User {
   _id: string;
   id: string;
   expiresIn: number;
-  accessToken: string;
-  refreshToken: string;
+  accessToken: string | null;
+  refreshToken: string | null;
   spotifyAuthDate?: string;
   lastTimestamp: number;
   tracks: string[];
