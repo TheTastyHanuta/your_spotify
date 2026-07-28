@@ -41,7 +41,7 @@ export class SpotifyAPI {
     if (Date.now() > user.expiresIn - 1000 * 120) {
       const token = user.refreshToken;
       if (!token) {
-        throw new Error("User has no refresh token");
+        throw new SpotifyReauthRequiredError(user.username);
       }
       let infos;
       try {
@@ -52,16 +52,13 @@ export class SpotifyAPI {
           e.status === 400 &&
           e.body.includes("invalid_grant")
         ) {
-          // The refresh token is expired or revoked. Spotify asks us to
-          // discard it without retrying, the user has to sign in again.
+          // Spotify expires refresh tokens six months after the authorization
+          // and asks us to discard them instead of retrying.
           await storeInUser("_id", user._id, {
             accessToken: null,
             refreshToken: null,
             spotifyReauthRequired: true,
           });
-          logger.error(
-            `Spotify refresh token for ${user.username} is expired or revoked, discarding it. The user has to re-log to Spotify from the settings page.`,
-          );
           throw new SpotifyReauthRequiredError(user.username);
         }
         throw e;

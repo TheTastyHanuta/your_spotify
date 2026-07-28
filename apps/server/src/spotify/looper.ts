@@ -6,6 +6,7 @@ import { RecentlyPlayedTrack } from "../database/schemas/track";
 import { User } from "../database/schemas/user";
 import { HttpError } from "../tools/apis/queueHttpClient";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
+import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
 import { retryPromise, wait } from "../tools/misc";
 import { getTracksAlbumsArtists, storeIterationOfLoop } from "./dbTools";
@@ -111,6 +112,9 @@ export const dbLoop = async () => {
             await loop(us);
           } catch (error) {
             logger.error(`[${us.username}]: Error during refresh`, error);
+            if (error instanceof SpotifyReauthRequiredError) {
+              continue;
+            }
             if (error instanceof HttpError) {
               logger.info("Response of failed request", error.message);
               continue;

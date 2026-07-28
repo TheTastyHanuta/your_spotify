@@ -7,8 +7,7 @@ export interface User {
   _id: string;
   id: string;
   expiresIn: number;
-  // accessToken and refreshToken are stripped by the server before being
-  // sent to the client
+  // Stripped by the server before being sent to the client
   accessToken?: string | null;
   refreshToken?: string | null;
   spotifyAuthDate?: string;
