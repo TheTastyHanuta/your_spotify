@@ -1,17 +1,17 @@
-import { useState } from "react";
 import { Button } from "@mui/material";
+import { useState } from "react";
 import { useSelector } from "react-redux";
-import Dialog from "../Dialog";
-import SimpleDialogContent from "../SimpleDialogContent";
+
 import {
   selectIsPublic,
   selectUser,
 } from "../../services/redux/modules/user/selector";
 import { getSpotifyLogUrl } from "../../services/tools";
+import Dialog from "../Dialog";
+import SimpleDialogContent from "../SimpleDialogContent";
 
-// Spotify expires refresh tokens six months after the user authorized the
-// app. Proposing a re-log after one month keeps the authorization fresh as
-// long as the user opens the dashboard at least once every five months.
+// Spotify expires authorizations after six months, so prompting at one month
+// leaves five months of margin for the user to open the dashboard.
 const PROPOSE_REFRESH_AFTER_DAYS = 30;
 const DISMISSED_KEY = "spotify-auth-refresh-dismissed";
 
@@ -26,10 +26,12 @@ export default function SpotifyAuthRefreshDialog() {
     return null;
   }
 
-  // The server discards the tokens and sets this flag when Spotify rejects
-  // a refresh, no matter how recent the authorization is.
+  // Set by the server when Spotify rejected a refresh and the tokens were
+  // discarded.
   const tokenDiscarded = Boolean(user.spotifyReauthRequired);
 
+  // Accounts that authorized before this field existed have no date, they only
+  // get prompted once their tokens are actually discarded.
   const authAgeDays = user.spotifyAuthDate
     ? Math.floor(
         (Date.now() - new Date(user.spotifyAuthDate).getTime()) /
@@ -38,8 +40,7 @@ export default function SpotifyAuthRefreshDialog() {
     : undefined;
   if (
     !tokenDiscarded &&
-    authAgeDays !== undefined &&
-    authAgeDays < PROPOSE_REFRESH_AFTER_DAYS
+    (authAgeDays === undefined || authAgeDays < PROPOSE_REFRESH_AFTER_DAYS)
   ) {
     return null;
   }
@@ -59,11 +60,7 @@ export default function SpotifyAuthRefreshDialog() {
         message={
           tokenDiscarded
             ? "Your Spotify authorization has expired or was revoked, and the tracking of your listening history has stopped. Refresh it to resume tracking."
-            : `${
-                authAgeDays === undefined
-                  ? "You authorized Spotify on this account at an unknown date."
-                  : `You authorized Spotify ${authAgeDays} days ago.`
-              } Spotify expires authorizations six months after sign-in, which would interrupt the tracking of your listening history. Refreshing it now only takes a second and does not require approving the app again.`
+            : `You authorized Spotify ${authAgeDays} days ago. Spotify expires authorizations six months after sign-in, which would interrupt the tracking of your listening history. Refreshing it now only takes a second.`
         }
         actions={
           <>

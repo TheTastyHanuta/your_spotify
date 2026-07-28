@@ -291,8 +291,8 @@ export const retryPromise = async <T>(
       const res = await fn();
       return res;
     } catch (e) {
+      // Retrying cannot succeed until the user re-logs to Spotify
       if (e instanceof SpotifyReauthRequiredError) {
-        // Retrying cannot succeed until the user re-logs to Spotify.
         throw e;
       }
       lastError = e;
