@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+
 import {
   getArtists,
   getFirstAndLastListened,
@@ -21,9 +22,7 @@ import { LoggedRequest } from "../tools/types";
 
 export const router = Router();
 
-const getArtistsSchema = z.object({
-  ids: z.string(),
-});
+const getArtistsSchema = z.object({ ids: z.string() });
 
 router.get("/:ids", isLoggedOrGuest, async (req, res) => {
   const { ids } = validate(req.params, getArtistsSchema);
@@ -35,9 +34,7 @@ router.get("/:ids", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(artists);
 });
 
-const getArtistStats = z.object({
-  id: z.string(),
-});
+const getArtistStats = z.object({ id: z.string() });
 
 router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
@@ -65,20 +62,20 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     dayRepartition,
   ] = await Promise.all(promises);
   if (!total) {
-    res.status(200).send({
-      code: "NEVER_LISTENED",
-    });
+    res.status(200).send({ code: "NEVER_LISTENED" });
     return;
   }
-  res.status(200).send({
-    artist,
-    firstLast,
-    mostListened,
-    albumMostListened,
-    bestPeriod,
-    total,
-    dayRepartition,
-  });
+  res
+    .status(200)
+    .send({
+      artist,
+      firstLast,
+      mostListened,
+      albumMostListened,
+      bestPeriod,
+      total,
+      dayRepartition,
+    });
 });
 
 router.get("/:id/rank", isLoggedOrGuest, async (req, res) => {
@@ -94,9 +91,7 @@ router.get("/:id/rank", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(rank);
 });
 
-const search = z.object({
-  query: z.string().min(3).max(64),
-});
+const search = z.object({ query: z.string().min(3).max(64) });
 
 router.get("/search/:query", isLoggedOrGuest, async (req, res) => {
   const { query } = validate(req.params, search);
@@ -105,9 +100,7 @@ router.get("/search/:query", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(results);
 });
 
-const blacklist = z.object({
-  id: z.string(),
-});
+const blacklist = z.object({ id: z.string() });
 
 router.post("/blacklist/:id", logged, async (req, res) => {
   const { user } = req as LoggedRequest;

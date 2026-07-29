@@ -10,7 +10,7 @@ import {
 import { useSelector } from "react-redux";
 import { getImports } from "../../../services/redux/modules/import/thunk";
 import { selectImportStates } from "../../../services/redux/modules/import/selector";
-import { ImporterStateTypes } from "../../../services/redux/modules/import/types";
+import { ImporterStateType } from "../../../services/redux/modules/import/types";
 import Text from "../../../components/Text";
 import { useAppDispatch } from "../../../services/redux/tools";
 import TitleCard from "../../../components/TitleCard";
@@ -19,7 +19,7 @@ import s from "./index.module.css";
 import Privacy from "./Privacy";
 import FullPrivacy from "./FullPrivacy";
 
-const ImportTypeToComponent: Record<ImporterStateTypes, any> = {
+const ImportTypeToComponent: Record<ImporterStateType, any> = {
   privacy: { label: "Account data", component: Privacy },
   "full-privacy": {
     label: "Extended streaming history",
@@ -32,19 +32,24 @@ const REFRESH_IF_RUNNING_INTERVAL = 2000;
 export default function Importer() {
   const dispatch = useAppDispatch();
   const imports = useSelector(selectImportStates);
-  const [importType, setImportType] = useState<ImporterStateTypes>(
-    ImporterStateTypes.privacy,
+  const [importType, setImportType] = useState<ImporterStateType>(
+    ImporterStateType.privacy,
   );
 
   // eslint-disable-next-line react-no-manual-memo/no-hook-memo
-  const fetch = useCallback((force = false) => dispatch(getImports(force)).catch(console.error), [dispatch])
+  const fetch = useCallback(
+    (force = false) => dispatch(getImports(force)).catch(console.error),
+    [dispatch],
+  );
 
   useEffect(() => {
     fetch().catch(console.error);
   }, [fetch]);
 
-  const running = imports?.find(st => st.status === "progress");
-  const Component = importType ? ImportTypeToComponent[importType].component : null;
+  const running = imports?.find((st) => st.status === "progress");
+  const Component = importType
+    ? ImportTypeToComponent[importType].component
+    : null;
 
   const isAtLeastOneImportRunning = Boolean(running);
 
@@ -75,7 +80,7 @@ export default function Importer() {
       <div>
         {running && (
           <div>
-            <Text className={s.progress} size='normal'>
+            <Text className={s.progress} size="normal">
               Importing {running.current} of {running.total}
             </Text>
             <LinearProgress
@@ -94,10 +99,10 @@ export default function Importer() {
               labelId="import-type-select"
               value={importType}
               label="Import type"
-              onChange={ev =>
-                setImportType(ev.target.value as ImporterStateTypes)
+              onChange={(ev) =>
+                setImportType(ev.target.value as ImporterStateType)
               }>
-              {Object.values(ImporterStateTypes).map(typ => (
+              {Object.values(ImporterStateType).map((typ) => (
                 <MenuItem value={typ} key={typ}>
                   {ImportTypeToComponent[typ].label}
                 </MenuItem>

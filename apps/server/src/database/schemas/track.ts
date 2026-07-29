@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+
 import { SpotifyAlbum } from "./album";
 import { SpotifyArtist } from "./artist";
 
@@ -27,11 +28,7 @@ export type SpotifyTrack = Omit<
 > & {
   artists: SpotifyArtist[];
   album: SpotifyAlbum;
-  external_ids?: {
-    isrc?: string;
-    ean?: string;
-    upc?: string;
-  };
+  external_ids?: { isrc?: string; ean?: string; upc?: string };
 };
 
 export interface RecentlyPlayedTrack {

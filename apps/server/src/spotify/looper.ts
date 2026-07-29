@@ -1,12 +1,14 @@
 import { MongoServerSelectionError } from "mongodb";
-import { AxiosError } from "axios";
+
 import { getCloseTrackId, getUser, getUserCount } from "../database";
+import { Infos } from "../database/schemas/info";
 import { RecentlyPlayedTrack } from "../database/schemas/track";
 import { User } from "../database/schemas/user";
+import { HttpError } from "../tools/apis/queueHttpClient";
+import { SpotifyAPI } from "../tools/apis/spotifyApi";
+import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
 import { retryPromise, wait } from "../tools/misc";
-import { SpotifyAPI } from "../tools/apis/spotifyApi";
-import { Infos } from "../database/schemas/info";
 import { getTracksAlbumsArtists, storeIterationOfLoop } from "./dbTools";
 
 const RETRY = 10;
@@ -31,7 +33,6 @@ const loop = async (user: User) => {
 
   do {
     const response = await retryPromise(
-       
       () => spotifyApi.raw(nextUrl),
       RETRY,
       30,
@@ -48,7 +49,7 @@ const loop = async (user: User) => {
     return;
   }
 
-  const spotifyTracks = items.map(e => e.track);
+  const spotifyTracks = items.map((e) => e.track);
   const { tracks, albums, artists, tracksBySpotifyId } =
     await getTracksAlbumsArtists(user._id.toString(), spotifyTracks);
   const infos: Omit<Infos, "owner">[] = [];
@@ -67,7 +68,7 @@ const loop = async (user: User) => {
     );
     if (duplicate.length === 0) {
       const isBlacklisted = user.settings.blacklistedArtists.find(
-        a => a === item.track.artists[0]?.id,
+        (a) => a === item.track.artists[0]?.id,
       );
       const [primaryArtist] = item.track.artists;
       if (!primaryArtist) {
@@ -78,7 +79,7 @@ const loop = async (user: User) => {
         durationMs: item.track.duration_ms,
         albumId: item.track.album.id,
         primaryArtistId: primaryArtist.id,
-        artistIds: item.track.artists.map(e => e.id),
+        artistIds: item.track.artists.map((e) => e.id),
         id: track.id,
         ...(isBlacklisted ? { blacklistedBy: "artist" } : {}),
       });
@@ -101,7 +102,7 @@ const WAIT_MS = 120 * 1000;
 
 export const dbLoop = async () => {
   // return;
-   
+
   while (true) {
     try {
       const nbUsers = await getUserCount();
@@ -113,14 +114,16 @@ export const dbLoop = async () => {
             await loop(us);
           } catch (error) {
             logger.error(`[${us.username}]: Error during refresh`, error);
-            if (error instanceof AxiosError) {
-              if (error.response?.data) {
-                logger.info("Response of failed request", error.response.data);
-              }
-              logger.info(
-                "There appears to be issues with either your internet connection or Spotify",
-              );
+            if (error instanceof SpotifyReauthRequiredError) {
+              continue;
             }
+            if (error instanceof HttpError) {
+              logger.info("Response of failed request", error.message);
+              continue;
+            }
+            logger.info(
+              "There appears to be issues with either your internet connection or Spotify",
+            );
           }
         }
       }

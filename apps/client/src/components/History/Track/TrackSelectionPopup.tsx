@@ -2,7 +2,7 @@ import { Popover } from "@mui/material";
 import { useDispatch } from "react-redux";
 import { VirtualElement } from "../../RightClickable/RightClickable";
 import { setPlaylistContext } from "../../../services/redux/modules/playlist/reducer";
-import { MenuItem } from "../../MenuItem/MenuItem";
+import { MenuItem } from "../../ui/MenuItem/MenuItem";
 import { MenuTitle } from "../../MenuTitle/MenuTitle";
 
 interface TrackSelectionPopupProps {
@@ -20,12 +20,7 @@ export function TrackSelectionPopup({
 
   const handlePlaylist = () => {
     onClose();
-    dispatch(
-      setPlaylistContext({
-        type: "specific",
-        songIds,
-      }),
-    );
+    dispatch(setPlaylistContext({ type: "specific", songIds }));
   };
 
   return (

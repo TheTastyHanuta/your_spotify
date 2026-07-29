@@ -3,9 +3,8 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
   LocalizationProvider,
   DateCalendar,
-  PickersDayProps,
+  PickerDayProps,
 } from "@mui/x-date-pickers";
-import { MenuItem } from "@mui/material";
 import clsx from "clsx";
 import {
   startOfDay,
@@ -22,6 +21,7 @@ import {
   endOfYear,
   subHours,
 } from "date-fns";
+import { MenuItem } from "../../ui/MenuItem/MenuItem";
 import s from "./index.module.css";
 
 interface DayProps {
@@ -111,11 +111,11 @@ function DayWrapper({
   setHover,
   hover,
   outsideCurrentMonth,
-}: PickersDayProps & DayWrapperAdditionalProps) {
+}: PickerDayProps & DayWrapperAdditionalProps) {
   return (
     <Day
       key={day.getTime()}
-      outsideCurrentMonth={outsideCurrentMonth}
+      outsideCurrentMonth={outsideCurrentMonth ?? false}
       onClick={internSetValue}
       value={rangeValue}
       onHover={setHover}
@@ -161,22 +161,13 @@ const presets: Array<{
       label: "Last 24 hours",
       create: () => [subHours(new Date(), 24), new Date()],
     },
-    {
-      label: "Last 7 days",
-      create: () => [subDays(new Date(), 7), new Date()],
-    },
-    {
-      label: "Last month",
-      create: () => [subMonths(new Date(), 1), new Date()],
-    },
+    { label: "Last 7 days", create: () => [subDays(new Date(), 7), new Date()] },
+    { label: "Last month", create: () => [subMonths(new Date(), 1), new Date()] },
     {
       label: "Last 3 months",
       create: () => [subMonths(new Date(), 3), new Date()],
     },
-    {
-      label: "Last year",
-      create: () => [subYears(new Date(), 1), new Date()],
-    },
+    { label: "Last year", create: () => [subYears(new Date(), 1), new Date()] },
     {
       label: "Last 2 years",
       create: () => [subYears(new Date(), 2), new Date()],
@@ -196,24 +187,24 @@ export default function RangePicker({ value, onChange }: RangePickerProps) {
   const [hover, setHover] = useState<Date | undefined>();
 
   const internSetValue = (date: Date) => {
-      const [first, second] = value;
-      if (!first) {
-        return onChange([date, undefined]);
-      }
-      if (first && second) {
-        return onChange([date, undefined]);
-      }
-      if (first.getTime() < date.getTime()) {
-        return onChange([first, date]);
-      }
-      return onChange([date, first]);
-    };
+    const [first, second] = value;
+    if (!first) {
+      return onChange([date, undefined]);
+    }
+    if (first && second) {
+      return onChange([date, undefined]);
+    }
+    if (first.getTime() < date.getTime()) {
+      return onChange([first, date]);
+    }
+    return onChange([date, first]);
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <div className={s.panel}>
         <div className={s.presets}>
-          {presets.map(preset => (
+          {presets.map((preset) => (
             <MenuItem
               key={preset.label}
               onClick={() => onChange(preset.create())}>
@@ -224,16 +215,9 @@ export default function RangePicker({ value, onChange }: RangePickerProps) {
         <DateCalendar
           classes={{ root: s.calendarRoot }}
           value={null}
-          slots={{
-            day: DayWrapper as any,
-          }}
+          slots={{ day: DayWrapper as any }}
           slotProps={{
-            day: {
-              hover,
-              internSetValue,
-              setHover,
-              rangeValue: value,
-            } as any,
+            day: { hover, internSetValue, setHover, rangeValue: value } as any,
           }}
         />
       </div>

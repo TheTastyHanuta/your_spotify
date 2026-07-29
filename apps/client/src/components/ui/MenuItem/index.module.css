@@ -1,0 +1,29 @@
+.item {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 6px 16px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius) !important;
+  justify-content: flex-start !important;
+}
+
+.item:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.selected {
+  background: var(--selected);
+}

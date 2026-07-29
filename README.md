@@ -60,11 +60,6 @@ services:
       CLIENT_ENDPOINT: http://localhost:3000
       SPOTIFY_PUBLIC: __your_spotify_client_id__
       SPOTIFY_SECRET: __your_spotify_secret__
-  mongo:
-    container_name: mongo
-    image: mongo:6
-    volumes:
-      - ./your_spotify_db:/data/db
 
   web:
     image: yooooomi/your_spotify_client
@@ -73,9 +68,14 @@ services:
       - "3000:3000"
     environment:
       API_ENDPOINT: http://localhost:8080
-```
 
-> Some ARM-based devices might have trouble with Mongo >= 5. I suggest you use the image **mongo:4.4**.
+  mongo:
+    container_name: mongo
+    image: mongo:8
+    volumes:
+      - ./your_spotify_db:/data/db
+
+```
 
 ## Installing locally (not recommended)
 
@@ -154,7 +154,7 @@ The import process uses cache to limit requests to the Spotify API. By default, 
 
 - Request your **Full privacy data** to have access to your history data since the creation of the account [here](https://www.spotify.com/us/account/privacy/).
 - Head to the **Settings** page and choose the **Extended streaming history** method.
-- Input your files starting with `endsongX.json`.
+- Input your files starting with `Streaming_History_Audio_YYYY-YYYY_X.json`.
 - Start your import.
 
 ## Troubleshoot
@@ -196,3 +196,4 @@ If you have any issue or any idea that could make the project better, feel free 
 # Sponsoring
 
 I work on this project on my spare time and try to fix issues as soon as I can. If you feel generous and think this project and my investment are worth a few cents, you can consider sponsoring it with the button on the right, many thanks.
+

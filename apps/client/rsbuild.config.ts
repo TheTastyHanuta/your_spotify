@@ -1,20 +1,17 @@
-import { defineConfig } from '@rsbuild/core';
-import { pluginReact } from '@rsbuild/plugin-react';
-import { pluginBabel } from '@rsbuild/plugin-babel';
+import { defineConfig } from "@rsbuild/core";
+import { pluginReact } from "@rsbuild/plugin-react";
+import { pluginBabel } from "@rsbuild/plugin-babel";
 
 export default defineConfig({
-  html: {
-    template: "./public/index.html",
-  },
-  output: {
-    distPath: "./build",
-  },
+  html: { template: "./public/index.html" },
+  output: { distPath: "./build" },
+  performance: { chunkSplit: { strategy: "all-in-one" }, },
   plugins: [
     pluginReact({ fastRefresh: true }),
     pluginBabel({
       include: /\.(?:jsx|tsx)$/,
       babelLoaderOptions(opts) {
-        opts.plugins?.unshift('babel-plugin-react-compiler');
+        opts.plugins?.unshift("babel-plugin-react-compiler");
       },
     }),
   ],

@@ -1,6 +1,6 @@
 import { startServer } from "./bin/www";
-import { runMergeTracksByIsrcCli } from "./migrations/mergeTracksByIsrc";
 import { runMigrations } from "./migrations";
+import { runMergeTracksByIsrcCli } from "./migrations/mergeTracksByIsrc";
 
 if (process.argv[2] === "--migrate") {
   runMigrations();

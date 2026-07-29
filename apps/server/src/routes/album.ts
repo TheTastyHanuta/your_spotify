@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
+
+import { getArtists, getRankOf, ItemType } from "../database";
 import {
   getAlbumSongs,
   getAlbums,
@@ -7,13 +9,10 @@ import {
 } from "../database/queries/album";
 import { isLoggedOrGuest, validate } from "../tools/middleware";
 import { LoggedRequest } from "../tools/types";
-import { getArtists, getRankOf, ItemType } from "../database";
 
 export const router = Router();
 
-const getAlbumsSchema = z.object({
-  ids: z.string(),
-});
+const getAlbumsSchema = z.object({ ids: z.string() });
 
 router.get("/:ids", isLoggedOrGuest, async (req, res) => {
   const { ids } = validate(req.params, getAlbumsSchema);
@@ -25,9 +24,7 @@ router.get("/:ids", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(albums);
 });
 
-const getAlbumStats = z.object({
-  id: z.string(),
-});
+const getAlbumStats = z.object({ id: z.string() });
 
 router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
@@ -44,12 +41,7 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     // getTotalListeningOfAlbum(user, id),
   ];
   const [firstLast, tracks, artists] = await Promise.all(promises);
-  res.status(200).send({
-    album,
-    artists,
-    firstLast,
-    tracks,
-  });
+  res.status(200).send({ album, artists, firstLast, tracks });
 });
 
 router.get("/:id/rank", isLoggedOrGuest, async (req, res) => {

@@ -3,8 +3,8 @@
     "files": true
   },
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "ES2024",
+    "module": "esnext",
+    "target": "esnext",
     // Rules
     "noImplicitReturns": true,
     "noImplicitAny": true,
@@ -16,7 +16,7 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "declaration": false
   },

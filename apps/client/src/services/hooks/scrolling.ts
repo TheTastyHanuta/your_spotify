@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { DEFAULT_ITEMS_TO_LOAD } from '../apis/api';
-import { Interval } from '../intervals';
+import { useState, useRef, useEffect } from "react";
+
+import { DEFAULT_ITEMS_TO_LOAD } from "../apis/api";
+import { Interval } from "../intervals";
 
 function isDocumentScrollable() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (typeof window === "undefined" || typeof document === "undefined") {
     return true;
   }
   return document.documentElement.scrollHeight > window.innerHeight;
@@ -51,14 +52,14 @@ export function useInfiniteScroll<T>(
         ? result.data.length
         : fetchedCountRef.current + result.data.length;
 
-      setItems(prevItems => {
+      setItems((prevItems) => {
         if (isNew) return filteredData;
         return [...prevItems, ...filteredData];
       });
 
       const nextHasMore = result.data.length === DEFAULT_ITEMS_TO_LOAD;
       setHasMore(nextHasMore);
-      setAutoFillCycle(prev => prev + 1);
+      setAutoFillCycle((prev) => prev + 1);
     } catch (e) {
       console.error(e);
     } finally {

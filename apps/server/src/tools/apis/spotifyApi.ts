@@ -1,248 +1,211 @@
-import { AxiosError, AxiosInstance } from "axios";
 import { Types } from "mongoose";
+
 import { getUserFromField, storeInUser } from "../../database";
+import { SpotifyAlbum } from "../../database/schemas/album";
+import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
-import { chunk, wait } from "../misc";
-import { Spotify } from "../oauth/Provider";
-import { PromiseQueue } from "../queue";
-import { SpotifyAlbum } from "../../database/schemas/album";
-import { SpotifyArtist } from "../../database/schemas/artist";
-import { getWithDefault } from "../env";
+import { chunk } from "../misc";
+import { spotifyProvider } from "../oauth/Provider";
+import { HttpError } from "./queueHttpClient";
 
-export const squeue = new PromiseQueue(getWithDefault("SPOTIFY_API_DELAY_MS", 2000));
-
-interface SpotifyMe {
-	id: string;
+export interface SpotifyMe {
+  id: string;
+  display_name: string;
 }
 
 interface SpotifyPlaylist {
-	id: string;
-	name: string;
-	owner: {
-		id: string;
-	};
+  id: string;
+  name: string;
+  owner: { id: string };
 }
 
 export class SpotifyAPI {
-	private client!: AxiosInstance;
+  constructor(private readonly userId: string) {}
 
-	constructor(private readonly userId: string) {}
+  private async checkToken() {
+    const user = await getUserFromField(
+      "_id",
+      new Types.ObjectId(this.userId),
+      true,
+    );
+    let access: string | null | undefined = user?.accessToken;
+    if (!user) {
+      throw new Error("User not found");
+    }
+    if (!user.spotifyId) {
+      throw new Error("User has no spotify id");
+    }
+    // Refresh the token if it expires in less than two minutes (1000ms * 120)
+    if (Date.now() > user.expiresIn - 1000 * 120) {
+      const token = user.refreshToken;
+      if (!token) {
+        throw new SpotifyReauthRequiredError(user.username);
+      }
+      let infos;
+      try {
+        infos = await spotifyProvider.refresh(token);
+      } catch (e) {
+        if (
+          e instanceof HttpError &&
+          e.status === 400 &&
+          e.body.includes("invalid_grant")
+        ) {
+          // Spotify expires refresh tokens six months after the authorization
+          // and asks us to discard them instead of retrying.
+          await storeInUser("_id", user._id, {
+            accessToken: null,
+            refreshToken: null,
+            spotifyReauthRequired: true,
+          });
+          throw new SpotifyReauthRequiredError(user.username);
+        }
+        throw e;
+      }
 
-	private async checkToken() {
-		// Refresh the token if it expires in less than two minutes (1000ms * 120)
-		const user = await getUserFromField(
-			"_id",
-			new Types.ObjectId(this.userId),
-			true,
-		);
-		let access: string | null | undefined = user?.accessToken;
-		if (!user) {
-			throw new Error("User not found");
-		}
-		if (!user.spotifyId) {
-			throw new Error("User has no spotify id");
-		}
-		if (Date.now() > user.expiresIn - 1000 * 120) {
-			const token = user.refreshToken;
-			if (!token) {
-				throw new SpotifyReauthRequiredError(user.username);
-			}
-			let infos;
-			try {
-				infos = await Spotify.refresh(token);
-			} catch (e) {
-				if (
-					e instanceof AxiosError &&
-					e.response?.status === 400 &&
-					e.response.data?.error === "invalid_grant"
-				) {
-					// Spotify expires refresh tokens six months after the authorization
-					// and asks us to discard them instead of retrying.
-					await storeInUser("_id", user._id, {
-						accessToken: null,
-						refreshToken: null,
-						spotifyReauthRequired: true,
-					});
-					throw new SpotifyReauthRequiredError(user.username);
-				}
-				throw e;
-			}
+      await storeInUser("_id", user._id, infos);
+      logger.info(`Refreshed token for ${user.username}`);
+      access = infos.accessToken;
+    }
+    if (access) {
+      return spotifyProvider.getHttpClient(access);
+    } else {
+      throw new Error("Could not get any access token");
+    }
+  }
 
-			await storeInUser("_id", user._id, infos);
-			logger.info(`Refreshed token for ${user.username}`);
-			access = infos.accessToken;
-		}
-		if (access) {
-			this.client = Spotify.getHttpClient(access);
-		} else {
-			throw new Error("Could not get any access token");
-		}
-	}
+  public async raw(url: string) {
+    const client = await this.checkToken();
+    return client.get(url);
+  }
 
-	public async raw(url: string) {
-		const res = await squeue.queue(async () => {
-			await this.checkToken();
-			return this.client.get(url);
-		});
+  public async playTrack(trackUri: string) {
+    const client = await this.checkToken();
+    return client.put("/me/player/play", { data: { uris: [trackUri] } });
+  }
 
-		return res;
-	}
+  public async me() {
+    const client = await this.checkToken();
+    const res = await client.get("/me", { priority: "high" });
+    return res.data as SpotifyMe;
+  }
 
-	public async playTrack(trackUri: string) {
-		await squeue.queue(async () => {
-			await this.checkToken();
-			return this.client.put("https://api.spotify.com/v1/me/player/play", {
-				uris: [trackUri],
-			});
-		});
-	}
+  public async playlists() {
+    const items: SpotifyPlaylist[] = [];
 
-	public async me() {
-		const res = await squeue.queue(async () => {
-			await this.checkToken();
-			return this.client.get("/me");
-		});
-		return res.data as SpotifyMe;
-	}
+    let nextUrl = "/me/playlists?limit=50";
+    while (nextUrl) {
+      const thisUrl = nextUrl;
 
-	public async playlists() {
-		const items: SpotifyPlaylist[] = [];
+      const client = await this.checkToken();
+      const res = await client.get(thisUrl);
+      nextUrl = res.data.next;
+      items.push(...res.data.items);
+    }
+    return items;
+  }
 
-		let nextUrl = "/me/playlists?limit=50";
-		while (nextUrl) {
-			const thisUrl = nextUrl;
+  private async handleAddIdsToPlaylist(id: string, ids: string[]) {
+    const chunks = chunk(ids, 100);
+    for (let i = 0; i < chunks.length; i += 1) {
+      const chk = chunks[i]!;
 
-			const res = await squeue.queue(async () => {
-				await this.checkToken();
-				return this.client.get(thisUrl);
-			});
-			nextUrl = res.data.next;
-			items.push(...res.data.items);
-		}
-		return items;
-	}
+      const client = await this.checkToken();
+      await client.post(`/playlists/${id}/tracks`, {
+        data: { uris: chk.map((trackId) => `spotify:track:${trackId}`) },
+      });
+    }
+  }
 
-	private async internAddToPlaylist(id: string, ids: string[]) {
-		const chunks = chunk(ids, 100);
-		for (let i = 0; i < chunks.length; i += 1) {
-			const chk = chunks[i]!;
+  public async addToPlaylist(id: string, ids: string[]) {
+    await this.checkToken();
+    return this.handleAddIdsToPlaylist(id, ids);
+  }
 
-			await this.client.post(`/playlists/${id}/tracks`, {
-				uris: chk.map((trackId) => `spotify:track:${trackId}`),
-			});
-			if (i !== chunks.length - 1) {
-				// Cannot queue inside queue, will cause infinite wait
+  public async createPlaylist(name: string, ids: string[]) {
+    const client = await this.checkToken();
+    const { data } = await client.post(`/me/playlists`, {
+      data: { name, public: true, collaborative: false, description: "" },
+    });
+    return this.handleAddIdsToPlaylist(data.id, ids);
+  }
 
-				await wait(1000);
-			}
-		}
-	}
+  async getTrack(id: string) {
+    try {
+      const client = await this.checkToken();
+      const res = await client.get(`/tracks/${id}`);
+      return res.data as SpotifyTrack;
+    } catch {
+      return undefined;
+    }
+  }
 
-	public async addToPlaylist(id: string, ids: string[]) {
-		await squeue.queue(async () => {
-			await this.checkToken();
-			return this.internAddToPlaylist(id, ids);
-		});
-	}
+  async getTracks(spotifyIds: string[]) {
+    const tracks: (SpotifyTrack | undefined)[] = [];
+    for (const id of spotifyIds) {
+      const track = await this.getTrack(id);
+      tracks.push(track);
+    }
+    return tracks;
+  }
 
-	public async createPlaylist(name: string, ids: string[]) {
-		await squeue.queue(async () => {
-			await this.checkToken();
-			const { data } = await this.client.post(`/me/playlists`, {
-				name,
-				public: true,
-				collaborative: false,
-				description: "",
-			});
-			return this.internAddToPlaylist(data.id, ids);
-		});
-	}
+  async getAlbum(id: string) {
+    try {
+      const client = await this.checkToken();
+      const res = await client.get(`/albums/${id}`);
+      return res.data as SpotifyAlbum;
+    } catch {
+      return undefined;
+    }
+  }
 
-	async getTrack(id: string) {
-		try {
-			const res = await squeue.queue(async () => {
-				await this.checkToken();
-				return this.client.get(`/tracks/${id}`);
-			});
-			return res.data as SpotifyTrack;
-		} catch {
-			return undefined;
-		}
-	}
+  async getAlbums(spotifyIds: string[]) {
+    const albums: (SpotifyAlbum | undefined)[] = [];
+    for (const id of spotifyIds) {
+      const album = await this.getAlbum(id);
+      albums.push(album);
+    }
+    return albums;
+  }
 
-	async getTracks(spotifyIds: string[]) {
-		const tracks: (SpotifyTrack | undefined)[] = [];
-		for (const id of spotifyIds) {
-			const track = await this.getTrack(id);
-			tracks.push(track);
-		}
-		return tracks;
-	}
+  async getArtist(id: string) {
+    try {
+      const client = await this.checkToken();
+      const res = await client.get(`/artists/${id}`);
+      return res.data as SpotifyArtist;
+    } catch {
+      return undefined;
+    }
+  }
 
-	async getAlbum(id: string) {
-		try {
-			const res = await squeue.queue(async () => {
-				await this.checkToken();
-				return this.client.get(`/albums/${id}`);
-			});
-			return res.data as SpotifyAlbum;
-		} catch {
-			return undefined;
-		}
-	}
+  async getArtists(spotifyIds: string[]) {
+    const artists: (SpotifyArtist | undefined)[] = [];
+    for (const id of spotifyIds) {
+      const artist = await this.getArtist(id);
+      artists.push(artist);
+    }
+    return artists;
+  }
 
-	async getAlbums(spotifyIds: string[]) {
-		const albums: (SpotifyAlbum | undefined)[] = [];
-		for (const id of spotifyIds) {
-			const album = await this.getAlbum(id);
-			albums.push(album);
-		}
-		return albums;
-	}
-
-	async getArtist(id: string) {
-		try {
-			const res = await squeue.queue(async () => {
-				await this.checkToken();
-				return this.client.get(`/artists/${id}`);
-			});
-			return res.data as SpotifyArtist;
-		} catch {
-			return undefined;
-		}
-	}
-
-	async getArtists(spotifyIds: string[]) {
-		const artists: (SpotifyArtist | undefined)[] = [];
-		for (const id of spotifyIds) {
-			const artist = await this.getArtist(id);
-			artists.push(artist);
-		}
-		return artists;
-	}
-
-	public async search(track: string, artist: string) {
-		try {
-			const res = await squeue.queue(async () => {
-				await this.checkToken();
-				const limitedTrack = track.slice(0, 100);
-				const limitedArtist = artist.slice(0, 100);
-				return this.client.get(
-					`/search?q=track:${encodeURIComponent(
-						limitedTrack,
-					)}+artist:${encodeURIComponent(limitedArtist)}&type=track&limit=10`,
-				);
-			});
-			return res.data.tracks.items[0] as SpotifyTrack;
-		} catch (e) {
-			if (e instanceof AxiosError) {
-				if (e.response?.status === 404) {
-					return undefined;
-				}
-			}
-			throw e;
-		}
-	}
+  public async search(track: string, artist: string) {
+    try {
+      const client = await this.checkToken();
+      const limitedTrack = track.slice(0, 100);
+      const limitedArtist = artist.slice(0, 100);
+      const res = await client.get(
+        `/search?q=track:${encodeURIComponent(
+          limitedTrack,
+        )}+artist:${encodeURIComponent(limitedArtist)}&type=track&limit=10`,
+      );
+      return res.data.tracks.items[0] as SpotifyTrack;
+    } catch (e) {
+      if (e instanceof HttpError) {
+        if (e.status === 404) {
+          return undefined;
+        }
+      }
+      throw e;
+    }
+  }
 }

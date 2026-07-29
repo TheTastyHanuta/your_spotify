@@ -1,17 +1,19 @@
-import { Fragment } from "react";
 import { CircularProgress, Grid } from "@mui/material";
+import { Fragment } from "react";
+
 import Header from "../../components/Header";
+import IdealImage from "../../components/IdealImage";
+import ImageTwoLines from "../../components/ImageTwoLines";
+import InlineAlbum from "../../components/InlineAlbum";
+import InlineArtist from "../../components/InlineArtist";
+import Text from "../../components/Text";
 import TitleCard from "../../components/TitleCard";
 import { TrackStatsResponse } from "../../services/apis/api";
-import { buildFromDateId } from "../../services/stats";
-import Text from "../../components/Text";
-import InlineArtist from "../../components/InlineArtist";
-import ImageTwoLines from "../../components/ImageTwoLines";
-import IdealImage from "../../components/IdealImage";
-import InlineAlbum from "../../components/InlineAlbum";
 import { DateFormatter } from "../../services/date";
+import { buildFromDateId } from "../../services/stats";
 import FirstAndLast from "./FirstAndLast";
 import TrackRank from "./TrackRank/TrackRank";
+
 import s from "./index.module.css";
 
 interface TrackStatsProps {
@@ -26,7 +28,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
 
   const [bestPeriod, secondBestPeriod] = stats.bestPeriod;
   const albumById = Object.fromEntries(
-    stats.listenedOn.map(item => [item.album.id, item.album]),
+    stats.listenedOn.map((item) => [item.album.id, item.album]),
   );
 
   return (
@@ -43,7 +45,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
         title={stats.track.name}
         subtitle={stats.artists.map((artist, index) => (
           <Fragment key={artist.id}>
-            <InlineArtist artist={artist} size='normal' />
+            <InlineArtist artist={artist} size="normal" />
             {index < stats.artists.length - 1 && ", "}
           </Fragment>
         ))}
@@ -55,15 +57,13 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
         </div>
         <Grid
           container
-          justifyContent="flex-start"
-          alignItems="flex-start"
           spacing={2}
+          sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
           style={{ marginTop: 0 }}>
           <Grid
             container
             size={{ xs: 12, lg: 6 }}
-            justifyContent="flex-start"
-            alignItems="flex-start"
+            sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
             spacing={2}>
             <Grid size={{ xs: 12 }}>
               <TitleCard title="Artists">
@@ -72,7 +72,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
                     key={artist.id}
                     className={s.recentitem}
                     image={<IdealImage images={artist.images} size={48} />}
-                    first={<InlineArtist artist={artist} size='normal' />}
+                    first={<InlineArtist artist={artist} size="normal" />}
                     second={index === 0 ? "Main artist" : "Featured artist"}
                   />
                 ))}
@@ -85,7 +85,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
                     key={album.id}
                     className={s.recentitem}
                     image={<IdealImage images={album.images} size={48} />}
-                    first={<InlineAlbum album={album} size='normal' />}
+                    first={<InlineAlbum album={album} size="normal" />}
                     second={`${count} ${count === 1 ? "time" : "times"}`}
                   />
                 ))}
@@ -93,7 +93,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TitleCard title="Times listened">
-                <Text element="strong" size='big'>
+                <Text element="strong" size="big">
                   {stats.total.count}
                 </Text>
               </TitleCard>
@@ -109,7 +109,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
                 title={`Top two months you listened to ${stats.track.name}`}>
                 {bestPeriod && (
                   <div className={s.bestperiod}>
-                    <Text element="strong" size='normal'>
+                    <Text element="strong" size="normal">
                       {DateFormatter.toMonthStringYear(
                         buildFromDateId(bestPeriod._id),
                       )}
@@ -123,7 +123,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
                 )}
                 {secondBestPeriod && (
                   <div className={s.bestperiod}>
-                    <Text element="strong" size='normal'>
+                    <Text element="strong" size="normal">
                       {DateFormatter.toMonthStringYear(
                         buildFromDateId(secondBestPeriod._id),
                       )}
@@ -142,14 +142,14 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
           </Grid>
           <Grid size={{ lg: 6, xs: 12 }}>
             <TitleCard title="Recently played on">
-              {stats.recentHistory.map(info => {
+              {stats.recentHistory.map((info) => {
                 const album = albumById[info.albumId] ?? stats.album;
                 return (
                   <ImageTwoLines
                     className={s.recentitem}
                     key={info._id}
                     image={<IdealImage images={album.images} size={48} />}
-                    first={<InlineAlbum album={album} size='normal' />}
+                    first={<InlineAlbum album={album} size="normal" />}
                     second={DateFormatter.toMinuteHourDayMonthYear(
                       new Date(info.played_at),
                     )}

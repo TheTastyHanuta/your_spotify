@@ -1,24 +1,25 @@
+import { IncomingMessage } from "http";
 import * as path from "path";
-import express from "express";
+
 import cookieParser from "cookie-parser";
-import morgan from "morgan";
 import cors from "cors";
+import express from "express";
+import morgan from "morgan";
 
 import { router as indexRouter } from "./routes";
-import { router as oauthRouter } from "./routes/oauth";
-import { router as spotifyRouter } from "./routes/spotify";
-import { router as globalRouter } from "./routes/global";
-import { router as artistRouter } from "./routes/artist";
 import { router as albumRouter } from "./routes/album";
+import { router as artistRouter } from "./routes/artist";
+import { router as globalRouter } from "./routes/global";
 import { router as importRouter } from "./routes/importer";
-import { router as trackRouter } from "./routes/track";
-import { router as searchRouter } from "./routes/search";
 import { router as metricsRouter } from "./routes/metrics";
+import { router as oauthRouter } from "./routes/oauth";
+import { router as searchRouter } from "./routes/search";
+import { router as spotifyRouter } from "./routes/spotify";
+import { router as trackRouter } from "./routes/track";
 import { get } from "./tools/env";
+import { ErrorTypeToHTTPCode, YourSpotifyError } from "./tools/errors/error";
 import { logger, LogLevelAccepts } from "./tools/logger";
 import { measureRequestDuration } from "./tools/middleware";
-import { ErrorTypeToHTTPCode, YourSpotifyError } from "./tools/errors/error";
-import { IncomingMessage } from "http";
 
 const app = express();
 const ALLOW_ALL_CORS =
@@ -36,17 +37,19 @@ const maskedSearchParams: Record<string, Set<string>> = {
   "/oauth/spotify/callback": new Set(["code"]),
 };
 
-morgan.token<IncomingMessage & { originalUrl?: string }>("url", req => {
+morgan.token<IncomingMessage & { originalUrl?: string }>("url", (req) => {
   try {
     const url = new URL(req.originalUrl ?? req.url!, "http://localhost");
 
     for (const param of url.searchParams.keys()) {
       if (maskedSearchParams[url.pathname]?.has(param)) {
-        url.searchParams.set(param, 'MASKED');
+        url.searchParams.set(param, "MASKED");
       }
     }
-    return url.pathname +
+    return (
+      url.pathname +
       (url.searchParams.size > 0 ? "?" + url.searchParams.toString() : "")
+    );
   } catch {
     return req.originalUrl ?? req.url;
   }
@@ -84,7 +87,7 @@ if (LogLevelAccepts("info")) {
   app.use(morgan("dev"));
 }
 app.use(cookieParser());
-app.use("/static", express.static(path.join(__dirname, "public")));
+app.use("/static", express.static(path.join(import.meta.dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 

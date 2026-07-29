@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 import { MongoInfos } from "./meta.types";
 
 export async function getMongoInfos(): Promise<MongoInfos> {
@@ -28,10 +29,18 @@ export async function getCompatibilityVersion(): Promise<{
   };
 }
 
-export async function setFeatureCompatibilityVersion(version: string) {
+export async function setFeatureCompatibilityVersion(
+  version: string,
+  currentMajor: number,
+) {
   if (!mongoose.connection.db) {
     throw new Error("Not connected to database, this should not happen");
   }
   const admin = mongoose.connection.db.admin();
-  await admin.command({ setFeatureCompatibilityVersion: version });
+  const command: { setFeatureCompatibilityVersion: string; confirm?: boolean } =
+    { setFeatureCompatibilityVersion: version };
+  if (currentMajor >= 7) {
+    command.confirm = true;
+  }
+  await admin.command(command);
 }

@@ -1,12 +1,15 @@
 import { Request, Response, Router } from "express";
 import { sign } from "jsonwebtoken";
 import { z } from "zod";
+
 import {
   createUser,
   getUserCount,
   getUserFromField,
   storeInUser,
 } from "../database";
+import { getPrivateData } from "../database/queries/privateData";
+import { SpotifyMe } from "../tools/apis/spotifyApi";
 import { get, getWithDefault } from "../tools/env";
 import { logger } from "../tools/logger";
 import {
@@ -15,9 +18,8 @@ import {
   withGlobalPreferences,
   withHttpClient,
 } from "../tools/middleware";
-import { Spotify } from "../tools/oauth/Provider";
+import { spotifyProvider } from "../tools/oauth/Provider";
 import { GlobalPreferencesRequest, SpotifyRequest } from "../tools/types";
-import { getPrivateData } from "../database/queries/privateData";
 
 export const router = Router();
 
@@ -34,9 +36,7 @@ function storeTokenInCookie(
 }
 
 const OAUTH_COOKIE_NAME = "oauth";
-const spotifyCallbackOAuthCookie = z.object({
-  state: z.string(),
-});
+const spotifyCallbackOAuthCookie = z.object({ state: z.string() });
 type OAuthCookie = z.infer<typeof spotifyCallbackOAuthCookie>;
 
 router.get("/spotify", async (req, res) => {
@@ -53,10 +53,8 @@ router.get("/spotify", async (req, res) => {
     res.status(204).end();
     return;
   }
-  const { url, state } = await Spotify.getRedirect();
-  const oauthCookie: OAuthCookie = {
-    state,
-  };
+  const { url, state } = await spotifyProvider.getRedirect();
+  const oauthCookie: OAuthCookie = { state };
 
   res.cookie(OAUTH_COOKIE_NAME, oauthCookie, {
     sameSite: "lax",
@@ -67,10 +65,7 @@ router.get("/spotify", async (req, res) => {
   res.redirect(url);
 });
 
-const spotifyCallback = z.object({
-  code: z.string(),
-  state: z.string(),
-});
+const spotifyCallback = z.object({ code: z.string(), state: z.string() });
 
 router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
   const { query, globalPreferences } = req as GlobalPreferencesRequest;
@@ -85,10 +80,12 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
       throw new Error("State does not match");
     }
 
-    const infos = await Spotify.exchangeCode(code, cookie.state);
+    const infos = await spotifyProvider.exchangeCode(code, cookie.state);
 
-    const client = Spotify.getHttpClient(infos.accessToken);
-    const { data: spotifyMe } = await client.get("/me");
+    const client = spotifyProvider.getHttpClient(infos.accessToken);
+    const { data: spotifyMe } = await client.get<SpotifyMe>("/me", {
+      priority: "high",
+    });
     let user = await getUserFromField("spotifyId", spotifyMe.id, false);
     if (!user) {
       if (!globalPreferences.allowRegistrations) {
@@ -113,9 +110,7 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
     const token = sign(
       { userId: user._id.toString() },
       privateData.jwtPrivateKey,
-      {
-        expiresIn: getWithDefault("COOKIE_VALIDITY_MS", "1h") as `${number}`,
-      },
+      { expiresIn: getWithDefault("COOKIE_VALIDITY_MS", "1h") as `${number}` },
     );
     storeTokenInCookie(req, res, token);
   } catch (e) {
@@ -128,6 +123,8 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
 
 router.get("/spotify/me", logged, withHttpClient, async (req, res) => {
   const { client } = req as SpotifyRequest;
+
+  console.log("WYTFUDGZJDGHZAKJHDKJZHZDKJHAZJKDHZAJKDHJKAHZ");
 
   try {
     const me = await client.me();

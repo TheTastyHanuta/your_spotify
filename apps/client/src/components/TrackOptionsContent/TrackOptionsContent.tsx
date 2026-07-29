@@ -3,7 +3,7 @@ import { setPlaylistContext } from "../../services/redux/modules/playlist/reduce
 import { playTrack } from "../../services/redux/modules/user/thunk";
 import { useAppDispatch } from "../../services/redux/tools";
 import { Track } from "../../services/types";
-import { MenuItem } from "../MenuItem/MenuItem";
+import { MenuItem } from "../ui/MenuItem/MenuItem";
 
 interface TrackOptionsContentProps {
   onClose: () => void;
@@ -19,12 +19,7 @@ export default function TrackOptionsContent({
 
   const add = () => {
     onClose();
-    dispatch(
-      setPlaylistContext({
-        type: "specific",
-        songIds: [track.id],
-      }),
-    );
+    dispatch(setPlaylistContext({ type: "specific", songIds: [track.id] }));
   };
 
   const play = () => {

@@ -1,38 +1,40 @@
-import { useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useMediaQuery } from "@mui/material";
 import { ThemeProvider } from "@mui/system";
+import { useEffect } from "react";
 import { useSelector } from "react-redux";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Layout from "./components/Layout";
 import Message from "./components/Message";
+import PlaylistDialog from "./components/PlaylistDialog";
 import PrivateRoute from "./components/PrivateRoute";
+import SpotifyAuthRefreshDialog from "./components/SpotifyAuthRefreshDialog";
 import Wrapper from "./components/Wrapper";
 import Login from "./scenes/Account/Login";
+import AlbumStats from "./scenes/AlbumStats";
 import AllStats from "./scenes/AllStats";
 import ArtistStats from "./scenes/ArtistStats";
+import Benchmarks from "./scenes/Benchmarks";
+import Affinity from "./scenes/Collaborative/Affinity";
+import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
+import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
+import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
+import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
+import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
+import LongestSessions from "./scenes/LongestSessions";
 import Settings from "./scenes/Settings";
 import Albums from "./scenes/Tops/Albums";
 import Artists from "./scenes/Tops/Artists";
 import Songs from "./scenes/Tops/Songs";
-import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
-import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
-import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
-import "./App.css";
-import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
-import Affinity from "./scenes/Collaborative/Affinity";
-import { useTheme } from "./services/theme";
-import { selectDarkMode } from "./services/redux/modules/user/selector";
-import PlaylistDialog from "./components/PlaylistDialog";
-import SpotifyAuthRefreshDialog from "./components/SpotifyAuthRefreshDialog";
 import TrackStats from "./scenes/TrackStats";
-import LongestSessions from "./scenes/LongestSessions";
-import AlbumStats from "./scenes/AlbumStats";
-import Benchmarks from "./scenes/Benchmarks";
-import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
 import { useDetectPointerType } from "./services/pointer";
+import { selectDarkMode } from "./services/redux/modules/user/selector";
 import { ShortcutsContextProvider } from "./services/shortcuts";
+import { useTheme } from "./services/theme";
+
+import "./App.css";
 
 function App() {
   const dark = useSelector(selectDarkMode);

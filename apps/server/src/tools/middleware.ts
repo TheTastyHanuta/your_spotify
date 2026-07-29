@@ -1,21 +1,23 @@
 import { hrtime } from "process";
+
 import { NextFunction, Request, Response } from "express";
-import { z } from "zod";
 import { verify } from "jsonwebtoken";
 import { Types } from "mongoose";
+import { z } from "zod";
+
 import { getUserFromField, getGlobalPreferences } from "../database";
 import { getUserImporterState } from "../database/queries/importer";
 import { getPrivateData } from "../database/queries/privateData";
+import { SpotifyAPI } from "./apis/spotifyApi";
+import { YourSpotifyError } from "./errors/error";
 import { logger } from "./logger";
+import { Metrics } from "./metrics";
 import {
   GlobalPreferencesRequest,
   LoggedRequest,
   OptionalLoggedRequest,
   SpotifyRequest,
 } from "./types";
-import { SpotifyAPI } from "./apis/spotifyApi";
-import { Metrics } from "./metrics";
-import { YourSpotifyError } from "./errors/error";
 
 export class ValidationError extends YourSpotifyError {
   type = "MALFORMED" as const;
@@ -46,7 +48,9 @@ export const validate = <
     if ("extend" in schema) {
       value = schema.extend({ token: z.string().optional() }).parse(payload);
     } else {
-      value = schema.and(z.object({ token: z.string().optional() })).parse(payload);
+      value = schema
+        .and(z.object({ token: z.string().optional() }))
+        .parse(payload);
     }
     return value;
   } catch (e) {
@@ -96,7 +100,6 @@ const baselogged = async (req: Request, useQueryToken = false) => {
   } catch {
     return null;
   }
-  return null;
 };
 
 export const logged = async (
@@ -202,7 +205,7 @@ export const notAlreadyImporting = async (
 ) => {
   const { user } = req as LoggedRequest;
   const imports = await getUserImporterState(user._id.toString());
-  if (imports.some(imp => imp.status === "progress")) {
+  if (imports.some((imp) => imp.status === "progress")) {
     throw new AlreadyImportingError();
   }
   next();

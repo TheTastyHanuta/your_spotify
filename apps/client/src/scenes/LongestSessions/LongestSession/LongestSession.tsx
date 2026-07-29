@@ -2,6 +2,7 @@ import { ExpandMore } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary } from "@mui/material";
 import clsx from "clsx";
 import { useState } from "react";
+
 import ImageTwoLines from "../../../components/ImageTwoLines";
 import InlineArtist from "../../../components/InlineArtist";
 import InlineTrack from "../../../components/InlineTrack";
@@ -13,6 +14,7 @@ import {
 } from "../../../services/date";
 import { useLoadArtists } from "../../../services/hooks/artist";
 import { Album, Track, TrackInfo } from "../../../services/types";
+
 import s from "./index.module.css";
 
 interface LongestSessionProps {
@@ -27,11 +29,11 @@ export default function LongestSession({
   fullAlbums,
 }: LongestSessionProps) {
   const artistIds = [
-      ...tracks.reduce((acc, track) => {
-        acc.add(track.primaryArtistId);
-        return acc;
-      }, new Set<string>()),
-    ];
+    ...tracks.reduce((acc, track) => {
+      acc.add(track.primaryArtistId);
+      return acc;
+    }, new Set<string>()),
+  ];
   const { loaded, artists } = useLoadArtists(artistIds);
   const [expanded, setExpanded] = useState(false);
 
@@ -78,14 +80,24 @@ export default function LongestSession({
                   <PlayButton
                     id={track.id}
                     covers={
-                      album?.images ?? artists[track.primaryArtistId]?.images ?? []
+                      album?.images ??
+                      artists[track.primaryArtistId]?.images ??
+                      []
                     }
                   />
                 }
-                first={fullTrack ? <InlineTrack size='normal' track={fullTrack} /> : null}
+                first={
+                  fullTrack ? (
+                    <InlineTrack size="normal" track={fullTrack} />
+                  ) : null
+                }
                 second={
                   artist ? (
-                    <InlineArtist size='normal' className={s.artist} artist={artist} />
+                    <InlineArtist
+                      size="normal"
+                      className={s.artist}
+                      artist={artist}
+                    />
                   ) : null
                 }
               />

@@ -1,18 +1,21 @@
- 
 import { readFile, unlink } from "fs/promises";
+
 import { z } from "zod";
+
 import {
   addTrackIdsToUser,
   getCloseTrackId,
   storeFirstListenedAtIfLess,
 } from "../../database";
 import { setImporterStateCurrent } from "../../database/queries/importer";
+import { Infos } from "../../database/schemas/info";
 import { RecentlyPlayedTrack } from "../../database/schemas/track";
 import { User } from "../../database/schemas/user";
 import {
   getTracksAlbumsArtists,
   storeTrackAlbumArtist,
 } from "../../spotify/dbTools";
+import { SpotifyAPI } from "../apis/spotifyApi";
 import { logger } from "../logger";
 import {
   beforeParenthesis,
@@ -20,15 +23,9 @@ import {
   removeDiacritics,
   retryPromise,
 } from "../misc";
-import { SpotifyAPI } from "../apis/spotifyApi";
 import { Unpack } from "../types";
-import { Infos } from "../../database/schemas/info";
 import { getFromCache, setToCache, SpotifyTrackCacheItem } from "./cache";
-import {
-  HistoryImporter,
-  ImporterStateTypes,
-  PrivacyImporterState,
-} from "./types";
+import { HistoryImporter, PrivacyImporterState } from "./types";
 
 const privacyFileSchema = z.array(
   z.object({
@@ -41,9 +38,7 @@ const privacyFileSchema = z.array(
 
 export type PrivacyItem = Unpack<z.infer<typeof privacyFileSchema>>;
 
-export class PrivacyImporter
-  implements HistoryImporter<ImporterStateTypes.privacy>
-{
+export class PrivacyImporter implements HistoryImporter<"privacy"> {
   private id: string;
 
   private userId: string;
@@ -73,7 +68,10 @@ export class PrivacyImporter
 
   storeItems = async (userId: string, items: RecentlyPlayedTrack[]) => {
     const { tracks, albums, artists, tracksBySpotifyId } =
-      await getTracksAlbumsArtists(userId, items.map(it => it.track));
+      await getTracksAlbumsArtists(
+        userId,
+        items.map((it) => it.track),
+      );
     await storeTrackAlbumArtist({ tracks, albums, artists });
     const finalInfos: Omit<Infos, "owner">[] = [];
     for (let i = 0; i < items.length; i += 1) {
@@ -90,7 +88,7 @@ export class PrivacyImporter
         60,
       );
       const currentImportDuplicate = finalInfos.find(
-        e => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
+        (e) => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
       );
       if (duplicate.length > 0 || currentImportDuplicate) {
         logger.info(
@@ -107,13 +105,13 @@ export class PrivacyImporter
         id: track.id,
         primaryArtistId: primaryArtist.id,
         albumId: item.track.album.id,
-        artistIds: item.track.artists.map(e => e.id),
+        artistIds: item.track.artists.map((e) => e.id),
         durationMs: item.track.duration_ms,
       });
     }
     await setImporterStateCurrent(this.id, this.currentItem + 1);
     await addTrackIdsToUser(this.userId.toString(), finalInfos);
-    const min = minOfArray(finalInfos, info => info.played_at.getTime());
+    const min = minOfArray(finalInfos, (info) => info.played_at.getTime());
     if (min) {
       const minInfo = finalInfos[min.minIndex];
       if (minInfo) {
@@ -136,15 +134,15 @@ export class PrivacyImporter
   };
 
   initWithFiles = async (filePaths: string[]) => {
-    const files = await Promise.all(filePaths.map(f => readFile(f)));
-    const filesContent = files.map(f => JSON.parse(f.toString()));
+    const files = await Promise.all(filePaths.map((f) => readFile(f)));
+    const filesContent = files.map((f) => JSON.parse(f.toString()));
 
     const totalContent = filesContent.reduce<PrivacyItem[]>((acc, curr) => {
       acc.push(...curr);
       return acc;
     }, []);
 
-    if (!this.initWithJSONContent(totalContent)) {
+    if (!(await this.initWithJSONContent(totalContent))) {
       return false;
     }
 
@@ -246,8 +244,7 @@ export class PrivacyImporter
     return true;
   };
 
-   
   cleanup = async (filePaths: string[]) => {
-    await Promise.all(filePaths.map(f => unlink(f)));
+    await Promise.all(filePaths.map((f) => unlink(f)));
   };
 }

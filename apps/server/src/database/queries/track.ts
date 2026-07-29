@@ -1,6 +1,6 @@
+import { Timesplit } from "../../tools/types";
 import { InfosModel, TrackModel } from "../Models";
 import { User } from "../schemas/user";
-import { Timesplit } from "../../tools/types";
 import { getGroupByDateProjection, getGroupingByTimeSplit } from "./statsTools";
 
 export const getTracks = (tracksId: string[]) =>
@@ -39,10 +39,7 @@ export const bestPeriodOfTrack = async (user: User, trackId: string) => {
   const res = await InfosModel.aggregate([
     { $match: { owner: user._id, id: trackId } },
     {
-      $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
-        id: 1,
-      },
+      $project: { ...getGroupByDateProjection(user.settings.timezone), id: 1 },
     },
     {
       $group: { _id: null, items: { $push: "$$CURRENT" }, total: { $sum: 1 } },
@@ -70,12 +67,7 @@ export const getTrackRecentHistory = async (user: User, trackId: string) =>
 export const getTrackListenedAlbums = async (user: User, trackId: string) => {
   const res = await InfosModel.aggregate([
     { $match: { owner: user._id, id: trackId } },
-    {
-      $group: {
-        _id: "$albumId",
-        count: { $sum: 1 },
-      },
-    },
+    { $group: { _id: "$albumId", count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     {
       $lookup: {
@@ -94,17 +86,13 @@ export const getTrackBySpotifyId = (id: string) => TrackModel.findOne({ id });
 
 export const checkBlacklistConsistency = () =>
   InfosModel.updateMany(
-    {
-      blacklistedBy: { $size: 0 },
-    },
-    {
-      $unset: { blacklistedBy: 1 },
-    },
+    { blacklistedBy: { $size: 0 } },
+    { $unset: { blacklistedBy: 1 } },
   );
 
 export const unblacklistByArtist = async (userId: string, artistId: string) => {
   const tracks = await TrackModel.find({ "artists.0": artistId });
-  const trackIds = tracks.map(t => t.id);
+  const trackIds = tracks.map((t) => t.id);
   await InfosModel.updateMany(
     {
       owner: userId,
@@ -114,24 +102,16 @@ export const unblacklistByArtist = async (userId: string, artistId: string) => {
     { $pull: { blacklistedBy: "artist" } },
   );
   await InfosModel.updateMany(
-    {
-      owner: userId,
-      blacklistedBy: { $size: 0 },
-    },
-    {
-      $unset: { blacklistedBy: 1 },
-    },
+    { owner: userId, blacklistedBy: { $size: 0 } },
+    { $unset: { blacklistedBy: 1 } },
   );
 };
 
 export const blacklistByArtist = async (userId: string, artistId: string) => {
   const tracks = await TrackModel.find({ "artists.0": artistId });
-  const trackIds = tracks.map(t => t.id);
+  const trackIds = tracks.map((t) => t.id);
   return InfosModel.updateMany(
-    {
-      owner: userId,
-      id: { $in: trackIds },
-    },
+    { owner: userId, id: { $in: trackIds } },
     { $addToSet: { blacklistedBy: "artist" } },
   );
 };

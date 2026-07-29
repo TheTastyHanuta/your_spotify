@@ -1,14 +1,16 @@
-import { useSelector } from "react-redux";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { useSelector } from "react-redux";
+
+import { GridWrapper } from "../../../components/Grid";
 import Header from "../../../components/Header";
+import Loader from "../../../components/Loader";
 import TitleCard from "../../../components/TitleCard";
 import { api } from "../../../services/apis/api";
-import Loader from "../../../components/Loader";
-import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
-import { GridWrapper } from "../../../components/Grid";
 import { useInfiniteScroll } from "../../../services/hooks/scrolling";
-import AlbumHeader from "./Album/AlbumHeader";
+import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
 import Album from "./Album";
+import AlbumHeader from "./Album/AlbumHeader";
+
 import s from "./index.module.css";
 
 export default function Albums() {
