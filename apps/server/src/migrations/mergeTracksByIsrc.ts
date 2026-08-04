@@ -6,13 +6,17 @@ import mongoose, { HydratedDocument, Types } from "mongoose";
 
 import { InfosModel, TrackModel } from "../database/Models";
 import { Track } from "../database/schemas/track";
+import { HttpError, QueuedHttpClient } from "../tools/apis/queueHttpClient";
 import { chunk } from "../tools/misc";
 import { credentials } from "../tools/oauth/credentials";
 
 const DEFAULT_MONGO_ENDPOINT = "mongodb://mongo:27017/your_spotify";
 const UPDATE_BATCH_SIZE = 1000;
-const SPOTIFY_FETCH_BATCH_SIZE = 50;
 const MAX_REPOINT_PASSES = 10;
+const SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1";
+const SPOTIFY_MIN_DELAY_MS = 100;
+const SPOTIFY_PROGRESS_INTERVAL = 50;
+const MAX_REPORTED_FETCH_FAILURES = 50;
 
 type TrackDocument = HydratedDocument<Track>;
 
@@ -33,6 +37,8 @@ interface MergeTracksByIsrcOptions {
 
 export interface MergeTracksByIsrcSummary {
   dryRun: boolean;
+  isrcsBackfilled: number;
+  isrcFetchFailures: number;
   duplicateIsrcs: number;
   redundantTracks: number;
   infosUpdated: number;
@@ -145,80 +151,102 @@ async function getSpotifyCatalogAccessToken() {
   return data.access_token as string;
 }
 
-async function fetchSpotifyTracks(trackIds: string[], accessToken: string) {
-  try {
-    const { data } = await Axios.get<{
-      tracks: (SpotifyCatalogTrack | null)[];
-    }>("https://api.spotify.com/v1/tracks", {
-      params: { ids: trackIds.join(",") },
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    return data.tracks;
-  } catch {
-    const tracks: (SpotifyCatalogTrack | null)[] = [];
-    for (const trackId of trackIds) {
-      try {
-        const { data } = await Axios.get<SpotifyCatalogTrack>(
-          `https://api.spotify.com/v1/tracks/${encodeURIComponent(trackId)}`,
-          { headers: { Authorization: `Bearer ${accessToken}` } },
-        );
-        tracks.push(data);
-      } catch {
-        tracks.push(null);
-      }
-    }
-    return tracks;
-  }
+// Spotify removed GET /tracks for development mode applications in February
+// 2026, which is what a self hosted installation uses, so this fetches one
+// track at a time. The queued client spaces the requests out and backs off on
+// 429 instead of hammering the API. external_ids survived the same round of
+// removals, so the single track endpoint still carries the ISRC.
+function createSpotifyCatalogClient(accessToken: string) {
+  return new QueuedHttpClient(
+    SPOTIFY_API_BASE_URL,
+    { Authorization: `Bearer ${accessToken}` },
+    undefined,
+    SPOTIFY_MIN_DELAY_MS,
+  );
 }
 
-async function backfillMissingIsrcs() {
+async function fetchTrackIsrc(client: QueuedHttpClient, trackId: string) {
+  const { data } = await client.get<SpotifyCatalogTrack>(
+    `/tracks/${encodeURIComponent(trackId)}`,
+  );
+  return data.external_ids?.isrc;
+}
+
+async function backfillMissingIsrcs(report: MigrationReport) {
   const tracksMissingIsrc = await TrackModel.find({
     mergedInto: { $exists: false },
     $or: [{ isrc: { $exists: false } }, { isrc: null }, { isrc: "" }],
   });
 
+  const empty = { tracks: [] as TrackDocument[], backfilledCount: 0 };
   if (tracksMissingIsrc.length === 0) {
     console.log("Step 2a: no tracks need ISRC backfill");
-    return { tracks: [] as TrackDocument[], backfilledCount: 0 };
+    return { ...empty, failedCount: 0 };
   }
 
-  const accessToken = await getSpotifyCatalogAccessToken();
+  await report.section("ISRC Backfill");
+
+  let client: QueuedHttpClient;
+  try {
+    client = createSpotifyCatalogClient(await getSpotifyCatalogAccessToken());
+  } catch (error) {
+    // Without a token nothing can be backfilled, but tracks that already have
+    // a stored ISRC can still be merged, so this does not abort the migration.
+    const message = `Could not authenticate with Spotify, skipping the ISRC backfill of ${tracksMissingIsrc.length} tracks`;
+    console.error(`Step 2a: ${message}`, error);
+    await report.write(message);
+    return { ...empty, failedCount: tracksMissingIsrc.length };
+  }
 
   console.log(
     `Step 2a: fetching ISRCs from Spotify for ${tracksMissingIsrc.length} tracks for grouping`,
   );
 
   let backfilledCount = 0;
+  let failedCount = 0;
   let processedCount = 0;
-  for (const trackBatch of chunk(tracksMissingIsrc, SPOTIFY_FETCH_BATCH_SIZE)) {
-    const spotifyTracks = await fetchSpotifyTracks(
-      trackBatch.map((track) => track.id),
-      accessToken,
-    );
-    const isrcByTrackId = new Map(
-      spotifyTracks.flatMap((spotifyTrack) => {
-        const isrc = spotifyTrack?.external_ids?.isrc;
-        return spotifyTrack && isrc ? [[spotifyTrack.id, isrc] as const] : [];
-      }),
-    );
-
-    for (const track of trackBatch) {
-      const isrc = isrcByTrackId.get(track.id);
-      if (!isrc) {
-        continue;
+  for (const track of tracksMissingIsrc) {
+    try {
+      const isrc = await fetchTrackIsrc(client, track.id);
+      if (isrc) {
+        track.isrc = isrc;
+        backfilledCount += 1;
       }
-      track.isrc = isrc;
-      backfilledCount += 1;
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 401) {
+        // Client credentials tokens last an hour and a large backfill outlives
+        // one. Renew it for the remaining tracks; this one counts as a failure
+        // and is picked up by the next run.
+        client = createSpotifyCatalogClient(
+          await getSpotifyCatalogAccessToken(),
+        );
+      }
+      failedCount += 1;
+      if (failedCount <= MAX_REPORTED_FETCH_FAILURES) {
+        await report.write(
+          `- ${track.id} | ${error instanceof Error ? error.message : error}`,
+        );
+      }
     }
 
-    processedCount += trackBatch.length;
-    console.log(
-      `Step 2a: checked ${processedCount}/${tracksMissingIsrc.length} tracks, found ${backfilledCount} ISRCs`,
+    processedCount += 1;
+    if (
+      processedCount % SPOTIFY_PROGRESS_INTERVAL === 0 ||
+      processedCount === tracksMissingIsrc.length
+    ) {
+      console.log(
+        `Step 2a: checked ${processedCount}/${tracksMissingIsrc.length} tracks, found ${backfilledCount} ISRCs, ${failedCount} failed`,
+      );
+    }
+  }
+
+  if (failedCount > MAX_REPORTED_FETCH_FAILURES) {
+    await report.write(
+      `- ...and ${failedCount - MAX_REPORTED_FETCH_FAILURES} more failures`,
     );
   }
 
-  return { tracks: tracksMissingIsrc, backfilledCount };
+  return { tracks: tracksMissingIsrc, backfilledCount, failedCount };
 }
 
 // The polling loop and the importers resolve a track id before they write the
@@ -368,7 +396,7 @@ export async function mergeTracksByIsrc({
   await report.write(`Step 1: running in ${dryRun ? "dry-run" : "apply"} mode`);
 
   console.log("Step 2: loading tracks with ISRCs");
-  const backfill = await backfillMissingIsrcs();
+  const backfill = await backfillMissingIsrcs(report);
   const tracksWithStoredIsrc = await TrackModel.find({
     isrc: { $exists: true, $ne: null },
     mergedInto: { $exists: false },
@@ -402,6 +430,9 @@ export async function mergeTracksByIsrc({
     `Found ${duplicateGroups.length} unique ISRCs with duplicates, ${redundantTracks} total redundant track documents`,
   );
   await report.write(`Total ISRCs backfilled: ${backfill.backfilledCount}`);
+  await report.write(
+    `Total ISRCs that could not be fetched: ${backfill.failedCount}`,
+  );
   await report.write(
     `Found ${duplicateGroups.length} unique ISRCs with duplicates, ${redundantTracks} total redundant track documents`,
   );
@@ -527,6 +558,8 @@ export async function mergeTracksByIsrc({
   const elapsedMs = Date.now() - startedAt;
   const summary: MergeTracksByIsrcSummary = {
     dryRun,
+    isrcsBackfilled: backfill.backfilledCount,
+    isrcFetchFailures: backfill.failedCount,
     duplicateIsrcs: duplicateGroups.length,
     redundantTracks,
     infosUpdated,
@@ -537,7 +570,10 @@ export async function mergeTracksByIsrc({
   };
 
   await report.section("Final Summary");
-  await report.write(`Total ISRCs backfilled: ${backfill.backfilledCount}`);
+  await report.write(`Total ISRCs backfilled: ${summary.isrcsBackfilled}`);
+  await report.write(
+    `Total ISRCs that could not be fetched: ${summary.isrcFetchFailures}`,
+  );
   await report.write(`Total ISRCs processed: ${summary.duplicateIsrcs}`);
   await report.write(
     `Total listen records re-pointed: ${summary.infosUpdated}`,
@@ -555,7 +591,10 @@ export async function mergeTracksByIsrc({
   await report.write(`Finished: ${new Date().toISOString()}`);
 
   console.log("Step 7: final summary");
-  console.log(`Total ISRCs backfilled: ${backfill.backfilledCount}`);
+  console.log(`Total ISRCs backfilled: ${summary.isrcsBackfilled}`);
+  console.log(
+    `Total ISRCs that could not be fetched: ${summary.isrcFetchFailures}`,
+  );
   console.log(`Total ISRCs processed: ${summary.duplicateIsrcs}`);
   console.log(`Total listen records re-pointed: ${summary.infosUpdated}`);
   console.log(
