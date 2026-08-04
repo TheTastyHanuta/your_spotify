@@ -69,10 +69,29 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
             spacing={2}
             sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}>
             <Grid size={{ xs: 12 }}>
-              <TitleCard title="Songs listened">
-                <Text element="strong" size="big">
-                  {stats.total.count}
-                </Text>
+              <TitleCard
+                title="Songs listened"
+                info="Only listens where this artist is credited first count towards your top artists and the rank above.">
+                <div className={s.totals}>
+                  <div className={s.total}>
+                    <Text element="strong" size="big">
+                      {stats.total.count}
+                    </Text>
+                    <Text size="normal">total</Text>
+                  </div>
+                  <div className={s.total}>
+                    <Text element="strong" size="big">
+                      {stats.total.primaryCount}
+                    </Text>
+                    <Text size="normal">as main artist</Text>
+                  </div>
+                  <div className={s.total}>
+                    <Text element="strong" size="big">
+                      {stats.total.featuredCount}
+                    </Text>
+                    <Text size="normal">featured</Text>
+                  </div>
+                </div>
               </TitleCard>
             </Grid>
             <Grid size={{ xs: 12 }}>

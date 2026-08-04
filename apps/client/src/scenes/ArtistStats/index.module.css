@@ -54,6 +54,22 @@
   width: 48px;
 }
 
+.totals {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+}
+
+.total > span {
+  color: var(--text-grey);
+}
+
 .bestperiod {
   display: flex;
   flex-direction: column;

@@ -93,7 +93,7 @@ export type ArtistStatsResponse = {
   };
   mostListened: { _id: string; count: number; track: TrackWithAlbum }[];
   albumMostListened: { _id: string; count: number; album: Album }[];
-  total: { count: number };
+  total: { count: number; primaryCount: number; featuredCount: number };
   dayRepartition: { _id: number; count: number; duration: number }[];
 };
 

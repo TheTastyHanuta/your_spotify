@@ -134,14 +134,25 @@ export const getTotalListeningOfArtist = async (
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
     {
-      $group: { _id: 1, count: { $sum: 1 }, differents: { $addToSet: "$id" } },
-    },
-    { $unwind: "$differents" },
-    {
       $group: {
-        _id: "$_id",
-        count: { $first: "$count" },
-        differents: { $sum: 1 },
+        _id: 1,
+        count: { $sum: 1 },
+        // The listens where this artist was the credited main artist, which is
+        // what the top artists page and the rank shown above this count. The
+        // rest are features, and the card breaks both out so the total does not
+        // silently disagree with the rank.
+        primaryCount: {
+          $sum: { $cond: [{ $eq: ["$primaryArtistId", artistId] }, 1, 0] },
+        },
+        differents: { $addToSet: "$id" },
+      },
+    },
+    {
+      $project: {
+        count: 1,
+        primaryCount: 1,
+        featuredCount: { $subtract: ["$count", "$primaryCount"] },
+        differents: { $size: "$differents" },
       },
     },
   ]);
