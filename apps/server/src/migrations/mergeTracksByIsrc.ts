@@ -217,9 +217,18 @@ async function backfillMissingIsrcs(report: MigrationReport) {
         // Client credentials tokens last an hour and a large backfill outlives
         // one. Renew it for the remaining tracks; this one counts as a failure
         // and is picked up by the next run.
-        client = createSpotifyCatalogClient(
-          await getSpotifyCatalogAccessToken(),
-        );
+        try {
+          client = createSpotifyCatalogClient(
+            await getSpotifyCatalogAccessToken(),
+          );
+        } catch (renewError) {
+          // Losing the token must not throw away the ISRCs already fetched,
+          // the remaining tracks just keep failing one by one and are reported.
+          console.error(
+            "Step 2a: could not renew the Spotify token, the remaining tracks will fail",
+            renewError,
+          );
+        }
       }
       failedCount += 1;
       if (failedCount <= MAX_REPORTED_FETCH_FAILURES) {

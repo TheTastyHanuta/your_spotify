@@ -48,8 +48,10 @@ export class SpotifyAPI {
     if (!user.spotifyId) {
       throw new Error("User has no spotify id");
     }
-    // Refresh the token if it expires in less than two minutes (1000ms * 120)
-    if (Date.now() > user.expiresIn - 1000 * 120) {
+    // Refresh the token if it expires in less than two minutes (1000ms * 120).
+    // A missing access token also goes through the refresh, so a still valid
+    // refresh token is used instead of being discarded further down.
+    if (!access || Date.now() > user.expiresIn - 1000 * 120) {
       const token = user.refreshToken;
       if (!token) {
         // Nothing left to refresh with, which is how accounts that were

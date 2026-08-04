@@ -11,6 +11,12 @@ import { Interval } from "../intervals";
 // sentinel is provably outside the band so the observer gets its transition.
 const SENTINEL_BAND = 0.2; // = 1 - InfiniteScroll's default scrollThreshold
 
+// A failed request leaves the sentinel exactly where it was, so InfiniteScroll
+// never gets another intersection and never asks for the page again. Retry a
+// few times with a growing delay, then stop and leave it to a user gesture.
+const MAX_AUTO_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
 function isSentinelClear() {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return true;
@@ -71,6 +77,7 @@ export function useInfiniteScroll<T>(
       const nextHasMore = result.data.length === DEFAULT_ITEMS_TO_LOAD;
       setHasMore(nextHasMore);
       setAutoFillCycle((prev) => prev + 1);
+      setFailedFetches(0);
     } catch (e) {
       console.error(e);
       // InfiniteScroll only re-arms its load guard when dataLength changes, so
@@ -108,17 +115,21 @@ export function useInfiniteScroll<T>(
   }, [interval]);
 
   useEffect(() => {
-    if (autoFillCycle === 0 || !hasMore) return;
+    if (autoFillCycle === 0 && failedFetches === 0) return;
+    if (!hasMore) return;
     if (isFetchingRef.current) return;
+    if (failedFetches > MAX_AUTO_RETRIES) return;
     if (isSentinelClear()) return;
 
-    // Trigger sequential page loads until the viewport becomes scrollable
+    // Trigger sequential page loads until the viewport becomes scrollable, and
+    // retry the failed ones, which is the only way back for a list that is too
+    // short to move its sentinel.
     const timeout = setTimeout(() => {
       void ref.current();
-    }, 0);
+    }, failedFetches * RETRY_DELAY_MS);
 
     return () => clearTimeout(timeout);
-  }, [autoFillCycle, hasMore]);
+  }, [autoFillCycle, hasMore, failedFetches]);
 
   // dataLength is only a reset key for InfiniteScroll, never a rendered count,
   // so counting failures in it is what lets a retry happen after an error.
