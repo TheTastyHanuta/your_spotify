@@ -32,30 +32,10 @@ export const matchArtistListens = (user: User, artistId: string) => ({
   artistIds: artistId,
 });
 
-// Every caller already selects listens by artist credit. Also requiring the
-// track's first artist to be that same artist dropped listens whose track was
-// merged into a release carrying different artist credits. The unwind still
-// discards listens whose track is missing.
-export const getArtistInfos = () => [
-  {
-    $lookup: {
-      from: "tracks",
-      let: { targetId: "$id" },
-      pipeline: [
-        { $match: { $expr: { $eq: ["$id", "$$targetId"] } } },
-        { $project: { trackId: "$id" } },
-      ],
-      as: "artistInfos",
-    },
-  },
-  { $unwind: "$artistInfos" },
-];
-
 export const getFirstAndLastListened = async (user: User, artistId: string) => {
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
-    ...getArtistInfos(),
     { $sort: { played_at: 1 } },
     {
       $group: {
@@ -69,7 +49,7 @@ export const getFirstAndLastListened = async (user: User, artistId: string) => {
         {
           $lookup: {
             from: "tracks",
-            localField: `${e}.artistInfos.trackId`,
+            localField: `${e}.id`,
             foreignField: "id",
             as: `${e}.track`,
           },
@@ -98,7 +78,6 @@ export const getMostListenedSongOfArtist = async (
   const res = await InfosModel.aggregate([
     // Non sense to compute blacklist here
     { $match: matchArtistListens(user, artistId) },
-    ...getArtistInfos(),
     { $group: { _id: "$id", count: { $sum: 1 } } },
     { $sort: { count: -1 } },
     { $limit: count },
@@ -128,13 +107,7 @@ export const bestPeriodOfArtist = async (user: User, artistId: string) => {
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
-    ...getArtistInfos(),
-    {
-      $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
-        artistInfos: 1,
-      },
-    },
+    { $project: getGroupByDateProjection(user.settings.timezone) },
     {
       $group: { _id: null, items: { $push: "$$CURRENT" }, total: { $sum: 1 } },
     },
@@ -160,7 +133,6 @@ export const getTotalListeningOfArtist = async (
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
-    ...getArtistInfos(),
     {
       $group: { _id: 1, count: { $sum: 1 }, differents: { $addToSet: "$id" } },
     },
@@ -203,11 +175,10 @@ export const getDayRepartitionOfArtist = (user: User, artistId: string) =>
   InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
     { $addFields: getGroupByDateProjection(user.settings.timezone) },
-    ...getArtistInfos(),
     {
       $lookup: {
         from: "tracks",
-        localField: "artistInfos.trackId",
+        localField: "id",
         foreignField: "id",
         as: "track",
       },

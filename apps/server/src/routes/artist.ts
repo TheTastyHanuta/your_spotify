@@ -61,7 +61,10 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     total,
     dayRepartition,
   ] = await Promise.all(promises);
-  if (!total) {
+  // firstLast is empty when the oldest or newest listen points at a track that
+  // no longer exists, which the missing-track repair normally prevents. The
+  // client dereferences it unguarded, so treat it like having no stats at all.
+  if (!total || !firstLast) {
     res.status(200).send({ code: "NEVER_LISTENED" });
     return;
   }
