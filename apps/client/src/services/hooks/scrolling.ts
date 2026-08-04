@@ -33,6 +33,7 @@ export function useInfiniteScroll<T>(
   const [items, setItems] = useState<T[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [autoFillCycle, setAutoFillCycle] = useState(0);
+  const [failedFetches, setFailedFetches] = useState(0);
 
   const ref = useRef<(force?: boolean) => Promise<void>>(async () => {});
   const isFetchingRef = useRef(false);
@@ -72,6 +73,12 @@ export function useInfiniteScroll<T>(
       setAutoFillCycle((prev) => prev + 1);
     } catch (e) {
       console.error(e);
+      // InfiniteScroll only re-arms its load guard when dataLength changes, so
+      // a failed request would otherwise leave the list stuck for good. Count
+      // the failure, it is part of the dataLength this hook reports.
+      if (generation === generationRef.current) {
+        setFailedFetches((prev) => prev + 1);
+      }
     } finally {
       if (generation === generationRef.current) {
         isFetchingRef.current = false;
@@ -91,6 +98,7 @@ export function useInfiniteScroll<T>(
     setHasMore(true);
     setItems([]);
     setAutoFillCycle(0);
+    setFailedFetches(0);
     // Defer the first load until after reset state is committed
     const timeout = setTimeout(() => {
       void ref.current(true);
@@ -112,5 +120,7 @@ export function useInfiniteScroll<T>(
     return () => clearTimeout(timeout);
   }, [autoFillCycle, hasMore]);
 
-  return { items, hasMore, onNext };
+  // dataLength is only a reset key for InfiniteScroll, never a rendered count,
+  // so counting failures in it is what lets a retry happen after an error.
+  return { items, hasMore, onNext, dataLength: items.length + failedFetches };
 }

@@ -15,7 +15,7 @@ import s from "./index.module.css";
 
 export default function Albums() {
   const { interval } = useSelector(selectRawIntervalDetail);
-  const { items, hasMore, onNext } = useInfiniteScroll(
+  const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     interval,
     api.getBestAlbums,
   );
@@ -31,7 +31,8 @@ export default function Albums() {
           <InfiniteScroll
             next={onNext}
             hasMore={hasMore}
-            dataLength={items.length}
+            dataLength={dataLength}
+            hasChildren={items.length > 0}
             loader={<Loader />}>
             <GridWrapper>
               <AlbumHeader />

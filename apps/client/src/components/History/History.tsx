@@ -25,7 +25,7 @@ export default function History() {
   const { interval } = useSelector(selectRawIntervalDetail);
   const { interval: allInterval } = useSelector(selectRawAllInterval);
   const [followInterval, setFollowInterval] = useState(true);
-  const { items, hasMore, onNext } = useInfiniteScroll(
+  const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     followInterval ? interval : allInterval,
     api.getTracks,
   );
@@ -53,7 +53,8 @@ export default function History() {
           selected={selectedTracks}
           setSelected={setSelectedTracks}>
           <InfiniteScroll
-            dataLength={items.length}
+            dataLength={dataLength}
+            hasChildren={items.length > 0}
             next={onNext}
             hasMore={hasMore}
             loader={<Loader />}>

@@ -13,7 +13,7 @@ import s from "./index.module.css";
 
 export default function Artists() {
   const { interval } = useSelector(selectRawIntervalDetail);
-  const { items, hasMore, onNext } = useInfiniteScroll(
+  const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     interval,
     api.getBestArtists,
   );
@@ -29,7 +29,8 @@ export default function Artists() {
           <InfiniteScroll
             next={onNext}
             hasMore={hasMore}
-            dataLength={items.length}
+            dataLength={dataLength}
+            hasChildren={items.length > 0}
             loader={<Loader />}>
             <GridWrapper>
               <ArtistHeader />

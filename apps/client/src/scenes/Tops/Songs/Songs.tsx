@@ -26,7 +26,7 @@ import s from "./index.module.css";
 export default function Songs() {
   const { interval } = useSelector(selectRawIntervalDetail);
 
-  const { items, hasMore, onNext } = useInfiniteScroll(
+  const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     interval,
     api.getBestSongs,
   );
@@ -58,7 +58,8 @@ export default function Songs() {
               <InfiniteScroll
                 next={onNext}
                 hasMore={hasMore}
-                dataLength={items.length}
+                dataLength={dataLength}
+                hasChildren={items.length > 0}
                 loader={<Loader />}>
                 <GridWrapper>
                   <TrackHeader />
