@@ -12,6 +12,7 @@ import { credentials } from "../tools/oauth/credentials";
 const DEFAULT_MONGO_ENDPOINT = "mongodb://mongo:27017/your_spotify";
 const UPDATE_BATCH_SIZE = 1000;
 const SPOTIFY_FETCH_BATCH_SIZE = 50;
+const MAX_REPOINT_PASSES = 10;
 
 type TrackDocument = HydratedDocument<Track>;
 
@@ -36,6 +37,7 @@ export interface MergeTracksByIsrcSummary {
   redundantTracks: number;
   infosUpdated: number;
   tracksMarkedMerged: number;
+  strayListensRepointed: number;
   elapsedMs: number;
   reportPath: string;
 }
@@ -217,6 +219,69 @@ async function backfillMissingIsrcs() {
   }
 
   return { tracks: tracksMissingIsrc, backfilledCount };
+}
+
+// The polling loop and the importers resolve a track id before they write the
+// listen. A listen resolved just before its track was marked as merged can land
+// on that secondary track after the migration already re-pointed its listens,
+// and the main scan can never find it again because it skips merged tracks.
+// Sweeping every merged track at the end catches those, which also means that
+// running the migration again repairs a database where it already happened.
+async function getSecondaryIdsByPrimaryId() {
+  const mergedTracks = await TrackModel.find({
+    mergedInto: { $exists: true, $ne: null },
+  });
+
+  const secondaryIdsByPrimaryId = new Map<string, string[]>();
+  for (const track of mergedTracks) {
+    if (!track.mergedInto) {
+      continue;
+    }
+    const group = secondaryIdsByPrimaryId.get(track.mergedInto) ?? [];
+    group.push(track.id);
+    secondaryIdsByPrimaryId.set(track.mergedInto, group);
+  }
+  return secondaryIdsByPrimaryId;
+}
+
+async function countListensOnMergedTracks() {
+  const secondaryIdsByPrimaryId = await getSecondaryIdsByPrimaryId();
+
+  let total = 0;
+  for (const secondaryIds of secondaryIdsByPrimaryId.values()) {
+    for (const secondaryIdBatch of chunk(secondaryIds, UPDATE_BATCH_SIZE)) {
+      total += await InfosModel.countDocuments({
+        id: { $in: secondaryIdBatch },
+      });
+    }
+  }
+  return total;
+}
+
+async function repointListensOnMergedTracks() {
+  let repointed = 0;
+  for (let pass = 0; pass < MAX_REPOINT_PASSES; pass += 1) {
+    const secondaryIdsByPrimaryId = await getSecondaryIdsByPrimaryId();
+
+    let repointedInPass = 0;
+    for (const [primaryId, secondaryIds] of secondaryIdsByPrimaryId) {
+      for (const secondaryIdBatch of chunk(secondaryIds, UPDATE_BATCH_SIZE)) {
+        const update = await InfosModel.updateMany(
+          { id: { $in: secondaryIdBatch } },
+          { $set: { id: primaryId } },
+        );
+        repointedInPass += update.modifiedCount;
+      }
+    }
+
+    repointed += repointedInPass;
+    if (repointedInPass === 0) {
+      return { repointed, incomplete: false };
+    }
+  }
+  // A secondary pointing at another merged track resolves on the next pass, so
+  // only a cycle in mergedInto can use up every pass.
+  return { repointed, incomplete: true };
 }
 
 async function writeExistingMergeAudit(report: MigrationReport) {
@@ -434,6 +499,30 @@ export async function mergeTracksByIsrc({
     await report.write("");
   }
 
+  console.log("Step 4: checking for listens left on merged tracks");
+  await report.section("Listens Left On Merged Tracks");
+  let strayListensRepointed = 0;
+  if (dryRun) {
+    const strays = await countListensOnMergedTracks();
+    console.log(`${strays} listen records are still attached to merged tracks`);
+    await report.write(
+      `Listen records still attached to merged tracks: ${strays}`,
+    );
+    await report.write("Action: dry-run only, no database writes");
+  } else {
+    const { repointed, incomplete } = await repointListensOnMergedTracks();
+    strayListensRepointed = repointed;
+    console.log(`Re-pointed ${repointed} listen records left on merged tracks`);
+    await report.write(
+      `Listen records re-pointed from merged tracks: ${repointed}`,
+    );
+    if (incomplete) {
+      const warning = `Stopped after ${MAX_REPOINT_PASSES} passes, check mergedInto for a cycle`;
+      console.warn(warning);
+      await report.write(warning);
+    }
+  }
+
   const mergedAuditCount = await writeExistingMergeAudit(report);
   const elapsedMs = Date.now() - startedAt;
   const summary: MergeTracksByIsrcSummary = {
@@ -442,6 +531,7 @@ export async function mergeTracksByIsrc({
     redundantTracks,
     infosUpdated,
     tracksMarkedMerged,
+    strayListensRepointed,
     elapsedMs,
     reportPath,
   };
@@ -456,6 +546,9 @@ export async function mergeTracksByIsrc({
     `Total secondary tracks marked as merged: ${summary.tracksMarkedMerged}`,
   );
   await report.write(
+    `Total listens re-pointed from merged tracks: ${summary.strayListensRepointed}`,
+  );
+  await report.write(
     `Total currently merged secondary tracks: ${mergedAuditCount}`,
   );
   await report.write(`Elapsed time: ${summary.elapsedMs}ms`);
@@ -467,6 +560,9 @@ export async function mergeTracksByIsrc({
   console.log(`Total listen records re-pointed: ${summary.infosUpdated}`);
   console.log(
     `Total secondary tracks marked as merged: ${summary.tracksMarkedMerged}`,
+  );
+  console.log(
+    `Total listens re-pointed from merged tracks: ${summary.strayListensRepointed}`,
   );
   console.log(`Total currently merged secondary tracks: ${mergedAuditCount}`);
   console.log(`Elapsed time: ${summary.elapsedMs}ms`);

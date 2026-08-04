@@ -101,6 +101,19 @@ Open `isrc-dry-run-report.md` and check:
 
 Only run apply mode after reviewing the dry-run report.
 
+The migration runs as its own process while the app keeps polling Spotify. A
+listen recorded during the run can therefore land on a track that the migration
+has just merged. The migration re-points those listens at the end of the run, so
+this repairs itself, but avoid starting a history import while apply mode is
+running. Imports write far more listens than the polling loop and take long
+enough to still be running when the migration finishes.
+
+If you suspect listens were recorded on merged tracks, run apply mode again. The
+final sweep looks at every merged track, not only the duplicates found by this
+run, so a second run repairs anything the first one raced with. A dry run
+reports the same number under "Listens Left On Merged Tracks" without changing
+anything.
+
 ```bash
 docker compose exec server \
   node /app/apps/server/build/index.js --merge-tracks-by-isrc \
