@@ -136,11 +136,13 @@ export const getCollaborativeBestAlbums = (
       },
     },
     { $unwind: "$data" },
-    { $lookup: lightTrackLookupPipeline("data.id") },
-    { $unwind: "$track" },
     {
+      // Group on the album the listen was recorded against, not the album of
+      // the canonical track. After an ISRC merge those differ, and using the
+      // canonical one reattributes singles and alternate releases. Ordinary
+      // album stats already use albumId.
       $group: {
-        _id: "$track.album",
+        _id: "$data.albumId",
         ...fromPairs(
           users.map((user) => [
             user.toString(),
@@ -218,12 +220,12 @@ export const getCollaborativeBestArtists = (
       },
     },
     { $unwind: "$data" },
-    { $lookup: lightTrackLookupPipeline("data.id") },
-    { $unwind: "$track" },
-    { $addFields: { "track.artist": { $first: "$track.artists" } } },
     {
+      // Same reasoning as the album variant: primaryArtistId is who was
+      // credited when the listen happened, the canonical track's first artist
+      // can be someone else entirely.
       $group: {
-        _id: "$track.artist",
+        _id: "$data.primaryArtistId",
         ...fromPairs(
           users.map((user) => [
             user.toString(),
