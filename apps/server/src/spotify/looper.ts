@@ -16,13 +16,9 @@ const RETRY = 10;
 const loop = async (user: User) => {
   logger.info(`[${user.username}]: refreshing...`);
 
-  if (!user.accessToken) {
-    logger.error(
-      `User ${user.username} has not access token, please relog to Spotify`,
-    );
-    return;
-  }
-
+  // No early return on a missing access token: checkToken either refreshes it
+  // or flags the account as needing a reconnection. Returning here left those
+  // accounts silently untracked, even when a refresh could still have worked.
   const url = `/me/player/recently-played?after=${
     user.lastTimestamp - 1000 * 60 * 60 * 2
   }`;

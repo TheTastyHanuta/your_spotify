@@ -24,6 +24,17 @@ interface SpotifyPlaylist {
 export class SpotifyAPI {
   constructor(private readonly userId: string) {}
 
+  // The account cannot authenticate on its own anymore. Discard what is left
+  // and flag it, so the client knows to ask for a Spotify reconnection.
+  private async requireReauth(userId: Types.ObjectId, username: string) {
+    await storeInUser("_id", userId, {
+      accessToken: null,
+      refreshToken: null,
+      spotifyReauthRequired: true,
+    });
+    return new SpotifyReauthRequiredError(username);
+  }
+
   private async checkToken() {
     const user = await getUserFromField(
       "_id",
@@ -41,7 +52,9 @@ export class SpotifyAPI {
     if (Date.now() > user.expiresIn - 1000 * 120) {
       const token = user.refreshToken;
       if (!token) {
-        throw new SpotifyReauthRequiredError(user.username);
+        // Nothing left to refresh with, which is how accounts that were
+        // discarded before the flag existed present themselves.
+        throw await this.requireReauth(user._id, user.username);
       }
       let infos;
       try {
@@ -54,12 +67,7 @@ export class SpotifyAPI {
         ) {
           // Spotify expires refresh tokens six months after the authorization
           // and asks us to discard them instead of retrying.
-          await storeInUser("_id", user._id, {
-            accessToken: null,
-            refreshToken: null,
-            spotifyReauthRequired: true,
-          });
-          throw new SpotifyReauthRequiredError(user.username);
+          throw await this.requireReauth(user._id, user.username);
         }
         throw e;
       }
@@ -68,11 +76,10 @@ export class SpotifyAPI {
       logger.info(`Refreshed token for ${user.username}`);
       access = infos.accessToken;
     }
-    if (access) {
-      return spotifyProvider.getHttpClient(access);
-    } else {
-      throw new Error("Could not get any access token");
+    if (!access) {
+      throw await this.requireReauth(user._id, user.username);
     }
+    return spotifyProvider.getHttpClient(access);
   }
 
   public async raw(url: string) {
