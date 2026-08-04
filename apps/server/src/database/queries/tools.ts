@@ -1,5 +1,4 @@
 import { AlbumModel, InfosModel, TrackModel, UserModel } from "../Models";
-import { Album } from "../schemas/album";
 import { Infos } from "../schemas/info";
 import { Track } from "../schemas/track";
 
@@ -33,8 +32,12 @@ export const getTracksWithoutAlbum = () =>
     { $match: { full_album: null } },
   ]);
 
+// Unwinds the album's own artist ids first, so every id is looked up on its
+// own. Looking up the whole array instead only reports albums where *no*
+// artist exists, and gives no way back to the ids that are missing.
 export const getAlbumsWithoutArtist = () =>
-  AlbumModel.aggregate<Album & { index: number }>([
+  AlbumModel.aggregate<{ id: string; missingArtistId: string }>([
+    { $unwind: "$artists" },
     {
       $lookup: {
         from: "artists",
@@ -43,12 +46,7 @@ export const getAlbumsWithoutArtist = () =>
         foreignField: "id",
       },
     },
-    {
-      $unwind: {
-        path: "$full_artists",
-        preserveNullAndEmptyArrays: true,
-        includeArrayIndex: "index",
-      },
-    },
+    { $unwind: { path: "$full_artists", preserveNullAndEmptyArrays: true } },
     { $match: { full_artists: null } },
+    { $project: { id: 1, missingArtistId: "$artists" } },
   ]);

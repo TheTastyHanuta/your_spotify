@@ -25,7 +25,6 @@ import { getWithDefault } from "./env";
 import { longWriteDbLock } from "./lock";
 import { logger } from "./logger";
 import { uniq } from "./misc";
-import { compact } from "./utils";
 
 export class Database {
   static async detectUpgrade() {
@@ -83,9 +82,9 @@ export class Database {
     }
     const allAlbums = await getAlbumsWithoutArtist();
     if (allAlbums.length > 0) {
-      const artistIds = uniq(compact(allAlbums.map((t) => t.artists[t.index])));
+      const artistIds = uniq(allAlbums.map((album) => album.missingArtistId));
       logger.info(
-        `Fixing missing artists for albums ${allAlbums.map((track) => track.id).join(",")} (${artistIds.join(",")})`,
+        `Fixing missing artists for albums ${uniq(allAlbums.map((album) => album.id)).join(",")} (${artistIds.join(",")})`,
       );
       const artists = await getArtists(user._id.toString(), artistIds);
       await storeTrackAlbumArtist({ artists });
