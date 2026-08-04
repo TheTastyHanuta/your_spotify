@@ -18,7 +18,7 @@ export const InfosSchema = new Schema<Infos>(
     id: { type: String, index: true },
     albumId: { type: String, index: true },
     primaryArtistId: { type: String, index: true },
-    artistIds: [{ type: String }],
+    artistIds: [{ type: String, index: true }],
 
     durationMs: { type: Number },
 

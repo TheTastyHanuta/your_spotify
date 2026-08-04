@@ -28,6 +28,14 @@ export default function ArtistRank({ artistId }: ArtistRankProps) {
     );
   }
 
+  // The rank only counts listens where the artist is the primary one, like the
+  // top artists page. An artist you only ever heard as a feature is not in it.
+  if (artistRank.index < 0) {
+    return (
+      <Text size="normal">Not in your top artists, only featured listens</Text>
+    );
+  }
+
   return (
     <div className={s.ranks}>
       {artistRank.results.map((rank, k, a) => (

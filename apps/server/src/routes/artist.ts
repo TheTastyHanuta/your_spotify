@@ -94,9 +94,10 @@ router.get("/:id/rank", isLoggedOrGuest, async (req, res) => {
 const search = z.object({ query: z.string().min(3).max(64) });
 
 router.get("/search/:query", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
   const { query } = validate(req.params, search);
 
-  const results = await searchArtist(query);
+  const results = await searchArtist(user, query);
   res.status(200).send(results);
 });
 

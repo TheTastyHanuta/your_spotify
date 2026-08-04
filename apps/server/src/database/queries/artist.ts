@@ -6,14 +6,36 @@ import { getGroupByDateProjection, getGroupingByTimeSplit } from "./statsTools";
 export const getArtists = (artistIds: string[]) =>
   ArtistModel.find({ id: { $in: artistIds } });
 
-export const searchArtist = (str: string) =>
-  ArtistModel.find({ name: { $regex: new RegExp(str, "i") } });
+// Only artists the user has a listen credited to, so the album artists pulled
+// in by the missing-artist repair job (composers, orchestras, cast recordings)
+// stop showing up as results whose page then says "never listened". Matching on
+// artistIds keeps featured artists searchable, like before that job worked.
+export const searchArtist = async (user: User, str: string) => {
+  const artists = await ArtistModel.find({
+    name: { $regex: new RegExp(str, "i") },
+  });
+  const listened = new Set<string>(
+    await InfosModel.distinct("artistIds", {
+      owner: user._id,
+      artistIds: { $in: artists.map((artist) => artist.id) },
+    }),
+  );
+  return artists.filter((artist) => listened.has(artist.id));
+};
 
-// Every caller already selects listens by primaryArtistId, which is the artist
-// credited when the listen was recorded. Also requiring the track's first
-// artist to be that same artist dropped listens whose track was merged into a
-// release carrying different artist credits. The unwind still discards listens
-// whose track is missing.
+// Same criterion as searchArtist, so every artist a search returns has stats to
+// show: a listen counts for each artist credited on it, not only the primary
+// one. Top pages still rank by primaryArtistId alone, so a featured artist can
+// have listens here and no rank.
+export const matchArtistListens = (user: User, artistId: string) => ({
+  owner: user._id,
+  artistIds: artistId,
+});
+
+// Every caller already selects listens by artist credit. Also requiring the
+// track's first artist to be that same artist dropped listens whose track was
+// merged into a release carrying different artist credits. The unwind still
+// discards listens whose track is missing.
 export const getArtistInfos = () => [
   {
     $lookup: {
@@ -32,7 +54,7 @@ export const getArtistInfos = () => [
 export const getFirstAndLastListened = async (user: User, artistId: string) => {
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     ...getArtistInfos(),
     { $sort: { played_at: 1 } },
     {
@@ -75,7 +97,7 @@ export const getMostListenedSongOfArtist = async (
 ) => {
   const res = await InfosModel.aggregate([
     // Non sense to compute blacklist here
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     ...getArtistInfos(),
     { $group: { _id: "$id", count: { $sum: 1 } } },
     { $sort: { count: -1 } },
@@ -105,7 +127,7 @@ export const getMostListenedSongOfArtist = async (
 export const bestPeriodOfArtist = async (user: User, artistId: string) => {
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     ...getArtistInfos(),
     {
       $project: {
@@ -137,7 +159,7 @@ export const getTotalListeningOfArtist = async (
 ) => {
   // Non sense to compute blacklist here
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     ...getArtistInfos(),
     {
       $group: { _id: 1, count: { $sum: 1 }, differents: { $addToSet: "$id" } },
@@ -159,7 +181,7 @@ export const getMostListenedAlbumOfArtist = async (
   artistId: string,
 ) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     { $group: { _id: "$albumId", count: { $sum: 1 } } },
     { $sort: { count: -1 } },
     {
@@ -179,7 +201,7 @@ export const getMostListenedAlbumOfArtist = async (
 export const getDayRepartitionOfArtist = (user: User, artistId: string) =>
   // Non sense to compute blacklist here
   InfosModel.aggregate([
-    { $match: { owner: user._id, primaryArtistId: artistId } },
+    { $match: matchArtistListens(user, artistId) },
     { $addFields: getGroupByDateProjection(user.settings.timezone) },
     ...getArtistInfos(),
     {
