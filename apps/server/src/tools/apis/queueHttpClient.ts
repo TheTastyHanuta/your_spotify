@@ -209,11 +209,17 @@ export class QueuedHttpClient {
 
       const retryAfterMs = this.parseRetryAfterHeader(response);
       await this.sleep(retryAfterMs);
+      // The requeued item settles the caller's promise when it runs again.
+      // Falling through here would parse an already consumed body, reject the
+      // caller, and still replay the request afterwards.
+      return;
     }
 
-    const data = await response.json();
+    // Spotify answers some requests (playback control, for instance) with an
+    // empty 204, which is a success and not parsable as JSON.
+    const text = await response.text();
     queueItem.resolve({
-      data,
+      data: (text ? JSON.parse(text) : undefined) as T,
       status: response.status,
       statusText: response.statusText,
     });
