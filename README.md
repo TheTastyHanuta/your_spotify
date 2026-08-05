@@ -11,6 +11,18 @@
 **YourSpotify** is a self-hosted application that tracks what you listen and offers you a dashboard to explore statistics about it!
 It's composed of a web server which polls the Spotify API every now and then and a web application on which you can explore your statistics.
 
+> **This is a fork** of [Yooooomi/your_spotify](https://github.com/Yooooomi/your_spotify) with some additional features on top of upstream. I try to stay in sync with upstream regularly. This fork adds:
+>
+> - **Track deduplication by ISRC** - merges duplicate tracks (e.g. different releases/remasters of the same song) into a single entry with combined listen history
+> - **Multi-artist support** - track and album pages now show every credited artist (labeled main/featured), not just one; artist pages and search now work for artists you've only ever heard as a featured credit (previously showed "never listened"); and the artist page separates primary listens from featured-artist listens
+> - **Listened album context** - track and history views show which specific album version a track was actually played from
+> - **Better Spotify auth handling** - detects when Spotify has revoked your tokens and shows a re-authentication prompt instead of failing silently
+> - Various fixes for infinite scroll and importer reliability
+>
+> This is a personal fork and not officially affiliated with or supported by the upstream project. For the original application, see the link above.
+>
+> **No warranty.** This fork is provided as-is, with no guarantee it will work correctly and no support commitment. Back up your database before upgrading or running any [migration](#fork-specific-migrations) below, and use it at your own risk.
+
 # Table of contents
 
 - [Prerequisites](#prerequisites)
@@ -25,6 +37,8 @@ It's composed of a web server which polls the Spotify API every now and then and
     - [Privacy data](#privacy-data)
     - [Full privacy data](#full-privacy-data-recommended)
   - [Troubleshoot](#troubleshoot)
+- [Fork-specific migrations](#fork-specific-migrations)
+  - [ISRC track deduplication](#isrc-track-deduplication)
 - [FAQ](#faq)
 - [External guides](#external-guides)
 - [Contributing](#contributing)
@@ -74,7 +88,6 @@ services:
     image: mongo:8
     volumes:
       - ./your_spotify_db:/data/db
-
 ```
 
 ## Installing locally (not recommended)
@@ -83,24 +96,24 @@ You can follow the instructions [here](https://github.com/Yooooomi/your_spotify/
 
 ## Environment
 
-| Key | Default value (if any) | Description |
-| :--- | :--- | :--- |
-| CLIENT_ENDPOINT       | REQUIRED | The endpoint of your web application |
-| API_ENDPOINT          | REQUIRED | The endpoint of your server |
-| SPOTIFY_PUBLIC        | REQUIRED | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application)) |
-| SPOTIFY_SECRET        | REQUIRED | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application)) |
-| TIMEZONE              | Europe/Paris | The timezone of your stats, only affects read requests since data is saved with UTC time |
-| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file |
-| PROMETHEUS_USERNAME             | _not defined_ | Prometheus basic auth username (see [here](https://github.com/Yooooomi/your_spotify/tree/master/apps/server#prometheus)) |
-| PROMETHEUS_PASSWORD             | _not defined_ | Prometheus basic auth password |
-| LOG_LEVEL             | info | The log level, debug is useful if you encouter any bugs |
-| CORS                  | _not defined_ | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT) |
-| COOKIE_VALIDITY_MS    | 1h | Validity time of the authentication cookie, following [this pattern](https://github.com/vercel/ms) |
-| MAX_IMPORT_CACHE_SIZE | Infinite | The maximum element in the cache when importing data from an outside source, more cache means less requests to Spotify, resulting in faster imports |
-| MONGO_NO_ADMIN_RIGHTS | false | Do not ask for admin right on the Mongo database |
-| PORT                  | 8080 | The port of the server, **do not** modify if you're using docker |
-| FRAME_ANCESTORS       | _not defined_ | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
-| SPOTIFY_API_DELAY_MS   | 2000 | Minimum delay in milliseconds between each spotify request. Can help with hitting 429 when importing data |
+| Key                   | Default value (if any)             | Description                                                                                                                                                       |
+| :-------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLIENT_ENDPOINT       | REQUIRED                           | The endpoint of your web application                                                                                                                              |
+| API_ENDPOINT          | REQUIRED                           | The endpoint of your server                                                                                                                                       |
+| SPOTIFY_PUBLIC        | REQUIRED                           | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
+| SPOTIFY_SECRET        | REQUIRED                           | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
+| TIMEZONE              | Europe/Paris                       | The timezone of your stats, only affects read requests since data is saved with UTC time                                                                          |
+| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file                                                               |
+| PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](https://github.com/Yooooomi/your_spotify/tree/master/apps/server#prometheus))                                          |
+| PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                    |
+| LOG_LEVEL             | info                               | The log level, debug is useful if you encouter any bugs                                                                                                           |
+| CORS                  | _not defined_                      | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                |
+| COOKIE_VALIDITY_MS    | 1h                                 | Validity time of the authentication cookie, following [this pattern](https://github.com/vercel/ms)                                                                |
+| MAX_IMPORT_CACHE_SIZE | Infinite                           | The maximum element in the cache when importing data from an outside source, more cache means less requests to Spotify, resulting in faster imports               |
+| MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                  |
+| PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                  |
+| FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
+| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each spotify request. Can help with hitting 429 when importing data                                                         |
 
 ## Advanced CORS settings
 
@@ -118,7 +131,9 @@ To do so, you need to create a **Spotify application** [here](https://developer.
 1. Click on **Create app**.
 2. Fill out all the information.
 3. Set the redirect URI, corresponding to your **server** location on the internet (or your local network) adding the suffix **/oauth/spotify/callback** (**/api/oauth/spotify/callback** if using the [linuxserver](https://github.com/linuxserver/docker-your_spotify) image).
+
 - i.e: `http://localhost:8080/oauth/spotify/callback` or `http://home.mydomain.com/your_spotify_backend/oauth/spotify/callback`
+
 4. Check **Web API**
 5. Check **I understand and agree**
 6. Hit **Settings** at the top right corner
@@ -160,12 +175,21 @@ The import process uses cache to limit requests to the Spotify API. By default, 
 ## Troubleshoot
 
 An import can fail:
+
 - If the server reboots.
 - If a request fails 10 times in a row.
 
 A failed import can be retried in the **Settings** page. Be sure to clean your failed imports if you do not want to retry it as it will remove the files used for it.
 
 It is safer to import data at account creation. Though **YourSpotify** detects duplicates, some may still be inserted.
+
+# Fork-specific migrations
+
+## ISRC track deduplication
+
+If you already had an instance running before switching to this fork, your database may contain duplicate tracks that are really the same song (e.g. from a single vs. an album re-release), which this fork's [track deduplication](#your-spotify) feature does not clean up retroactively. A one-off, opt-in migration script is included to merge those; it defaults to a dry run and includes backup/rollback steps.
+
+See [`apps/server/ISRC_DEDUPLICATION.md`](apps/server/ISRC_DEDUPLICATION.md) for the full guide.
 
 # FAQ
 
@@ -196,4 +220,3 @@ If you have any issue or any idea that could make the project better, feel free 
 # Sponsoring
 
 I work on this project on my spare time and try to fix issues as soon as I can. If you feel generous and think this project and my investment are worth a few cents, you can consider sponsoring it with the button on the right, many thanks.
-
