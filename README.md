@@ -27,13 +27,10 @@ It's composed of a web server which polls the Spotify API every now and then and
 ## Table of contents
 
 - [Prerequisites](#prerequisites)
-- [Creating the Spotify application](#creating-the-spotify-application)
 - [Installation](#installation)
+  - [Choose how to access YourSpotify](#choose-how-to-access-yourspotify)
+  - [Creating the Spotify application](#creating-the-spotify-application)
   - [Using Docker Compose](#using-docker-compose)
-  - [Environment variables](#environment-variables)
-  - [Advanced CORS settings](#advanced-cors-settings)
-  - [Building the images yourself](#building-the-images-yourself)
-  - [Installing locally (not recommended)](#installing-locally-not-recommended)
 - [Updating](#updating)
 - [Importing past history](#importing-past-history)
   - [Supported import methods](#supported-import-methods)
@@ -42,6 +39,11 @@ It's composed of a web server which polls the Spotify API every now and then and
   - [Troubleshooting](#troubleshooting)
 - [Fork-specific migrations](#fork-specific-migrations)
   - [ISRC track deduplication](#isrc-track-deduplication)
+- [Advanced setup](#advanced-setup)
+  - [Environment variables](#environment-variables)
+  - [Advanced CORS settings](#advanced-cors-settings)
+  - [Building the images yourself](#building-the-images-yourself)
+  - [Installing locally (not recommended)](#installing-locally-not-recommended)
 - [FAQ](#faq)
 - [External guides](#external-guides)
 - [Contributing](#contributing)
@@ -50,46 +52,18 @@ It's composed of a web server which polls the Spotify API every now and then and
 
 ## Prerequisites
 
-1. A machine with [Docker](https://docs.docker.com/get-started/get-docker/) and Docker Compose (the `docker compose` command).
-2. A Spotify application, see [Creating the Spotify application](#creating-the-spotify-application). The server needs its **public** AND **secret** key.
-3. An **authorized** redirect URI in the Spotify application that points to your server.
-
-## Creating the Spotify application
-
-For **YourSpotify** to work you need to provide a Spotify application **public** AND **secret** to the server environment.
-To do so, you need to create a **Spotify application** [here](https://developer.spotify.com/dashboard/applications).
-
-1. Click on **Create app**.
-2. Fill out all the information.
-3. Set the redirect URI, corresponding to your **server** location on the internet (or your local network) adding the suffix **/oauth/spotify/callback**.
-   - i.e: `http://127.0.0.1:8080/oauth/spotify/callback` or `https://home.mydomain.com/your_spotify_backend/oauth/spotify/callback`
-4. Check **Web API**
-5. Check **I understand and agree**
-6. Hit **Settings** at the top right corner
-7. Copy the **public** and the **secret** key into your compose file under the name of `SPOTIFY_PUBLIC` and `SPOTIFY_SECRET` respectively.
-8. Once you have created your application, Spotify wants you to register the users that will be able to access the application. (You don't need to do that for the account that created the application)
-   1. Click the **User Management** button
-   2. Enter the required information, a name and the email the user's Spotify account has been created with.
-   3. (Optional) You can **Request extension** if you do not want to register the users by hand.
+1. For the recommended installation, a machine with [Docker](https://docs.docker.com/get-started/get-docker/) and Docker Compose (the `docker compose` command). The separate [local installation guide](LOCAL_INSTALL.md) lists its own requirements.
+2. A Spotify account and access to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications).
 
 ## Installation
 
-### Using Docker Compose
+### Choose how to access YourSpotify
 
-The images are published on the GitHub Container Registry:
-
-- `ghcr.io/thetastyhanuta/your_spotify_server`
-- `ghcr.io/thetastyhanuta/your_spotify_client`
-
-The `latest` tag is the newest release, `nightly` follows the `master` branch.
-
-Create a `compose.yaml` file like the one below (also available as [docker-compose-example.yml](docker-compose-example.yml)) and start it with `docker compose up -d`.
-
-Choose the setup that matches how you will access YourSpotify:
+Choose your endpoints before creating the Spotify application:
 
 #### On the device running Docker
 
-Keep the provided `127.0.0.1` values, open `http://127.0.0.1:3000`, and register this Spotify redirect URI:
+Use the provided `127.0.0.1` values, open `http://127.0.0.1:3000`, and use this Spotify redirect URI:
 
 ```text
 http://127.0.0.1:8080/oauth/spotify/callback
@@ -97,7 +71,7 @@ http://127.0.0.1:8080/oauth/spotify/callback
 
 #### From another device on the local network using SSH
 
-Keep the Compose configuration unchanged and make sure SSH is enabled on the Docker host. On the other device, run the following command and keep it open:
+Use the same `127.0.0.1` values and make sure SSH is enabled on the Docker host. On the other device, run the following command and keep it open:
 
 ```bash
 ssh -N -L 3000:127.0.0.1:3000 -L 8080:127.0.0.1:8080 pi@192.168.1.50
@@ -120,7 +94,27 @@ web:
     API_ENDPOINT: https://api.yourspotify.example.com
 ```
 
-Register `https://api.yourspotify.example.com/oauth/spotify/callback` as the Spotify redirect URI. Spotify [requires HTTPS](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri) unless the redirect uses a loopback address such as `127.0.0.1`.
+Use `https://api.yourspotify.example.com/oauth/spotify/callback` as the Spotify redirect URI. Spotify [requires HTTPS](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri) unless the redirect uses a loopback address such as `127.0.0.1`.
+
+### Creating the Spotify application
+
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and click **Create app**.
+2. Fill out the application information.
+3. Enter the redirect URI from the access option you chose above.
+4. Check **Web API** and **I understand and agree**, then create the application.
+5. Open **Settings** and copy the client ID and client secret. You will use them as `SPOTIFY_PUBLIC` and `SPOTIFY_SECRET` in the Compose file below.
+6. Add any other Spotify users who should have access under **User Management**. The account that created the application is added automatically.
+
+### Using Docker Compose
+
+The images are published on the GitHub Container Registry:
+
+- `ghcr.io/thetastyhanuta/your_spotify_server`
+- `ghcr.io/thetastyhanuta/your_spotify_client`
+
+The `latest` tag is the newest release, `nightly` follows the `master` branch.
+
+Create a `compose.yaml` file like the one below (also available as [docker-compose-example.yml](docker-compose-example.yml)). Replace the Spotify credentials and, when using an HTTPS reverse proxy, the endpoint values.
 
 ```yml
 services:
@@ -152,51 +146,11 @@ services:
       API_ENDPOINT: http://127.0.0.1:8080
 ```
 
-### Environment variables
-
-| Key                   | Default value (if any)             | Description                                                                                                                                                       |
-| :-------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLIENT_ENDPOINT       | REQUIRED                           | The endpoint of your web application                                                                                                                              |
-| API_ENDPOINT          | REQUIRED                           | The endpoint of your server                                                                                                                                       |
-| SPOTIFY_PUBLIC        | REQUIRED                           | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
-| SPOTIFY_SECRET        | REQUIRED                           | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
-| TIMEZONE              | Europe/Paris                       | The timezone of your stats, only affects read requests since data is saved with UTC time                                                                          |
-| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file                                                               |
-| PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](apps/server/README.md#prometheus))                                                                                     |
-| PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                    |
-| LOG_LEVEL             | info                               | The log level, debug is useful if you encounter any bugs                                                                                                          |
-| CORS                  | _not defined_                      | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                |
-| COOKIE_VALIDITY_MS    | 1h                                 | Validity time of the authentication cookie, following [this pattern](https://github.com/vercel/ms)                                                                |
-| MAX_IMPORT_CACHE_SIZE | 100000                             | The maximum number of cached items per user during an import. A larger cache reduces Spotify requests and can make imports faster                                 |
-| MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                  |
-| PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                  |
-| FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
-| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each Spotify request (imports, polling, login). Helps avoid being rate limited by Spotify when importing data               |
-
-### Advanced CORS settings
-
-**Manually specifying CORS configuration is not required for typical deployments.**
-99.9% of users do not need to worry about this, it is handled automatically.
-
-If your use case requires the backend to be used from multiple frontend origins, you can manually adjust the `CORS` variable.
-For example, a value of `origin1,origin2` will allow `origin1` and `origin2`.
-
-### Building the images yourself
-
-If you prefer not to use the published images, you can build them from this repository:
+Start YourSpotify from the directory containing the file:
 
 ```bash
-git clone https://github.com/TheTastyHanuta/your_spotify.git
-cd your_spotify
-docker build -f Dockerfile.server.production -t your_spotify_server .
-docker build -f Dockerfile.client.production -t your_spotify_client .
+docker compose up -d
 ```
-
-Then use `your_spotify_server` and `your_spotify_client` as the `image` of the `server` and `web` services in your compose file.
-
-### Installing locally (not recommended)
-
-You can follow the instructions [here](LOCAL_INSTALL.md). Note that you still need the [Spotify application](#creating-the-spotify-application).
 
 ## Updating
 
@@ -256,6 +210,54 @@ It is safer to import data at account creation. Though **YourSpotify** detects d
 If you already had an instance running before switching to this fork, your database may contain duplicate tracks that are really the same song (e.g. from a single vs. an album re-release), which this fork's [track deduplication](#your-spotify) feature does not clean up retroactively. A one-off, opt-in migration script is included to merge those; it defaults to a dry run and includes backup/rollback steps.
 
 See [`apps/server/ISRC_DEDUPLICATION.md`](apps/server/ISRC_DEDUPLICATION.md) for the full guide.
+
+## Advanced setup
+
+### Environment variables
+
+| Key                   | Default value (if any)             | Description                                                                                                                                                       |
+| :-------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLIENT_ENDPOINT       | REQUIRED                           | The endpoint of your web application                                                                                                                              |
+| API_ENDPOINT          | REQUIRED                           | The endpoint of your server                                                                                                                                       |
+| SPOTIFY_PUBLIC        | REQUIRED                           | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
+| SPOTIFY_SECRET        | REQUIRED                           | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
+| TIMEZONE              | Europe/Paris                       | The timezone of your stats, only affects read requests since data is saved with UTC time                                                                          |
+| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file                                                               |
+| PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](apps/server/README.md#prometheus))                                                                                     |
+| PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                    |
+| LOG_LEVEL             | info                               | The log level, debug is useful if you encounter any bugs                                                                                                          |
+| CORS                  | _not defined_                      | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                |
+| COOKIE_VALIDITY_MS    | 1h                                 | Validity time of the authentication cookie, following [this pattern](https://github.com/vercel/ms)                                                                |
+| MAX_IMPORT_CACHE_SIZE | 100000                             | The maximum number of cached items per user during an import. A larger cache reduces Spotify requests and can make imports faster                                 |
+| MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                  |
+| PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                  |
+| FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
+| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each Spotify request (imports, polling, login). Helps avoid being rate limited by Spotify when importing data               |
+
+### Advanced CORS settings
+
+**Manually specifying CORS configuration is not required for typical deployments.**
+99.9% of users do not need to worry about this, it is handled automatically.
+
+If your use case requires the backend to be used from multiple frontend origins, you can manually adjust the `CORS` variable.
+For example, a value of `origin1,origin2` will allow `origin1` and `origin2`.
+
+### Building the images yourself
+
+If you prefer not to use the published images, you can build them from this repository:
+
+```bash
+git clone https://github.com/TheTastyHanuta/your_spotify.git
+cd your_spotify
+docker build -f Dockerfile.server.production -t your_spotify_server .
+docker build -f Dockerfile.client.production -t your_spotify_client .
+```
+
+Then use `your_spotify_server` and `your_spotify_client` as the `image` of the `server` and `web` services in your compose file.
+
+### Installing locally (not recommended)
+
+You can follow the instructions [here](LOCAL_INSTALL.md). Note that you still need the [Spotify application](#creating-the-spotify-application).
 
 ## FAQ
 

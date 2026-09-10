@@ -38,6 +38,7 @@ WORKDIR /app
 
 RUN npm install -g serve
 
+COPY LICENSE /app/LICENSE
 COPY --from=builder /app/apps/client/scripts/ apps/client/scripts/
 COPY --from=builder /app/apps/client/build/ apps/client/build/
 
