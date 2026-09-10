@@ -8,11 +8,29 @@ import { getMinOfArray } from "./tools";
 import { Timesplit } from "./types";
 import { getFirstListenedAt } from "./user";
 
-const now = new Date();
-const startOfToday = startOfDay(now);
-const startOfThisWeek = startOfWeek(now);
-const startOfThisMonth = startOfMonth(now);
-const startOfThisYear = startOfYear(now);
+function computePresetDates() {
+  const now = new Date();
+  return {
+    now,
+    today: { timesplit: Timesplit.hour, start: startOfDay(now), end: now },
+    thisWeek: { timesplit: Timesplit.day, start: startOfWeek(now), end: now },
+    thisMonth: { timesplit: Timesplit.day, start: startOfMonth(now), end: now },
+    thisYear: { timesplit: Timesplit.month, start: startOfYear(now), end: now },
+  };
+}
+
+let presetDates = computePresetDates();
+
+// Preset ranges end now, so they are recomputed once they are a minute old
+// and a page left open picks up new listens and day changes. In between the
+// same objects are handed out: components fetch again whenever the dates
+// change identity.
+export function getPresetDates() {
+  if (Date.now() - presetDates.now.getTime() >= 60 * 1000) {
+    presetDates = computePresetDates();
+  }
+  return presetDates;
+}
 
 export interface Interval {
   timesplit: Timesplit;
@@ -56,25 +74,33 @@ export const presetIntervals = [
     type: "preset",
     name: "Today",
     unit: "day",
-    interval: { timesplit: Timesplit.hour, start: startOfToday, end: now },
+    get interval() {
+      return getPresetDates().today;
+    },
   },
   {
     type: "preset",
     name: "This week",
     unit: "week",
-    interval: { timesplit: Timesplit.day, start: startOfThisWeek, end: now },
+    get interval() {
+      return getPresetDates().thisWeek;
+    },
   },
   {
     type: "preset",
     name: "This month",
     unit: "month",
-    interval: { timesplit: Timesplit.day, start: startOfThisMonth, end: now },
+    get interval() {
+      return getPresetDates().thisMonth;
+    },
   },
   {
     type: "preset",
     name: "This year",
     unit: "year",
-    interval: { timesplit: Timesplit.month, start: startOfThisYear, end: now },
+    get interval() {
+      return getPresetDates().thisYear;
+    },
   },
 ] as const satisfies PresetIntervalDetail[];
 
@@ -83,6 +109,7 @@ export const userBasedIntervals: UserBasedIntervalDetails[] = [
     type: "userbased",
     name: "All",
     interval: (user) => {
+      const { now } = getPresetDates();
       const start = getFirstListenedAt(
         user ? new Date(user.firstListenedAt) : new Date(2010),
       );

@@ -1,9 +1,16 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { RootState } from "../..";
-import { getRawIntervalDetail, RawIntervalDetail } from "../../../intervals";
+import {
+  getPresetDates,
+  getRawIntervalDetail,
+  RawIntervalDetail,
+} from "../../../intervals";
 import { fromReduxIntervalDetail } from "./utils";
 
 const selectUserState = (state: RootState) => state.user;
+// Not part of the state on purpose: selectors using it hand out fresh preset
+// dates once those were recomputed, without anything being dispatched.
+const selectPresetDates = () => getPresetDates();
 
 export const selectLoaded = createSelector(
   selectUserState,
@@ -14,7 +21,7 @@ export const selectUser = createSelector(
   (state) => state.user,
 );
 export const selectInterval = createSelector(
-  selectUserState,
+  [selectUserState, selectPresetDates],
   (state) => fromReduxIntervalDetail(state.intervalDetail).interval,
 );
 
@@ -23,7 +30,7 @@ export const selectIntervalDetail = createSelector(selectUserState, (state) =>
 );
 
 export const selectRawIntervalDetail = createSelector(
-  selectUserState,
+  [selectUserState, selectPresetDates],
   (state): RawIntervalDetail =>
     getRawIntervalDetail(
       fromReduxIntervalDetail(state.intervalDetail),
@@ -32,7 +39,7 @@ export const selectRawIntervalDetail = createSelector(
 );
 
 export const selectRawAllInterval = createSelector(
-  selectUserState,
+  [selectUserState, selectPresetDates],
   (state): RawIntervalDetail =>
     getRawIntervalDetail(
       fromReduxIntervalDetail({ type: "userbased", index: 0 }),
