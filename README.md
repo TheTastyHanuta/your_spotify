@@ -17,7 +17,9 @@ It's composed of a web server which polls the Spotify API every now and then and
 > - **Multi-artist support** - track and album pages now show every credited artist (labeled main/featured), not just one; artist pages and search now work for artists you've only ever heard as a featured credit (previously showed "never listened"); and the artist page separates primary listens from featured-artist listens
 > - **Listened album context** - track and history views show which specific album version a track was actually played from
 > - **Better Spotify auth handling** - detects when Spotify has revoked your tokens and shows a re-authentication prompt instead of failing silently
-> - Various fixes for infinite scroll and importer reliability
+> - **Spotify rate limit handling** - a configurable pause between Spotify requests ([`SPOTIFY_API_DELAY_MS`](#environment)) makes bans less likely; when Spotify does ban the app for hours, imports and logins fail with a clear log message and the server still starts, instead of everything hanging silently
+> - **Importer reliability** - imports no longer silently drop listens, resume from the right place after a failure, and clean up their uploaded files
+> - Various fixes: infinite scroll, affinity stats on empty ranges and large histories, album page crash, searching with special characters, date presets in tabs left open for a long time
 >
 > This is a personal fork and not officially affiliated with or supported by the upstream project. For the original application, see the link above.
 >
@@ -113,7 +115,7 @@ You can follow the instructions [here](https://github.com/Yooooomi/your_spotify/
 | MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                  |
 | PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                  |
 | FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
-| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each spotify request. Can help with hitting 429 when importing data                                                         |
+| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each Spotify request (imports, polling, login). Helps avoid being rate limited by Spotify when importing data               |
 
 ## Advanced CORS settings
 
@@ -178,6 +180,7 @@ An import can fail:
 
 - If the server reboots.
 - If a request fails 10 times in a row.
+- If Spotify rate limits the application for a long time. The server log shows until when, retry the import after that.
 
 A failed import can be retried in the **Settings** page. Be sure to clean your failed imports if you do not want to retry it as it will remove the files used for it.
 
