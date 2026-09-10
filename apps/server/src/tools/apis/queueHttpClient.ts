@@ -1,3 +1,5 @@
+import { logger } from "../logger";
+
 export type RequestPriority = "normal" | "high";
 
 interface HttpClientRequestConfig {
@@ -27,6 +29,8 @@ interface QueueState {
   highPriorityQueue: QueueItem<any>[];
   normalPriorityQueue: QueueItem<any>[];
   isProcessingQueue: boolean;
+  // Timestamp until which every request fails without being sent
+  rateLimitedUntil: number;
 }
 
 export class HttpError extends Error {
@@ -44,14 +48,29 @@ export class HttpError extends Error {
   }
 }
 
+export class RateLimitedError extends HttpError {
+  constructor(public readonly until: Date) {
+    super({
+      status: 429,
+      statusText: "Too Many Requests",
+      body: `Rate limited until ${until.toISOString()}`,
+    });
+  }
+}
+
 const DEFAULT_RETRY_429_MAX_ATTEMPTS = 5;
 const DEFAULT_RETRY_AFTER_MS = 1000;
+// Longer Retry-After values are not waited for. Spotify bans apps for up to a
+// day, and waiting that long here silently hangs every request behind it:
+// logins, the missing data repair before the server starts, imports.
+const MAX_RETRY_AFTER_MS = 30 * 1000;
 
 function createQueueState(): QueueState {
   return {
     highPriorityQueue: [],
     normalPriorityQueue: [],
     isProcessingQueue: false,
+    rateLimitedUntil: 0,
   };
 }
 
@@ -163,6 +182,11 @@ export class QueuedHttpClient {
   }
 
   private async execute<T = any>(queueItem: QueueItem<T>) {
+    // Sending requests during the ban would only collect more 429s
+    if (Date.now() < this.queueState.rateLimitedUntil) {
+      throw new RateLimitedError(new Date(this.queueState.rateLimitedUntil));
+    }
+
     const url = new URL(queueItem.config.url);
 
     if (queueItem.config.params) {
@@ -193,6 +217,16 @@ export class QueuedHttpClient {
         });
       }
 
+      const retryAfterMs = this.parseRetryAfterHeader(response);
+      if (retryAfterMs > MAX_RETRY_AFTER_MS) {
+        this.queueState.rateLimitedUntil = Date.now() + retryAfterMs;
+        const until = new Date(this.queueState.rateLimitedUntil);
+        logger.warn(
+          `Rate limited by ${url.host} until ${until.toLocaleString()}, requests fail until then instead of waiting`,
+        );
+        throw new RateLimitedError(until);
+      }
+
       const maxAttempts =
         queueItem.config.retry429MaxAttempts ?? DEFAULT_RETRY_429_MAX_ATTEMPTS;
 
@@ -207,7 +241,6 @@ export class QueuedHttpClient {
       queueItem.retry429AttemptCount += 1;
       this.requeue(queueItem);
 
-      const retryAfterMs = this.parseRetryAfterHeader(response);
       await this.sleep(retryAfterMs);
       // The requeued item settles the caller's promise when it runs again.
       // Falling through here would parse an already consumed body, reject the
