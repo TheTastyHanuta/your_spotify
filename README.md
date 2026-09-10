@@ -85,7 +85,42 @@ The `latest` tag is the newest release, `nightly` follows the `master` branch.
 
 Create a `compose.yaml` file like the one below (also available as [docker-compose-example.yml](docker-compose-example.yml)) and start it with `docker compose up -d`.
 
-The example uses `127.0.0.1`, which works when you open YourSpotify on the same machine that runs Docker. For access from another device, replace `127.0.0.1` in all three endpoint values with HTTPS addresses that device can reach, usually provided through a domain and reverse proxy. Spotify permits HTTP redirect URIs only for loopback addresses, so a plain `http://192.168.x.x` LAN address will not work for login. Add the resulting `API_ENDPOINT` followed by `/oauth/spotify/callback` as a redirect URI in your Spotify application.
+Choose the setup that matches how you will access YourSpotify:
+
+#### On the device running Docker
+
+Keep the provided `127.0.0.1` values, open `http://127.0.0.1:3000`, and register this Spotify redirect URI:
+
+```text
+http://127.0.0.1:8080/oauth/spotify/callback
+```
+
+#### From another device on the local network using SSH
+
+Keep the Compose configuration unchanged and make sure SSH is enabled on the Docker host. On the other device, run the following command and keep it open:
+
+```bash
+ssh -N -L 3000:127.0.0.1:3000 -L 8080:127.0.0.1:8080 pi@192.168.1.50
+```
+
+Replace `pi` and `192.168.1.50` with the host's SSH username and local IP address, then open `http://127.0.0.1:3000`. Use the same Spotify redirect URI as above.
+
+#### Through an HTTPS reverse proxy
+
+Configure Nginx, Caddy, Traefik, or another proxy to forward your frontend address to port `3000` and your API address to port `8080`. Replace the three endpoints in the Compose file, for example:
+
+```yml
+server:
+  environment:
+    API_ENDPOINT: https://api.yourspotify.example.com
+    CLIENT_ENDPOINT: https://yourspotify.example.com
+
+web:
+  environment:
+    API_ENDPOINT: https://api.yourspotify.example.com
+```
+
+Register `https://api.yourspotify.example.com/oauth/spotify/callback` as the Spotify redirect URI. Spotify [requires HTTPS](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri) unless the redirect uses a loopback address such as `127.0.0.1`.
 
 ```yml
 services:
