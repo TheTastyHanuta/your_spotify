@@ -1,3 +1,4 @@
+import { escapeRegExp } from "../../tools/misc";
 import { Timesplit } from "../../tools/types";
 import { InfosModel, TrackModel } from "../Models";
 import { User } from "../schemas/user";
@@ -8,7 +9,7 @@ export const getTracks = (tracksId: string[]) =>
 
 export const searchTrack = (str: string) =>
   TrackModel.find({
-    name: { $regex: new RegExp(str, "i") },
+    name: { $regex: new RegExp(escapeRegExp(str), "i") },
     mergedInto: { $exists: false },
   })
     .populate("full_album")

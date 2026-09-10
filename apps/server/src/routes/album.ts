@@ -41,6 +41,12 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     // getTotalListeningOfAlbum(user, id),
   ];
   const [firstLast, tracks, artists] = await Promise.all(promises);
+  // The client dereferences firstLast unguarded, and search lists albums the
+  // user never played, so an empty history has to be reported explicitly.
+  if (!firstLast) {
+    res.status(200).send({ code: "NEVER_LISTENED" });
+    return;
+  }
   res.status(200).send({ album, artists, firstLast, tracks });
 });
 

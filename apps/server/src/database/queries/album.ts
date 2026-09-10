@@ -1,3 +1,4 @@
+import { escapeRegExp } from "../../tools/misc";
 import { AlbumModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
 
@@ -5,9 +6,9 @@ export const getAlbums = (albumsId: string[]) =>
   AlbumModel.find({ id: { $in: albumsId } });
 
 export const searchAlbum = (str: string) =>
-  AlbumModel.find({ name: { $regex: new RegExp(str, "i") } }).populate(
-    "full_artists",
-  );
+  AlbumModel.find({
+    name: { $regex: new RegExp(escapeRegExp(str), "i") },
+  }).populate("full_artists");
 
 export const getFirstAndLastListenedAlbum = async (
   user: User,

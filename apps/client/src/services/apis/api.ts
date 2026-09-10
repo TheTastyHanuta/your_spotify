@@ -239,7 +239,7 @@ export const api = {
       artists: Artist[];
       tracks: TrackWithFullArtistAlbum[];
       albums: AlbumWithFullArtist[];
-    }>(`/search/${str}`),
+    }>(`/search/${encodeURIComponent(str)}`),
   getBestSongs: (start: Date, end: Date, nb: number, offset: number) =>
     get<
       {

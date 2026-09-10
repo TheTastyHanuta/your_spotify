@@ -9,8 +9,12 @@ import { logger } from "./logger";
 export const deleteUser = async (userId: string) => {
   logger.info(`Deleting user ${userId}`);
   await longWriteDbLock.lock();
-  await deleteAllInfosFromUserId(userId);
-  await dbDeleteUser(userId);
-  await deleteAllOrphanTracks();
-  longWriteDbLock.unlock();
+  try {
+    await deleteAllInfosFromUserId(userId);
+    await dbDeleteUser(userId);
+    await deleteAllOrphanTracks();
+  } finally {
+    // The polling loop waits on this lock, leaving it held stops tracking
+    longWriteDbLock.unlock();
+  }
 };

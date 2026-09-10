@@ -13,7 +13,6 @@ export interface User {
   spotifyAuthDate?: Date;
   spotifyReauthRequired?: boolean;
   lastTimestamp: number;
-  tracks: Schema.Types.ObjectId[];
   settings: {
     historyLine: boolean;
     preferredStatsPeriod: string;
@@ -40,12 +39,6 @@ export const UserSchema = new Schema<User>(
     spotifyAuthDate: { type: Date },
     spotifyReauthRequired: { type: Boolean },
     lastTimestamp: { type: Number, default: 0 },
-    tracks: {
-      type: [Schema.Types.ObjectId],
-      ref: "Infos",
-      select: false,
-      default: [],
-    },
     settings: {
       historyLine: { type: Boolean, default: true },
       preferredStatsPeriod: { type: String, default: "day" },

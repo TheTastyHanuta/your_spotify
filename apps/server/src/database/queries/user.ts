@@ -19,7 +19,7 @@ export const getUserFromField = async <F extends keyof User>(
 ) => {
   const user = UserModel.findOne(
     { [field]: value },
-    includeTokens ? "-tracks" : "-tracks -accessToken -refreshToken",
+    includeTokens ? "" : "-accessToken -refreshToken",
   );
 
   if (!user && crash) {
@@ -29,10 +29,7 @@ export const getUserFromField = async <F extends keyof User>(
 };
 
 export const getAllUsers = (includeTokens: boolean) =>
-  UserModel.find(
-    {},
-    includeTokens ? "-tracks" : "-tracks -accessToken -refreshToken",
-  );
+  UserModel.find({}, includeTokens ? "" : "-accessToken -refreshToken");
 
 export const createUser = (
   username: string,
@@ -108,10 +105,7 @@ export const addTrackIdsToUser = async (
     ...info,
     owner: new Types.ObjectId(id),
   }));
-  const infosSaved = await InfosModel.create(realInfos);
-  return UserModel.findByIdAndUpdate(id, {
-    $push: { tracks: { $each: infosSaved.map((e) => e._id) } },
-  });
+  return InfosModel.create(realInfos);
 };
 
 export const getCloseTrackId = async (

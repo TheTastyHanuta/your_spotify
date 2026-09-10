@@ -1,3 +1,4 @@
+import { escapeRegExp } from "../../tools/misc";
 import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
@@ -12,7 +13,7 @@ export const getArtists = (artistIds: string[]) =>
 // artistIds keeps featured artists searchable, like before that job worked.
 export const searchArtist = async (user: User, str: string) => {
   const artists = await ArtistModel.find({
-    name: { $regex: new RegExp(str, "i") },
+    name: { $regex: new RegExp(escapeRegExp(str), "i") },
   });
   const listened = new Set<string>(
     await InfosModel.distinct("artistIds", {

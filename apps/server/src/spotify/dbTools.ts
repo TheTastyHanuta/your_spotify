@@ -319,6 +319,25 @@ export const getTracksAlbumsArtists = async (
   };
 };
 
+// Upserts, because an import and the polling loop can both find the same
+// item missing and fetch it, and a plain insert of the second copy would fail
+// on the unique id index.
+async function upsertById(model: mongoose.Model<any>, items: { id: string }[]) {
+  const uniqueItems = uniqBy(items, (item) => item.id);
+  if (uniqueItems.length === 0) {
+    return;
+  }
+  await model.bulkWrite(
+    uniqueItems.map((item) => ({
+      updateOne: {
+        filter: { id: item.id },
+        update: { $set: item },
+        upsert: true,
+      },
+    })),
+  );
+}
+
 export async function storeTrackAlbumArtist({
   tracks,
   albums,
@@ -328,26 +347,9 @@ export async function storeTrackAlbumArtist({
   albums?: Album[];
   artists?: Artist[];
 }) {
-  if (tracks) {
-    const uniqueTracks = uniqBy(tracks, (item) => item.id);
-    if (uniqueTracks.length > 0) {
-      await TrackModel.bulkWrite(
-        uniqueTracks.map((track) => ({
-          updateOne: {
-            filter: { id: track.id },
-            update: { $set: track },
-            upsert: true,
-          },
-        })),
-      );
-    }
-  }
-  if (albums) {
-    await AlbumModel.create(uniqBy(albums, (item) => item.id));
-  }
-  if (artists) {
-    await ArtistModel.create(uniqBy(artists, (item) => item.id));
-  }
+  await upsertById(TrackModel, tracks ?? []);
+  await upsertById(AlbumModel, albums ?? []);
+  await upsertById(ArtistModel, artists ?? []);
 }
 
 export async function storeIterationOfLoop(

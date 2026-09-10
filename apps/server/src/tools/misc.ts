@@ -338,6 +338,10 @@ export function chunk<T>(array: T[], chunkSize: number) {
   return chunks;
 }
 
+// Makes a RegExp built from the string match it literally
+export const escapeRegExp = (str: string) =>
+  str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export function uniq<T>(array: T[]) {
   const uniqd: T[] = [];
   const seen = new Set<T>();
