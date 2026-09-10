@@ -67,11 +67,15 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
   };
 
   storeItems = async (userId: string, items: RecentlyPlayedTrack[]) => {
-    const { tracks, albums, artists, tracksBySpotifyId } =
-      await getTracksAlbumsArtists(
-        userId,
-        items.map((it) => it.track),
-      );
+    const { tracks, albums, artists, tracksBySpotifyId } = await retryPromise(
+      () =>
+        getTracksAlbumsArtists(
+          userId,
+          items.map((it) => it.track),
+        ),
+      10,
+      30,
+    );
     await storeTrackAlbumArtist({ tracks, albums, artists });
     const finalInfos: Omit<Infos, "owner">[] = [];
     for (let i = 0; i < items.length; i += 1) {
@@ -109,8 +113,8 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         durationMs: item.track.duration_ms,
       });
     }
-    await setImporterStateCurrent(this.id, this.currentItem + 1);
-    await addTrackIdsToUser(this.userId.toString(), finalInfos);
+    // Recorded before the listens: once those are stored, a retry skips them
+    // as duplicates and would never record their date.
     const min = minOfArray(finalInfos, (info) => info.played_at.getTime());
     if (min) {
       const minInfo = finalInfos[min.minIndex];
@@ -118,6 +122,10 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         await storeFirstListenedAtIfLess(this.userId, minInfo.played_at);
       }
     }
+    // Save the progress only once the listens are stored. Listens a retry
+    // stores a second time are skipped by the duplicate check above.
+    await addTrackIdsToUser(this.userId.toString(), finalInfos);
+    await setImporterStateCurrent(this.id, this.currentItem + 1);
   };
 
   initWithJSONContent = async (content: any[]) => {

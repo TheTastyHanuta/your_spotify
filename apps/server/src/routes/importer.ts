@@ -1,4 +1,6 @@
-import { Router } from "express";
+import { unlink } from "fs/promises";
+
+import { Request, Response, Router } from "express";
 import multer from "multer";
 import { z } from "zod";
 
@@ -26,13 +28,16 @@ const upload = multer({
   },
 });
 
-router.post(
-  "/import/privacy",
-  logged,
-  notAlreadyImporting,
-  upload.array("imports", 50),
-  async (req, res) => {
-    const { files, user } = req as LoggedRequest;
+const removeUploads = (files: Express.Multer.File[]) =>
+  Promise.all(files.map((file) => unlink(file.path)));
+
+// A started import deletes its uploads when it succeeds and keeps them for a
+// retry when it fails. Uploads of an import that never started are deleted
+// here, nothing would reference them afterwards.
+const importUploadedFiles =
+  (type: "privacy" | "full-privacy") => async (req: Request, res: Response) => {
+    const { user } = req as LoggedRequest;
+    const files = req.files as Express.Multer.File[] | undefined;
 
     if (!files) {
       res.status(400).end();
@@ -40,25 +45,33 @@ router.post(
     }
 
     if (!canUserImport(user._id.toString())) {
+      removeUploads(files).catch(logger.error);
       res.status(400).send({ code: "ALREADY_IMPORTING" });
       return;
     }
 
     runImporter(
       null,
-      "privacy",
+      type,
       user._id.toString(),
-      (files as Express.Multer.File[]).map((f) => f.path),
+      files.map((f) => f.path),
       (success) => {
         if (success) {
           res.status(200).send({ code: "IMPORT_STARTED" });
           return;
         }
+        removeUploads(files).catch(logger.error);
         res.status(400).send({ code: "IMPORT_INIT_FAILED" });
-        return;
       },
     ).catch(logger.error);
-  },
+  };
+
+router.post(
+  "/import/privacy",
+  logged,
+  notAlreadyImporting,
+  upload.array("imports", 50),
+  importUploadedFiles("privacy"),
 );
 
 router.post(
@@ -66,34 +79,7 @@ router.post(
   logged,
   notAlreadyImporting,
   upload.array("imports", 50),
-  async (req, res) => {
-    const { files, user } = req as LoggedRequest;
-
-    if (!files) {
-      res.status(400).end();
-      return;
-    }
-
-    if (!canUserImport(user._id.toString())) {
-      res.status(400).send({ code: "ALREADY_IMPORTING" });
-      return;
-    }
-
-    runImporter(
-      null,
-      "full-privacy",
-      user._id.toString(),
-      (files as Express.Multer.File[]).map((f) => f.path),
-      (success) => {
-        if (success) {
-          res.status(200).send({ code: "IMPORT_STARTED" });
-          return;
-        }
-        res.status(400).send({ code: "IMPORT_INIT_FAILED" });
-        return;
-      },
-    ).catch(logger.error);
-  },
+  importUploadedFiles("full-privacy"),
 );
 
 const retrySchema = z.object({ existingStateId: z.string() });

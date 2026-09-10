@@ -44,7 +44,7 @@ export async function cleanupImport(existingStateId: string) {
   if (!instanceClass) {
     return;
   }
-  const user = await getUserFromField("_id", importState._id, false);
+  const user = await getUserFromField("_id", importState.user, false);
   if (!user) {
     return;
   }
@@ -57,6 +57,36 @@ export async function cleanupImport(existingStateId: string) {
 }
 
 export async function runImporter<T extends ImporterStateType>(
+  existingStateId: string | null,
+  name: T,
+  userId: string,
+  requiredInitData: ImporterStateFromType<T>["metadata"],
+  initDone: (success: boolean) => void,
+) {
+  let initReported = false;
+  const reportInit = (success: boolean) => {
+    if (!initReported) {
+      initReported = true;
+      initDone(success);
+    }
+  };
+  try {
+    await startImport(
+      existingStateId,
+      name,
+      userId,
+      requiredInitData,
+      reportInit,
+    );
+  } finally {
+    // An error before the import started, a failed database call for
+    // instance, still has to answer the waiting request, which then deletes
+    // the uploads. Once the start was reported this does nothing.
+    reportInit(false);
+  }
+}
+
+async function startImport<T extends ImporterStateType>(
   existingStateId: string | null,
   name: T,
   userId: string,
@@ -138,7 +168,10 @@ export async function runImporter<T extends ImporterStateType>(
     logger.error(
       "This import failed, but metadata is kept so that you can retry it later in the settings",
     );
+  } finally {
+    // An import that fails to start returns from the try block, which used
+    // to skip this and keep the user flagged as importing until a restart.
+    clearCache(userId);
+    delete userImporters[userId];
   }
-  clearCache(userId);
-  delete userImporters[userId];
 }

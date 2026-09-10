@@ -57,11 +57,22 @@ export class Database {
 
   static async fixMissingTrackData() {
     await longWriteDbLock.lock();
+    try {
+      await Database.fetchMissingTrackData();
+    } catch (e) {
+      // Spotify being unreachable must not keep the server from starting,
+      // whatever is still missing is looked up again on the next start.
+      logger.warn("Could not fix missing track data, will retry next start", e);
+    } finally {
+      longWriteDbLock.unlock();
+    }
+  }
+
+  private static async fetchMissingTrackData() {
     logger.info("Checking database for missing track data...");
     const user = await getAdminUser();
     if (!user) {
       logger.warn("No user is admin, cannot auto fix database");
-      longWriteDbLock.unlock();
       return;
     }
     const allInfos = await getInfosWithoutTracks();
@@ -93,7 +104,6 @@ export class Database {
       const total = allInfos.length + allTracks.length + allAlbums.length;
       logger.info(`Database fixed ${total} missing entries`);
     }
-    longWriteDbLock.unlock();
   }
 
   static async deletePossibleDuplicates() {

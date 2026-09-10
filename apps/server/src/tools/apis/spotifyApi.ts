@@ -140,14 +140,25 @@ export class SpotifyAPI {
     return this.handleAddIdsToPlaylist(data.id, ids);
   }
 
-  async getTrack(id: string) {
+  // Only a missing or malformed id means the item does not exist. Anything
+  // else (network errors, 5xx, 429s the client gave up on, token problems) is
+  // thrown, so callers retry or fail visibly instead of dropping the listens
+  // as if the item had never existed.
+  private async getItem<T>(url: string) {
+    const client = await this.checkToken();
     try {
-      const client = await this.checkToken();
-      const res = await client.get(`/tracks/${id}`);
-      return res.data as SpotifyTrack;
-    } catch {
-      return undefined;
+      const res = await client.get(url);
+      return res.data as T;
+    } catch (e) {
+      if (e instanceof HttpError && (e.status === 400 || e.status === 404)) {
+        return undefined;
+      }
+      throw e;
     }
+  }
+
+  async getTrack(id: string) {
+    return this.getItem<SpotifyTrack>(`/tracks/${id}`);
   }
 
   async getTracks(spotifyIds: string[]) {
@@ -160,13 +171,7 @@ export class SpotifyAPI {
   }
 
   async getAlbum(id: string) {
-    try {
-      const client = await this.checkToken();
-      const res = await client.get(`/albums/${id}`);
-      return res.data as SpotifyAlbum;
-    } catch {
-      return undefined;
-    }
+    return this.getItem<SpotifyAlbum>(`/albums/${id}`);
   }
 
   async getAlbums(spotifyIds: string[]) {
@@ -179,13 +184,7 @@ export class SpotifyAPI {
   }
 
   async getArtist(id: string) {
-    try {
-      const client = await this.checkToken();
-      const res = await client.get(`/artists/${id}`);
-      return res.data as SpotifyArtist;
-    } catch {
-      return undefined;
-    }
+    return this.getItem<SpotifyArtist>(`/artists/${id}`);
   }
 
   async getArtists(spotifyIds: string[]) {

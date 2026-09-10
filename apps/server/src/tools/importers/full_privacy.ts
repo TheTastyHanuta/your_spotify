@@ -9,7 +9,10 @@ import {
 } from "../../database";
 import { setImporterStateCurrent } from "../../database/queries/importer";
 import { Infos } from "../../database/schemas/info";
-import { RecentlyPlayedTrack } from "../../database/schemas/track";
+import {
+  RecentlyPlayedTrack,
+  SpotifyTrack,
+} from "../../database/schemas/track";
 import { User } from "../../database/schemas/user";
 import {
   getTracksAlbumsArtists,
@@ -45,34 +48,42 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
 
   private spotifyApi: SpotifyAPI;
 
+  // Index of the oldest element waiting in idsToSearch, those are not stored
+  // yet so a retried import has to start from there.
+  private oldestPendingItem: number | null;
+
   constructor(user: User) {
     this.id = "";
     this.userId = user._id.toString();
     this.elements = null;
     this.currentItem = 0;
     this.spotifyApi = new SpotifyAPI(this.userId);
+    this.oldestPendingItem = null;
   }
 
   static idFromSpotifyURI = (uri: string) => uri.split(":")[2];
 
   search = async (spotifyIds: string[]) => {
-    if (spotifyIds.length === 0) {
-      return [];
+    const tracks: (SpotifyTrack | undefined)[] = [];
+    // One id at a time, so a retry does not fetch the whole batch again
+    for (const id of spotifyIds) {
+      tracks.push(
+        await retryPromise(() => this.spotifyApi.getTrack(id), 10, 30),
+      );
     }
-    const res = await retryPromise(
-      () => this.spotifyApi.getTracks(spotifyIds),
-      10,
-      30,
-    );
-    return res;
+    return tracks;
   };
 
   storeItems = async (userId: string, items: RecentlyPlayedTrack[]) => {
-    const { tracks, albums, artists, tracksBySpotifyId } =
-      await getTracksAlbumsArtists(
-        userId,
-        items.map((it) => it.track),
-      );
+    const { tracks, albums, artists, tracksBySpotifyId } = await retryPromise(
+      () =>
+        getTracksAlbumsArtists(
+          userId,
+          items.map((it) => it.track),
+        ),
+      10,
+      30,
+    );
     await storeTrackAlbumArtist({ tracks, albums, artists });
     const finalInfos: Omit<Infos, "owner">[] = [];
     for (let i = 0; i < items.length; i += 1) {
@@ -110,8 +121,8 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         durationMs: item.track.duration_ms,
       });
     }
-    await setImporterStateCurrent(this.id, this.currentItem + 1);
-    await addTrackIdsToUser(this.userId.toString(), finalInfos);
+    // Recorded before the listens: once those are stored, a retry skips them
+    // as duplicates and would never record their date.
     const min = minOfArray(finalInfos, (info) => info.played_at.getTime());
     if (min) {
       const minInfo = finalInfos[min.minIndex];
@@ -119,6 +130,13 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         await storeFirstListenedAtIfLess(this.userId, minInfo.played_at);
       }
     }
+    // Save the progress only once the listens are stored. Listens a retry
+    // stores a second time are skipped by the duplicate check above.
+    await addTrackIdsToUser(this.userId.toString(), finalInfos);
+    await setImporterStateCurrent(
+      this.id,
+      this.oldestPendingItem ?? this.currentItem + 1,
+    );
   };
 
   initWithJSONContent = async (content: any[]) => {
@@ -185,12 +203,13 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         setToCacheString(this.userId.toString(), id, { exists: false });
         continue;
       }
-      const playedAt = idsToSearch[searchedItem.id];
+      // Keyed by the requested id, Spotify can answer with another id for
+      // relinked tracks and the file keeps referring to the requested one.
+      const playedAt = idsToSearch[id];
       if (!playedAt) {
-        logger.error("Cannot add item", searchedItem.id, "no played_at found");
         continue;
       }
-      setToCacheString(this.userId.toString(), searchedItem.id, {
+      setToCacheString(this.userId.toString(), id, {
         exists: true,
         track: searchedItem,
       });
@@ -201,6 +220,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         `Adding ${searchedItem.name} - ${searchedItem.artists[0]?.name} from data`,
       );
     }
+    this.oldestPendingItem = null;
     idsToSearch = {};
     return idsToSearch;
   };
@@ -249,6 +269,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         const arrayOfPlayedAt = idsToSearch[spotifyId] ?? [];
         arrayOfPlayedAt.push(content.ts);
         idsToSearch[spotifyId] = arrayOfPlayedAt;
+        this.oldestPendingItem ??= i;
         idsToSearch = await this.checkIdsToSearch(idsToSearch, items);
       } else if (item.exists) {
         items.push({ track: item.track, played_at: content.ts });
