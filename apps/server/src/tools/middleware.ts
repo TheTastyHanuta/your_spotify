@@ -244,14 +244,18 @@ class AffinityNotAllowedError extends YourSpotifyError {
   }
 }
 
+export const checkAffinityAllowed = async () => {
+  const globalPreferences = await getGlobalPreferences();
+  if (!globalPreferences?.allowAffinity) {
+    throw new AffinityNotAllowedError();
+  }
+};
+
 export const affinityAllowed = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const globalPreferences = await getGlobalPreferences();
-  if (!globalPreferences?.allowAffinity) {
-    throw new AffinityNotAllowedError();
-  }
+  await checkAffinityAllowed();
   next();
 };

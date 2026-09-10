@@ -30,6 +30,7 @@ import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
   affinityAllowed,
+  checkAffinityAllowed,
   isLoggedOrGuest,
   logged,
   validate,
@@ -446,11 +447,14 @@ router.post("/playlist/create", logged, withHttpClient, async (req, res) => {
       )}`;
     }
   } else if (body.type === "affinity") {
+    // Same rules as the collaborative routes: affinity has to be enabled and
+    // the ranking always includes the requesting user.
+    await checkAffinityAllowed();
     if (!playlistName) {
       playlistName = `Your Spotify Playlist • ${DateFormatter.toDayMonthYear(user.settings.dateFormat, new Date())}`;
     }
     const affinity = await getCollaborativeBestSongs(
-      body.userIds,
+      [user._id.toString(), ...body.userIds],
       body.interval.start,
       body.interval.end,
       body.mode,
