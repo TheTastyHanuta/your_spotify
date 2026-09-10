@@ -146,7 +146,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       return content;
     }
     logger.error(
-      "If you submitted the right files and this error comes up, please open an issue with the following logs at https://github.com/Yooooomi/your_spotify",
+      "If you submitted the right files and this error comes up, please open an issue with the following logs at https://github.com/TheTastyHanuta/your_spotify/issues",
       JSON.stringify(value.error.issues, null, " "),
     );
     return null;

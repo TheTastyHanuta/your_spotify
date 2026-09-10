@@ -2,15 +2,23 @@
 
 name: Release CI
 
+# Runs when a release is published on GitHub. The release tag is the version
+# and has to match the version in the package.json files.
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    env:
+      TAG: ${{ github.ref_name }}
 
     steps:
       - name: Checkout
@@ -26,13 +34,11 @@ jobs:
         id: docker-meta
         uses: docker/metadata-action@v5
         with:
-          images: yooooomi/your_spotify # required dummy value, will not be used
+          images: your_spotify # required dummy value, only the labels are used
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      # Image names on ghcr.io have to be lowercase
+      - name: Lowercase image owner
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -41,15 +47,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get current tag
-        id: tag
-        uses: "WyriHaximus/github-action-get-previous-tag@master"
-
       - name: Verify tag matches package.json before pushing
         run: |
           for PKG_PATH in "./package.json" "./apps/client/package.json" "./apps/server/package.json"; do
-            if [ -f "$PKG_PATH" ] && [ "$(node -p "require('$PKG_PATH').version")" != "${{ steps.tag.outputs.tag }}" ]; then
-              echo "Error: $PKG_PATH version doesn't match tag ${{ steps.tag.outputs.tag }}"
+            if [ -f "$PKG_PATH" ] && [ "$(node -p "require('$PKG_PATH').version")" != "$TAG" ]; then
+              echo "Error: $PKG_PATH version doesn't match tag $TAG"
               exit 1
             fi
           done
@@ -63,10 +65,8 @@ jobs:
           push: true
           labels: ${{ steps.docker-meta.outputs.labels }}
           tags: |
-            yooooomi/your_spotify_client:latest
-            yooooomi/your_spotify_client:${{ steps.tag.outputs.tag }}
-            ghcr.io/yooooomi/your_spotify_client:latest
-            ghcr.io/yooooomi/your_spotify_client:${{ steps.tag.outputs.tag }}
+            ghcr.io/${{ env.OWNER }}/your_spotify_client:latest
+            ghcr.io/${{ env.OWNER }}/your_spotify_client:${{ env.TAG }}
 
       - name: Build and push server release
         uses: docker/build-push-action@v5
@@ -77,7 +77,5 @@ jobs:
           push: true
           labels: ${{ steps.docker-meta.outputs.labels }}
           tags: |
-            yooooomi/your_spotify_server:latest
-            yooooomi/your_spotify_server:${{ steps.tag.outputs.tag }}
-            ghcr.io/yooooomi/your_spotify_server:latest
-            ghcr.io/yooooomi/your_spotify_server:${{ steps.tag.outputs.tag }}
+            ghcr.io/${{ env.OWNER }}/your_spotify_server:latest
+            ghcr.io/${{ env.OWNER }}/your_spotify_server:${{ env.TAG }}

@@ -36,7 +36,7 @@ If you are developing from this repository with `docker-compose-prod.yml` and
 
 Make sure:
 
-- Your `yooooomi/your_spotify_server` image has been updated to a version that
+- Your `ghcr.io/thetastyhanuta/your_spotify_server` image has been updated to a version that
   contains this migration.
 - MongoDB is running and reachable by the server container.
 - `SPOTIFY_PUBLIC` and `SPOTIFY_SECRET` are configured. The migration uses them

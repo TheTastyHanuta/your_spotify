@@ -1,28 +1,27 @@
 services:
   server:
-    image: yooooomi/your_spotify_server
+    image: ghcr.io/thetastyhanuta/your_spotify_server:latest
     restart: always
     ports:
       - "8080:8080"
-    links:
-      - mongo
     depends_on:
       - mongo
     environment:
-      API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the spotify dashboard
+      # 127.0.0.1 works only when the browser runs on this machine. For access
+      # from another device, use reachable HTTPS addresses for all endpoints.
+      API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the Spotify dashboard
       CLIENT_ENDPOINT: http://127.0.0.1:3000
       SPOTIFY_PUBLIC: __your_spotify_client_id__
       SPOTIFY_SECRET: __your_spotify_secret__
 
   mongo:
-    container_name: mongo
     image: mongo:8
     restart: always
     volumes:
       - ./your_spotify_db:/data/db
 
   web:
-    image: yooooomi/your_spotify_client
+    image: ghcr.io/thetastyhanuta/your_spotify_client:latest
     restart: always
     ports:
       - "3000:3000"

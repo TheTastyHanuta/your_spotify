@@ -4,7 +4,7 @@
 
 You will need to have
 
-- Git clone of this repo (you can `git clone git@github.com:Yooooomi/your_spotify.git --depth=1`)
+- Git clone of this repo (you can `git clone https://github.com/TheTastyHanuta/your_spotify.git --depth=1`)
 - A mongo database
 - NodeJS
 

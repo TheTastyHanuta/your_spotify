@@ -17,7 +17,7 @@ A clear and concise description of what you expected to happen.
 
 **Additional context**
 
-Please paste the docker-compose file you're using to host YourSpotify and their logs (you can skip mongo logs). If your issue have anything related to other tools, please paste their config too.
+Please paste the compose file you're using to host YourSpotify and their logs (you can skip mongo logs). If your issue have anything related to other tools, please paste their config too.
 
 **Screenshots**
 

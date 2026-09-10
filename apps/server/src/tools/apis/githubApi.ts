@@ -62,7 +62,7 @@ export class GithubAPI {
 
   static async releases() {
     const { data: releases } = await GithubAPI.client.get<Release[]>(
-      "https://api.github.com/repos/yooooomi/your_spotify/releases",
+      "https://api.github.com/repos/TheTastyHanuta/your_spotify/releases",
     );
     return releases;
   }
