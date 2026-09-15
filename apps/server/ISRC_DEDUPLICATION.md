@@ -2,229 +2,291 @@
 
 Spotify can assign multiple track IDs to the same recording when a song appears
 on different releases, such as a standard album, deluxe edition, single, or
-compilation. YourSpotify historically stored listen history by Spotify track ID,
-so those versions could appear as separate songs in stats.
+compilation. The original YourSpotify stores listen history by Spotify track ID,
+so those versions appear as separate songs in your stats.
 
-This feature stores Spotify's ISRC (`external_ids.isrc`) on tracks and can merge
-existing duplicates so listens for the same recording point to one canonical
-track.
+This fork stores each track's ISRC, a code that identifies the recording itself.
+New listens are matched by it automatically. Your **existing** history is only
+cleaned up when you run the migration in this guide yourself. Switching to this
+fork does not merge anything on its own.
 
-The migration is optional, but recommended if you already have listening history
-in your database.
+The migration is optional, but recommended if you already have listening history.
 
-## Which Commands Should I Use?
+## Overview
 
-Most self-hosted installations use a copy of `docker-compose-example.yml` and
-start YourSpotify with:
+1. Back up your database, while still running the original images.
+2. Switch to this fork's images.
+3. Run a dry run and read the report.
+4. Apply the migration.
+5. Check the result.
 
-```bash
-docker compose up -d
-```
-
-That compose file uses published Docker images and names the server service
-`server`, so the main commands in this guide use:
-
-```bash
-docker compose exec server ...
-```
-
-If you are developing from this repository with `docker-compose-prod.yml` and
-`docker-compose-personal.yml`, use the alternative commands in the
-[Repository Development Compose](#repository-development-compose) section.
+Plan some time: the migration asks Spotify for the ISRC of every track, one at
+a time, at roughly 5 tracks per second. A database with 20,000 tracks takes
+about an hour for the dry run and another hour for the apply run. The app keeps
+running and recording listens the whole time.
 
 ## Before You Start
 
-Make sure:
+### Service And Container Names
 
-- Your `ghcr.io/thetastyhanuta/your_spotify_server` image has been updated to a version that
-  contains this migration.
-- MongoDB is running and reachable by the server container.
-- `SPOTIFY_PUBLIC` and `SPOTIFY_SECRET` are configured. The migration uses them
-  to fetch missing ISRCs from Spotify.
-- You can run `docker compose` from the directory containing your compose file.
+The commands in this guide use Docker Compose with the service names from the
+example compose file of both the original project and this fork: `server`,
+`mongo` and `web`. Run them from the directory containing your compose file.
 
-Update the published images and restart the app:
+If your services are named differently, replace the names in the commands. To
+list your service names:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose config --services
 ```
 
-## Step 1: Back Up MongoDB
+If you do not use Docker Compose (plain `docker run`, a NAS web interface,
+etc.), find your container names with:
 
-Create a backup before applying the migration.
+```bash
+docker ps --format '{{.Names}}\t{{.Image}}'
+```
+
+The server is the container running `yooooomi/your_spotify_server` (before the
+switch) or `ghcr.io/thetastyhanuta/your_spotify_server` (after), the database is
+the one running a `mongo` image. Then translate the commands like this:
+
+| In this guide                         | Without Docker Compose                           |
+| ------------------------------------- | ------------------------------------------------ |
+| `docker compose exec server ...`      | `docker exec <server container> ...`             |
+| `docker compose exec -d server ...`   | `docker exec -d <server container> ...`          |
+| `docker compose cp server:/tmp/x ./x` | `docker cp <server container>:/tmp/x ./x`        |
+| `docker compose stop server web`      | `docker stop <server container> <web container>` |
+
+### Database Name
+
+The commands assume the default database name `your_spotify`. If you set
+`MONGO_ENDPOINT` on the server, the database name is its last part, for example
+`mongodb://mongo:27017/my_stats` uses `my_stats`. Replace `your_spotify` in the
+backup and rollback commands in that case.
+
+### Spotify Credentials
+
+The migration uses the `SPOTIFY_PUBLIC` and `SPOTIFY_SECRET` already configured
+on your server. Nothing needs to change.
+
+## Step 1: Back Up Your Database
+
+Do this **before** switching images. The new server changes the database as soon
+as it starts (regular migrations and storing ISRCs), so a backup taken afterwards
+is no longer your original database.
 
 ```bash
 docker compose exec mongo \
   mongodump --archive=/tmp/your_spotify-before-isrc.archive --db your_spotify
 ```
 
-Copy the backup from the Mongo container to your host:
+Copy the backup out of the container:
 
 ```bash
 docker compose cp \
   mongo:/tmp/your_spotify-before-isrc.archive ./your_spotify-before-isrc.archive
 ```
 
-Keep this file until you have verified the migration result.
+Check that `your_spotify-before-isrc.archive` exists and is not empty. Keep it
+until you are happy with the result.
 
-If your Mongo service has a different name, replace `mongo` with that service
-name.
+## Step 2: Switch To This Fork
 
-## Step 2: Run A Dry Run
+In your compose file, change the two app images:
 
-The migration defaults to dry-run mode. It will inspect the database, fetch
-missing ISRCs from Spotify, choose primary tracks, and write a report without
-changing the database.
+| Service  | Original project               | This fork                                           |
+| -------- | ------------------------------ | --------------------------------------------------- |
+| `server` | `yooooomi/your_spotify_server` | `ghcr.io/thetastyhanuta/your_spotify_server:latest` |
+| `web`    | `yooooomi/your_spotify_client` | `ghcr.io/thetastyhanuta/your_spotify_client:latest` |
 
-```bash
-docker compose exec server \
-  node /app/apps/server/build/index.js --merge-tracks-by-isrc \
-  --report=/tmp/isrc-dry-run-report.md
-```
+Leave everything else as it is. In particular, **do not change the `mongo`
+image**: MongoDB cannot open data files from a much older major version.
 
-Copy the report to your host:
+Pull only the two app images and restart:
 
 ```bash
-docker compose cp \
-  server:/tmp/isrc-dry-run-report.md ./isrc-dry-run-report.md
+docker compose pull server web
+docker compose up -d
 ```
 
-Open `isrc-dry-run-report.md` and check:
-
-- How many duplicate ISRC groups were found.
-- Which track was selected as the primary for each group.
-- Which secondary tracks would be merged.
-- Whether the selected primary tracks look reasonable.
-
-## Step 3: Apply The Migration
-
-Only run apply mode after reviewing the dry-run report.
-
-The migration runs as its own process while the app keeps polling Spotify. A
-listen recorded during the run can therefore land on a track that the migration
-has just merged. The migration re-points those listens at the end of the run, so
-this repairs itself, but avoid starting a history import while apply mode is
-running. Imports write far more listens than the polling loop and take long
-enough to still be running when the migration finishes.
-
-If you suspect listens were recorded on merged tracks, run apply mode again. The
-final sweep looks at every merged track, not only the duplicates found by this
-run, so a second run repairs anything the first one raced with. A dry run
-reports the same number under "Listens Left On Merged Tracks" without changing
-anything.
+Watch the server log until it prints `Migrations successfully ran`, then press
+Ctrl+C to stop following the log:
 
 ```bash
-docker compose exec server \
-  node /app/apps/server/build/index.js --merge-tracks-by-isrc \
-  --apply \
-  --report=/tmp/isrc-merge-report.md
+docker compose logs -f server
 ```
 
-Copy the final report to your host:
+Check that the server now runs this fork's image. The output must show
+`ghcr.io/thetastyhanuta/your_spotify_server`:
 
 ```bash
-docker compose cp \
-  server:/tmp/isrc-merge-report.md ./isrc-merge-report.md
+docker compose images server
 ```
 
-Keep this report with your backup. It documents the selected primary tracks,
-merged secondary tracks, play counts, updated listen records, and final totals.
+Open the web app and make sure your stats still show up.
 
-## Step 4: Verify The Result
+## Step 3: Run A Dry Run
 
-Start or restart the app normally, then check your stats for songs that
-previously appeared as duplicates.
+The dry run fetches the ISRCs, finds the duplicates and writes a report, but does
+not change the database.
 
-You can also run another dry run:
+Start it in the background, so it keeps running if you close the terminal or
+lose your SSH connection:
+
+```bash
+docker compose exec -d server sh -c \
+  'node /app/apps/server/build/index.js --merge-tracks-by-isrc \
+  --report=/tmp/isrc-dry-run-report.md > /tmp/isrc-dry-run.log 2>&1'
+```
+
+Follow the progress. Ctrl+C only stops following, not the migration:
+
+```bash
+docker compose exec server tail -f /tmp/isrc-dry-run.log
+```
+
+It prints a line every 50 tracks, for example
+`Step 2a: checked 1250/20000 tracks, found 1249 ISRCs, 0 failed`. The run is
+finished when the log ends with `Disconnected from MongoDB`. If you see
+`Failed to merge tracks by ISRC` right before that, the run stopped with an
+error; the lines above it explain why.
+
+Do not restart the server container while the migration runs, that stops it.
+Stopping it is safe though, just start the same command again.
+
+Copy the report out of the container:
+
+```bash
+docker compose cp server:/tmp/isrc-dry-run-report.md ./isrc-dry-run-report.md
+```
+
+Open `isrc-dry-run-report.md`. The **Final Summary** at the end shows how many
+duplicates were found. Above it, each `### ISRC` block lists one recording: the
+**primary** track that will be kept and the **secondaries** whose listens move
+to it. The primary is the version you listened to most. This choice only decides
+which track page represents the song; no listens are lost, and each listen keeps
+the album you actually played it from.
+
+## Step 4: Apply The Migration
+
+Only continue if the dry-run report looks right.
+
+The app can keep running. Do not start a history import in the settings while
+the migration runs. If you did, or are unsure, simply run this step again
+afterwards: a second run repairs anything the first one missed.
+
+```bash
+docker compose exec -d server sh -c \
+  'node /app/apps/server/build/index.js --merge-tracks-by-isrc --apply \
+  --report=/tmp/isrc-merge-report.md > /tmp/isrc-merge.log 2>&1'
+```
+
+Follow the progress the same way as before:
+
+```bash
+docker compose exec server tail -f /tmp/isrc-merge.log
+```
+
+When the log ends with `Disconnected from MongoDB`, copy the report:
+
+```bash
+docker compose cp server:/tmp/isrc-merge-report.md ./isrc-merge-report.md
+```
+
+Keep this report together with your backup. It lists every merged track and the
+number of listens that were moved.
+
+## Step 5: Check The Result
+
+Open the web app and look up a few songs that used to appear more than once.
+They should now show up once, with the listens combined.
+
+Optionally run another dry run. It is much faster now, because the ISRCs are
+already stored:
 
 ```bash
 docker compose exec server \
   node /app/apps/server/build/index.js --merge-tracks-by-isrc \
   --report=/tmp/isrc-post-migration-audit.md
-```
-
-Copy the audit report:
-
-```bash
 docker compose cp \
   server:/tmp/isrc-post-migration-audit.md ./isrc-post-migration-audit.md
 ```
 
-After a successful migration, this report should show no remaining duplicate
-groups, or fewer groups if Spotify does not provide ISRCs for some tracks. It
-also includes an audit section for tracks already marked with `mergedInto`.
+It should report `Found 0 unique ISRCs with duplicates` and
+`Listen records still attached to merged tracks: 0`.
 
-## What The Migration Changes
-
-For each duplicate ISRC group, the migration:
-
-1. Chooses a primary track.
-2. Updates listen records from secondary track IDs to the primary track ID.
-3. Marks secondary track documents with `mergedInto`.
-4. Keeps the primary track's `isrc`.
-5. Removes `isrc` from secondary tracks so the sparse unique index remains valid.
-
-Secondary track documents are not deleted. They are kept for auditability.
+You can delete the backup once you are happy with the result.
 
 ## Album And Track Counts
 
-After deduplication, track stats are recording-level while album stats remain
-release-level.
+After the migration, track stats count the recording, while album stats still
+count the release you listened to.
 
-For example, if you listened to the same recording twice on an album and once on
-an EP, the artist page can show that track with 3 listens. The album page for
-the album will still show 2 listens for that track, and the EP can still count
-the remaining listen for that release.
+For example, if you listened to the same song twice on an album and once on an
+EP, the song shows 3 listens. The album page still shows 2 listens for it, and
+the EP page shows 1.
 
 ## If You Do Not Run The Migration
 
-The app still works if you upgrade without running this migration.
+The app works fine without it:
 
-- Existing history remains unchanged.
-- Existing duplicate tracks remain separate.
-- New tracks store ISRCs when Spotify provides them.
-- New listens can deduplicate against tracks that already have an ISRC.
-- Tracks without ISRC keep the old Spotify-ID behavior.
+- Your existing history stays as it is, including the duplicates.
+- New tracks store their ISRC.
+- A new listen of a song is added to the existing track with the same ISRC, if
+  there is one. Older listens of other versions stay where they are until you
+  run the migration.
 
-Run the migration when you want to clean up historical duplicates.
+You can run the migration at any later time.
+
+## What The Migration Changes
+
+For each recording with more than one track, the migration:
+
+1. Chooses a primary track (the one with the most listens).
+2. Moves the listens of the other tracks to the primary track.
+3. Marks the other tracks as merged into the primary track (`mergedInto`).
+4. Keeps the ISRC only on the primary track.
+
+Merged tracks are not deleted, so the change can be traced in the database.
 
 ## Rollback
 
-The safest rollback is restoring the MongoDB backup created in step 1.
+Restoring the backup from step 1 undoes the migration completely.
 
-Stop the app services that write to MongoDB, then copy the backup archive into
-the Mongo container:
+Stop the app, copy the backup into the Mongo container and restore it:
 
 ```bash
+docker compose stop server web
 docker compose cp \
   ./your_spotify-before-isrc.archive mongo:/tmp/your_spotify-before-isrc.archive
-```
-
-Restore it:
-
-```bash
 docker compose exec mongo \
   mongorestore --drop --archive=/tmp/your_spotify-before-isrc.archive --nsInclude='your_spotify.*'
 ```
 
-Then restart the app:
+Listens recorded after the backup was taken are lost, unless Spotify still
+returns them (it keeps roughly the last 50 plays).
+
+To go back to the original project as well, change the two images back to
+`yooooomi/your_spotify_server` and `yooooomi/your_spotify_client` and pull them:
+
+```bash
+docker compose pull server web
+```
+
+Then start the app:
 
 ```bash
 docker compose up -d
 ```
 
-## Repository Development Compose
+## For Developers
 
-If you are running this repository directly with `docker-compose-prod.yml` and
-`docker-compose-personal.yml`, the server service is named `app`. Use this
-compose prefix:
+### Repository Compose Files
 
-```bash
-docker compose -f docker-compose-prod.yml -f docker-compose-personal.yml
-```
-
-Example dry run:
+When running this repository with `docker-compose-prod.yml` and
+`docker-compose-personal.yml`, the server service is named `app` and every
+command needs the compose files:
 
 ```bash
 docker compose -f docker-compose-prod.yml -f docker-compose-personal.yml exec app \
@@ -232,21 +294,16 @@ docker compose -f docker-compose-prod.yml -f docker-compose-personal.yml exec ap
   --report=/tmp/isrc-dry-run-report.md
 ```
 
-Example apply:
+### Without Docker
 
-```bash
-docker compose -f docker-compose-prod.yml -f docker-compose-personal.yml exec app \
-  node /app/apps/server/build/index.js --merge-tracks-by-isrc \
-  --apply \
-  --report=/tmp/isrc-merge-report.md
-```
-
-## Local Development Without Docker
-
-If you are not using Docker and have dependencies installed locally:
+Build the server first. The command reads the same environment variables as the
+server (`MONGO_ENDPOINT`, `SPOTIFY_PUBLIC`, `SPOTIFY_SECRET`, `API_ENDPOINT`,
+`CLIENT_ENDPOINT`). `MONGO_ENDPOINT` defaults to
+`mongodb://mongo:27017/your_spotify`, which only resolves inside Docker.
 
 ```bash
 cd apps/server
+pnpm build
 pnpm run merge-tracks-by-isrc -- --report=/tmp/isrc-dry-run-report.md
 pnpm run merge-tracks-by-isrc -- --apply --report=/tmp/isrc-merge-report.md
 ```

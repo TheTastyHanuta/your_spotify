@@ -146,6 +146,8 @@ services:
       API_ENDPOINT: http://127.0.0.1:8080
 ```
 
+> **Older CPUs and ARM devices:** MongoDB 5.0 and newer need a CPU with ARMv8.2-A (ARM) or AVX (x86-64). On older hardware, for example a Raspberry Pi 4 or older, or some older x86 servers and virtual machines, the `mongo` container stops right after starting, often with exit code 132 or an "Illegal instruction" error in `docker compose logs mongo`. Use the image `mongo:4.4` instead. It no longer receives updates, so only use it when your hardware requires it.
+
 Start YourSpotify from the directory containing the file:
 
 ```bash

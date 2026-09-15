@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "dev": "concurrently \"rsbuild build -w\" \"nodemon build/index.js\"",
     "migrate": "node ./build/index.js --migrate",
-    "merge-tracks-by-isrc": "ts-node src/migrations/run.ts",
+    "merge-tracks-by-isrc": "node ./build/index.js --merge-tracks-by-isrc",
     "lint": "oxlint -c ../dev/.oxlintrc.json . && oxfmt -c ../dev/.oxfmtrc.json --check .",
     "lint:fix": "oxlint -c ../dev/.oxlintrc.json --fix . && oxfmt -c ../dev/.oxfmtrc.json ."
   },
