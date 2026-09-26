@@ -7,6 +7,7 @@ import {
   setImporterStateStatus,
 } from "../../database/queries/importer";
 import { User } from "../../database/schemas/user";
+import { RateLimitedError } from "../apis/queueHttpClient";
 import { logger } from "../logger";
 import { Metrics } from "../metrics";
 import { clearCache } from "./cache";
@@ -159,7 +160,11 @@ async function startImport<T extends ImporterStateType>(
       .inc();
   } catch (e) {
     if (existingState) {
-      await setImporterStateStatus(existingState._id.toString(), "failure");
+      await setImporterStateStatus(
+        existingState._id.toString(),
+        "failure",
+        e instanceof RateLimitedError ? e.until : undefined,
+      );
       Metrics.importsTotal
         .labels({ status: "failure", user: userId, type: name })
         .inc();

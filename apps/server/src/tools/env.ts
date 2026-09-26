@@ -20,6 +20,7 @@ const validators = {
   PROMETHEUS_USERNAME: z.string().optional(),
   PROMETHEUS_PASSWORD: z.string().optional(),
   SPOTIFY_API_DELAY_MS: z.preprocess(toNumber, z.number().optional()),
+  DISABLE_POLLING: z.preprocess(toBoolean, z.boolean().optional()),
 } as const;
 
 const validatedEnv: Record<string, any> = {};

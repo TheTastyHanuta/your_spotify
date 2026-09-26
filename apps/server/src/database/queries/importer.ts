@@ -15,10 +15,18 @@ export const createImporterState = (
     "_id" | "user"
   >);
 
+// Any status change clears the ban end of an earlier failure
 export const setImporterStateStatus = (
   id: string,
   status: ImporterStateStatus,
-) => ImporterStateModel.findByIdAndUpdate(id, { status });
+  rateLimitedUntil?: Date,
+) =>
+  ImporterStateModel.findByIdAndUpdate(
+    id,
+    rateLimitedUntil
+      ? { $set: { status, rateLimitedUntil } }
+      : { $set: { status }, $unset: { rateLimitedUntil: 1 } },
+  );
 
 export const getImporterState = <T extends ImporterStateType>(id: string) =>
   ImporterStateModel.findById<ImporterStateFromType<T>>(id);

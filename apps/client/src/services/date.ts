@@ -93,6 +93,12 @@ export const DateFormatter = {
       month: "long",
     }).format(date);
   },
+  toDateTime(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  },
   listenedAt(date: Date) {
     const now = new Date();
     const day = 1000 * 60 * 60 * 24;

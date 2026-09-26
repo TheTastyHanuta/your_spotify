@@ -17,3 +17,9 @@
 .right > span {
   margin-right: 8px;
 }
+
+.ratelimited {
+  display: block;
+  color: grey;
+  font-style: italic;
+}

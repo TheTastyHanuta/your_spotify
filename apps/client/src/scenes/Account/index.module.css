@@ -42,3 +42,10 @@
 .check {
   padding: 0px !important;
 }
+
+.error {
+  max-width: 480px;
+  margin-bottom: 8px;
+  text-align: center;
+  color: rgb(242, 93, 93);
+}

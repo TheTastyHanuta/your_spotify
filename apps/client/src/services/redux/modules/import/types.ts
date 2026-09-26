@@ -17,6 +17,8 @@ export interface BaseImporterState {
   current: number;
   total: number;
   status: ImporterStateStatus;
+  // Set when the import failed because Spotify blocked the requests
+  rateLimitedUntil?: string;
 }
 
 export interface PrivacyImporterState extends BaseImporterState {

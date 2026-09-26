@@ -55,7 +55,13 @@ export function startServer() {
           "Spotify was detected in CLIENT_ENDPOINT, Google might mark your entire domain as deceptive. https://github.com/Yooooomi/your_spotify/pull/254",
         );
       }
-      dbLoop().catch(logger.error);
+      if (get("DISABLE_POLLING")) {
+        logger.info(
+          "DISABLE_POLLING is set, new listens are not fetched from Spotify",
+        );
+      } else {
+        dbLoop().catch(logger.error);
+      }
     })
     .catch(console.error);
 }

@@ -168,10 +168,7 @@ function mapSpotifyIdsToCanonicalTracks(
   );
 }
 
-export const getTracks = async (userId: string, ids: string[]) => {
-  const client = new SpotifyAPI(userId);
-  const spotifyTracks = compact(await client.getTracks(ids));
-
+const toStoredTracks = (userId: string, spotifyTracks: SpotifyTrack[]) => {
   const tracks = spotifyTracks.map<Track>((track) => {
     logger.info(
       `Storing non existing track ${track.name} by ${track.artists[0]?.name}`,
@@ -181,6 +178,11 @@ export const getTracks = async (userId: string, ids: string[]) => {
   Metrics.ingestedTracksTotal.inc({ user: userId }, tracks.length);
 
   return tracks;
+};
+
+export const getTracks = async (userId: string, ids: string[]) => {
+  const client = new SpotifyAPI(userId);
+  return toStoredTracks(userId, compact(await client.getTracks(ids)));
 };
 
 export const getAlbums = async (userId: string, ids: string[]) => {
@@ -214,9 +216,29 @@ export const getArtists = async (userId: string, ids: string[]) => {
 
 const getTracksAndRelatedAlbumArtists = async (
   userId: string,
+  spotifyTracks: SpotifyTrack[],
   ids: string[],
 ) => {
-  const tracks = await getTracks(userId, ids);
+  // The polling loop and the importers already hold full track objects, and
+  // fetching them again doubled the requests of an import. Tracks without
+  // external_ids are still fetched, so their ISRC is not lost when a response
+  // leaves the field out. Local files go the old way too, Spotify has no
+  // track behind them and the lookup drops them.
+  const givenById = new Map(
+    spotifyTracks
+      .filter(
+        (track) =>
+          track.id && !track.is_local && track.external_ids !== undefined,
+      )
+      .map((track) => [track.id, track]),
+  );
+  const uniqueIds = [...new Set(ids)];
+  const given = compact(uniqueIds.map((id) => givenById.get(id)));
+  const toFetch = uniqueIds.filter((id) => !givenById.has(id));
+  const tracks = [
+    ...toStoredTracks(userId, given),
+    ...(toFetch.length > 0 ? await getTracks(userId, toFetch) : []),
+  ];
 
   return {
     tracks,
@@ -271,7 +293,11 @@ export const getTracksAlbumsArtists = async (
     artists: relatedArtists,
     albums: relatedAlbums,
   } = missingTrackIds.length > 0
-    ? await getTracksAndRelatedAlbumArtists(userId, missingTrackIds)
+    ? await getTracksAndRelatedAlbumArtists(
+        userId,
+        spotifyTracks,
+        missingTrackIds,
+      )
     : { tracks: [], artists: [], albums: [] };
   if (missingTrackIds.length === 0) {
     logger.info("No missing tracks, passing...");

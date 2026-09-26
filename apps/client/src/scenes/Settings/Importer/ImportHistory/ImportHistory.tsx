@@ -57,6 +57,13 @@ export default function ImportHistory() {
             <div className={s.right}>
               <Text size="normal">
                 {statusToString[st.status]} ({st.current}/{st.total})
+                {st.status === "failure" && st.rateLimitedUntil && (
+                  <Text className={s.ratelimited} size="small">
+                    Spotify blocks requests until{" "}
+                    {DateFormatter.toDateTime(new Date(st.rateLimitedUntil))},
+                    retry after that
+                  </Text>
+                )}
               </Text>
               <ThreePoints
                 items={compact([

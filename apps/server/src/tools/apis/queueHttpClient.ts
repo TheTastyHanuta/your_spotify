@@ -64,6 +64,20 @@ const DEFAULT_RETRY_AFTER_MS = 1000;
 // day, and waiting that long here silently hangs every request behind it:
 // logins, the missing data repair before the server starts, imports.
 const MAX_RETRY_AFTER_MS = 30 * 1000;
+// Used when Spotify reports an exhausted quota without a longer Retry-After,
+// so the queue does not ask again every second.
+const MIN_QUOTA_EXCEEDED_BLOCK_MS = 60 * 1000;
+
+// Spotify answers an exhausted development mode quota with a 429 whose body
+// carries reason QUOTA_EXCEEDED, other 429s are short rate limits.
+function isQuotaExceeded(body: string) {
+  try {
+    const parsed = JSON.parse(body);
+    return (parsed?.error?.reason ?? parsed?.reason) === "QUOTA_EXCEEDED";
+  } catch {
+    return false;
+  }
+}
 
 function createQueueState(): QueueState {
   return {
@@ -218,11 +232,20 @@ export class QueuedHttpClient {
       }
 
       const retryAfterMs = this.parseRetryAfterHeader(response);
-      if (retryAfterMs > MAX_RETRY_AFTER_MS) {
-        this.queueState.rateLimitedUntil = Date.now() + retryAfterMs;
+      // An exhausted quota does not come back within a few retries, and
+      // every retry is counted against it again.
+      const quotaExceeded = isQuotaExceeded(text);
+      if (quotaExceeded || retryAfterMs > MAX_RETRY_AFTER_MS) {
+        this.queueState.rateLimitedUntil =
+          Date.now() +
+          (quotaExceeded
+            ? Math.max(retryAfterMs, MIN_QUOTA_EXCEEDED_BLOCK_MS)
+            : retryAfterMs);
         const until = new Date(this.queueState.rateLimitedUntil);
         logger.warn(
-          `Rate limited by ${url.host} until ${until.toLocaleString()}, requests fail until then instead of waiting`,
+          quotaExceeded
+            ? `The request quota of this Spotify app is used up until ${until.toLocaleString()}, requests fail until then instead of waiting`
+            : `Rate limited by ${url.host} until ${until.toLocaleString()}, requests fail until then instead of waiting`,
         );
         throw new RateLimitedError(until);
       }

@@ -8,6 +8,23 @@ import { getSpotifyLogUrl } from "../../../services/tools";
 import s from "../index.module.css";
 import { LocalStorage, REMEMBER_ME_KEY } from "../../../services/storage";
 import { useNavigate } from "../../../services/hooks/useNavigate";
+import { DateFormatter } from "../../../services/date";
+
+// Set by the server when the Spotify login failed
+function getLoginError() {
+  const search = new URLSearchParams(window.location.search);
+  const error = search.get("error");
+  if (!error) {
+    return null;
+  }
+  const until = new Date(search.get("until") ?? "");
+  if (error === "spotify_rate_limited" && !Number.isNaN(until.getTime())) {
+    return `Spotify is blocking requests from this server until ${DateFormatter.toDateTime(
+      until,
+    )}, so logging in is not possible before then.`;
+  }
+  return "Logging in with Spotify failed, the server logs have the details.";
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,14 +32,17 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(
     LocalStorage.get(REMEMBER_ME_KEY) === "true",
   );
+  const [loginError] = useState(getLoginError);
 
   useEffect(() => {
     if (user) {
       navigate("/");
-    } else if (LocalStorage.get(REMEMBER_ME_KEY) === "true") {
+    } else if (!loginError && LocalStorage.get(REMEMBER_ME_KEY) === "true") {
+      // Not after a failed login, retrying right away would fail again and
+      // bounce between this page and Spotify forever
       window.location.href = getSpotifyLogUrl();
     }
-  }, [navigate, user]);
+  }, [loginError, navigate, user]);
 
   const handleRememberMeClick = async () => {
     const newRememberMe = !rememberMe;
@@ -42,6 +62,11 @@ export default function Login() {
       <Text size="big" className={s.welcome}>
         To access your personal dashboard, please login with your account
       </Text>
+      {loginError && (
+        <Text size="normal" className={s.error}>
+          {loginError}
+        </Text>
+      )}
       <div>
         <a className={s.link} href={getSpotifyLogUrl()}>
           Login
