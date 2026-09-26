@@ -1,7 +1,7 @@
 import { hrtime } from "process";
 
 import { NextFunction, Request, Response } from "express";
-import { verify } from "jsonwebtoken";
+import { decode, sign, verify } from "jsonwebtoken";
 import { Types } from "mongoose";
 import { z } from "zod";
 
@@ -9,6 +9,7 @@ import { getUserFromField, getGlobalPreferences } from "../database";
 import { getUserImporterState } from "../database/queries/importer";
 import { getPrivateData } from "../database/queries/privateData";
 import { SpotifyAPI } from "./apis/spotifyApi";
+import { getWithDefault } from "./env";
 import { YourSpotifyError } from "./errors/error";
 import { logger } from "./logger";
 import { Metrics } from "./metrics";
@@ -59,7 +60,32 @@ export const validate = <
   }
 };
 
-const baselogged = async (req: Request, useQueryToken = false) => {
+// The cookie gets an expiry date matching the token. Without one the browser
+// drops it when it closes, which sent everyone back through Spotify, and
+// during a Spotify ban locked them out of stats that only need the database.
+export function storeSessionCookie(
+  req: Request,
+  res: Response,
+  userId: string,
+  jwtPrivateKey: string,
+) {
+  const token = sign({ userId }, jwtPrivateKey, {
+    expiresIn: getWithDefault("COOKIE_VALIDITY_MS", "30d") as `${number}`,
+  });
+  const { exp } = decode(token) as { exp: number };
+  res.cookie("token", token, {
+    sameSite: "strict",
+    httpOnly: true,
+    secure: req.secure,
+    expires: new Date(exp * 1000),
+  });
+}
+
+const baselogged = async (
+  req: Request,
+  res: Response,
+  useQueryToken = false,
+) => {
   const { token: queryToken } = req.query;
 
   if (useQueryToken && queryToken && typeof queryToken === "string") {
@@ -81,6 +107,8 @@ const baselogged = async (req: Request, useQueryToken = false) => {
     }
     const jwtUser = verify(auth, privateData.jwtPrivateKey) as {
       userId: string;
+      iat?: number;
+      exp?: number;
     };
 
     if (typeof jwtUser.userId !== "string") {
@@ -96,6 +124,12 @@ const baselogged = async (req: Request, useQueryToken = false) => {
     if (!user) {
       return null;
     }
+    // Past half of its lifetime the session is renewed, so a device that is
+    // used regularly never has to go through Spotify again.
+    const { iat, exp } = jwtUser;
+    if (iat && exp && Date.now() / 1000 > iat + (exp - iat) / 2) {
+      storeSessionCookie(req, res, jwtUser.userId, privateData.jwtPrivateKey);
+    }
     return user;
   } catch {
     return null;
@@ -107,7 +141,7 @@ export const logged = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const user = await baselogged(req, false);
+  const user = await baselogged(req, res, false);
   if (!user) {
     throw new NotLoggedError();
   }
@@ -120,7 +154,7 @@ export const isLoggedOrGuest = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const user = await baselogged(req, true);
+  const user = await baselogged(req, res, true);
   if (!user) {
     throw new NotLoggedError();
   }
@@ -133,7 +167,7 @@ export const optionalLoggedOrGuest = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const user = await baselogged(req, true);
+  const user = await baselogged(req, res, true);
   (req as OptionalLoggedRequest).user = user;
   next();
 };
@@ -143,7 +177,7 @@ export const optionalLogged = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const user = await baselogged(req, false);
+  const user = await baselogged(req, res, false);
   (req as OptionalLoggedRequest).user = user;
   next();
 };
