@@ -17,6 +17,7 @@ It's composed of a web server which polls the Spotify API every now and then and
 > - **Listened album context** - track and history views show which specific album version a track was actually played from
 > - **Better Spotify auth handling** - detects when Spotify has revoked your tokens and shows a re-authentication prompt instead of failing silently
 > - **Spotify rate limit handling** - a configurable pause between Spotify requests ([`SPOTIFY_API_DELAY_MS`](#environment-variables)) makes bans less likely; when Spotify does ban the app for hours (including an exhausted `QUOTA_EXCEEDED` quota), imports and logins fail with a message showing until when, and the server still starts, instead of everything hanging silently. The login stays valid for 30 days and renews itself while the device is used, so the stats remain usable during a ban, and polling can be turned off ([`DISABLE_POLLING`](#environment-variables))
+> - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks up each artist's genres on [MusicBrainz](https://musicbrainz.org) in the background (one request per second, no account needed). Genres Spotify returned before are kept
 > - **Importer reliability** - imports no longer silently drop listens, resume from the right place after a failure, and clean up their uploaded files
 > - Various fixes: infinite scroll, affinity stats on empty ranges and large histories, album page crash, searching with special characters, date presets in tabs left open for a long time
 >

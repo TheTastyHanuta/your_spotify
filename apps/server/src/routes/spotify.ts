@@ -26,6 +26,13 @@ import {
   getCollaborativeBestArtists,
   getCollaborativeBestSongs,
 } from "../database/queries/collaborative";
+import {
+  getCalendar,
+  getGenres,
+  getOverview,
+  getTaste,
+  getTimeline,
+} from "../database/queries/insights";
 import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
@@ -488,4 +495,43 @@ router.post("/playlist/create", logged, withHttpClient, async (req, res) => {
     await client.createPlaylist(playlistName, spotifyIds);
   }
   res.status(204).end();
+});
+
+router.get("/overview", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end } = validate(req.query, interval);
+  res.status(200).send(await getOverview(user, start, end));
+});
+
+router.get("/calendar", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end } = validate(req.query, interval);
+  res.status(200).send(await getCalendar(user, start, end));
+});
+
+router.get("/taste", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end } = validate(req.query, interval);
+  res.status(200).send(await getTaste(user, start, end));
+});
+
+const genresSchema = interval.extend({
+  nb: z.preprocess(toNumber, z.number().int().min(1).max(50).default(20)),
+});
+
+router.get("/genres", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, nb } = validate(req.query, genresSchema);
+  res.status(200).send(await getGenres(user, start, end, nb));
+});
+
+const timelineSchema = z.object({
+  type: z.enum(["artist", "album", "track"]),
+  id: z.string().min(1).max(64),
+});
+
+router.get("/timeline", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { type, id } = validate(req.query, timelineSchema);
+  res.status(200).send(await getTimeline(user, type, id));
 });
