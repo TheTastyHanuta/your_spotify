@@ -19,13 +19,20 @@ export function useAPI<Fn extends (...ags: any[]) => Promise<{ data: D }>, D>(
     UnboxPromise<ReturnType<Fn>>["data"] | null
   >(null);
   useEffect(() => {
+    // A slower answer to older arguments must not replace a newer one
+    let stale = false;
     async function fetch() {
       const result = await call(...args);
-      setValue(result.data);
+      if (!stale) {
+        setValue(result.data);
+      }
     }
 
     setValue(null);
     fetch().catch(console.error);
+    return () => {
+      stale = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...args, call]);
 
@@ -46,10 +53,14 @@ export function useConditionalAPI<
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // A slower answer to older arguments must not replace a newer one
+    let stale = false;
     async function fetch() {
       const result = await call(...args);
-      setLoading(false);
-      setValue(result.data);
+      if (!stale) {
+        setLoading(false);
+        setValue(result.data);
+      }
     }
 
     if (condition) {
@@ -58,6 +69,9 @@ export function useConditionalAPI<
     } else {
       setValue(null);
     }
+    return () => {
+      stale = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...args, condition, call]);
 
