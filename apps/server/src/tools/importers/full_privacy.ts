@@ -15,6 +15,7 @@ import {
 } from "../../database/schemas/track";
 import { User } from "../../database/schemas/user";
 import {
+  getReusableStoredTracks,
   getTracksAlbumsArtists,
   storeTrackAlbumArtist,
 } from "../../spotify/dbTools";
@@ -193,12 +194,20 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     if (ids.length < 45 && !force) {
       return idsToSearch;
     }
-    const searchedItems = await this.search(ids);
-    for (const [index, searchedItem] of searchedItems.entries()) {
-      const id = ids[index];
-      if (!id) {
-        continue;
-      }
+    // Tracks stored before, by the polling loop or a run that got rate
+    // limited, are not requested again.
+    const stored = await retryPromise(
+      () => getReusableStoredTracks(ids),
+      10,
+      30,
+    );
+    const toSearch = ids.filter((id) => !stored.has(id));
+    const searchedItems = await this.search(toSearch);
+    const searchedById = new Map(
+      toSearch.map((id, index) => [id, searchedItems[index]]),
+    );
+    for (const id of ids) {
+      const searchedItem = stored.get(id) ?? searchedById.get(id);
       if (searchedItem === undefined) {
         setToCacheString(this.userId.toString(), id, { exists: false });
         continue;
@@ -217,7 +226,9 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         items.push({ track: searchedItem, played_at: pa });
       });
       logger.info(
-        `Adding ${searchedItem.name} - ${searchedItem.artists[0]?.name} from data`,
+        stored.has(id)
+          ? `Adding ${searchedItem.name} from the database`
+          : `Adding ${searchedItem.name} - ${searchedItem.artists[0]?.name} from data`,
       );
     }
     this.oldestPendingItem = null;

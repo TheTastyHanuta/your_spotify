@@ -6,7 +6,7 @@ import {
   storeFirstListenedAtIfLess,
 } from "../database";
 import { TrackModel, AlbumModel, ArtistModel } from "../database/Models";
-import { Album } from "../database/schemas/album";
+import { Album, SpotifyAlbum } from "../database/schemas/album";
 import { Artist } from "../database/schemas/artist";
 import { Infos } from "../database/schemas/info";
 import { SpotifyTrack, Track } from "../database/schemas/track";
@@ -185,20 +185,73 @@ export const getTracks = async (userId: string, ids: string[]) => {
   return toStoredTracks(userId, compact(await client.getTracks(ids)));
 };
 
-export const getAlbums = async (userId: string, ids: string[]) => {
-  const client = new SpotifyAPI(userId);
-  const spotifyAlbums = compact(await client.getAlbums(ids));
-
+// The album inside a track response lacks copyrights and genres, neither is
+// read anywhere and Spotify deprecated album genres, so they default to empty.
+const toStoredAlbums = (userId: string, spotifyAlbums: SpotifyAlbum[]) => {
   const albums: Album[] = spotifyAlbums.map((alb) => {
     logger.info(
       `Storing non existing album ${alb.name} by ${alb.artists[0]?.name}`,
     );
 
-    return { ...alb, artists: alb.artists.map((art) => art.id) };
+    return {
+      ...alb,
+      copyrights: alb.copyrights ?? [],
+      genres: alb.genres ?? [],
+      artists: alb.artists.map((art) => art.id),
+    };
   });
   Metrics.ingestedAlbumsTotal.inc({ user: userId }, albums.length);
 
   return albums;
+};
+
+export const getAlbums = async (userId: string, ids: string[]) => {
+  const client = new SpotifyAPI(userId);
+  return toStoredAlbums(userId, compact(await client.getAlbums(ids)));
+};
+
+// Tracks the importer loads from the database carry only the album id
+const isFullAlbum = (album: SpotifyAlbum | undefined): album is SpotifyAlbum =>
+  album?.name !== undefined &&
+  Array.isArray(album.images) &&
+  Array.isArray(album.artists);
+
+// Spotify only needs to be asked for the albums no track brought along
+export const splitMissingAlbums = (
+  spotifyTracks: SpotifyTrack[],
+  missingIds: string[],
+) => {
+  const embedded = new Map(
+    spotifyTracks
+      .map((track) => track.album)
+      .filter(isFullAlbum)
+      .map((album) => [album.id, album]),
+  );
+  return {
+    embedded: compact(missingIds.map((id) => embedded.get(id))),
+    toFetch: missingIds.filter((id) => !embedded.has(id)),
+  };
+};
+
+// What the importers need from a track already stored, so it does not have to
+// be requested from Spotify again. Its album and artists only hold their ids.
+export const storedTrackToSpotifyTrack = (track: Track): SpotifyTrack => ({
+  ...track,
+  album: { id: track.album } as SpotifyAlbum,
+  artists: track.artists.map((id) => ({ id }) as Artist),
+  external_ids: track.isrc ? { isrc: track.isrc } : {},
+});
+
+// Stored tracks without an ISRC are left out, fetching them again is what
+// fills in their ISRC. Merged tracks have theirs removed on purpose.
+export const getReusableStoredTracks = async (ids: string[]) => {
+  const tracks: Track[] = await TrackModel.find({
+    id: { $in: ids },
+    $or: [{ isrc: { $ne: null } }, { mergedInto: { $ne: null } }],
+  }).lean();
+  return new Map(
+    tracks.map((track) => [track.id, storedTrackToSpotifyTrack(track)]),
+  );
 };
 
 export const getArtists = async (userId: string, ids: string[]) => {
@@ -235,13 +288,15 @@ const getTracksAndRelatedAlbumArtists = async (
   const uniqueIds = [...new Set(ids)];
   const given = compact(uniqueIds.map((id) => givenById.get(id)));
   const toFetch = uniqueIds.filter((id) => !givenById.has(id));
-  const tracks = [
-    ...toStoredTracks(userId, given),
-    ...(toFetch.length > 0 ? await getTracks(userId, toFetch) : []),
-  ];
+  const fetched =
+    toFetch.length > 0
+      ? compact(await new SpotifyAPI(userId).getTracks(toFetch))
+      : [];
+  const tracks = toStoredTracks(userId, [...given, ...fetched]);
 
   return {
     tracks,
+    fetched,
     artists: [...new Set(tracks.flatMap((e) => e.artists)).values()],
     albums: [...new Set(tracks.map((e) => e.album)).values()],
   };
@@ -290,6 +345,7 @@ export const getTracksAlbumsArtists = async (
 
   const {
     tracks,
+    fetched,
     artists: relatedArtists,
     albums: relatedAlbums,
   } = missingTrackIds.length > 0
@@ -298,7 +354,7 @@ export const getTracksAlbumsArtists = async (
         spotifyTracks,
         missingTrackIds,
       )
-    : { tracks: [], artists: [], albums: [] };
+    : { tracks: [], fetched: [], artists: [], albums: [] };
   if (missingTrackIds.length === 0) {
     logger.info("No missing tracks, passing...");
   }
@@ -326,8 +382,14 @@ export const getTracksAlbumsArtists = async (
       !storedArtists.find((salb) => salb.id.toString() === alb.toString()),
   );
 
-  const albums =
-    missingAlbumIds.length > 0 ? await getAlbums(userId, missingAlbumIds) : [];
+  const { embedded, toFetch } = splitMissingAlbums(
+    [...spotifyTracks, ...fetched],
+    missingAlbumIds,
+  );
+  const albums = [
+    ...toStoredAlbums(userId, embedded),
+    ...(toFetch.length > 0 ? await getAlbums(userId, toFetch) : []),
+  ];
   const artists =
     missingArtistIds.length > 0
       ? await getArtists(userId, missingArtistIds)
