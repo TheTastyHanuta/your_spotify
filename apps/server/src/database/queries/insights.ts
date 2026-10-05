@@ -156,10 +156,16 @@ export const getCalendar = async (user: User, start: Date, end: Date) => {
 // Upper bounds in minutes of the track length buckets, the last one is open
 const LENGTH_BUCKETS = [2, 3, 4, 5];
 
+// Plays of songs released at most this many years before they were played
+const FRESH_YEARS = 1;
+// and at least this many years before
+const NOSTALGIC_YEARS = 10;
+
 // Release years of what was listened to, and what kind of tracks it was
 export const getTaste = async (user: User, start: Date, end: Date) => {
+  const timezone = getTimezone(user.settings.timezone);
   const perTrack: {
-    _id: { track: string };
+    _id: { track: string; year: number };
     plays: number;
     durationMs: number;
     releaseDate?: string;
@@ -170,8 +176,13 @@ export const getTaste = async (user: User, start: Date, end: Date) => {
     ...basicMatch(user._id, start, end),
     {
       $group: {
-        // The listened album, a track can be on several
-        _id: { track: "$id", album: "$albumId" },
+        // The listened album, a track can be on several. The year it was
+        // played, to know how old the song was then.
+        _id: {
+          track: "$id",
+          album: "$albumId",
+          year: { $year: { date: "$played_at", timezone } },
+        },
         plays: { $sum: 1 },
         durationMs: { $sum: "$durationMs" },
       },
@@ -211,9 +222,18 @@ export const getTaste = async (user: User, start: Date, end: Date) => {
   const albumTypes: Record<string, number> = {};
   const explicit = { explicit: 0, clean: 0 };
   const lengths = new Array<number>(LENGTH_BUCKETS.length + 1).fill(0);
+  const ageWhenPlayed = { fresh: 0, nostalgic: 0 };
   for (const row of perTrack) {
     const year = Number(row.releaseDate?.slice(0, 4));
     if (year > 1900) {
+      const age = row._id.year - year;
+      // A negative age is a play of an album released later, often a
+      // remaster Spotify replaced the original with. Not fresh.
+      if (age >= 0 && age <= FRESH_YEARS) {
+        ageWhenPlayed.fresh += row.plays;
+      } else if (age >= NOSTALGIC_YEARS) {
+        ageWhenPlayed.nostalgic += row.plays;
+      }
       const entry = years.get(year) ?? {
         plays: 0,
         durationMs: 0,
@@ -262,11 +282,69 @@ export const getTaste = async (user: User, start: Date, end: Date) => {
           top: { track: topsById.get(id), plays },
         };
       }),
+    // Plays of songs released at most 1 year, or at least 10 years, before
+    // they were played. Out of the plays of the years above.
+    ageWhenPlayed,
     albumTypes,
     explicit,
     // Plays per track length: < 2 min, 2-3, 3-4, 4-5, 5 min and more
     lengths,
   };
+};
+
+// Plays per release decade for each year of the user's whole history, to
+// show how their taste moved. Per album, as the release date is the album's.
+export const getDecadesPerYear = async (user: User) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const perAlbum: {
+    _id: { year: number };
+    plays: number;
+    releaseDate?: string;
+  }[] = await InfosModel.aggregate([
+    { $match: { owner: user._id, blacklistedBy: { $exists: 0 } } },
+    {
+      $group: {
+        _id: {
+          year: { $year: { date: "$played_at", timezone } },
+          album: "$albumId",
+        },
+        plays: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "albums",
+        localField: "_id.album",
+        foreignField: "id",
+        as: "album",
+      },
+    },
+    {
+      $project: {
+        plays: 1,
+        releaseDate: { $arrayElemAt: ["$album.release_date", 0] },
+      },
+    },
+  ]);
+  const years = new Map<number, Map<number, number>>();
+  for (const row of perAlbum) {
+    const release = Number(row.releaseDate?.slice(0, 4));
+    if (!(release > 1900)) {
+      continue;
+    }
+    const decades = years.get(row._id.year) ?? new Map<number, number>();
+    const decade = Math.floor(release / 10) * 10;
+    decades.set(decade, (decades.get(decade) ?? 0) + row.plays);
+    years.set(row._id.year, decades);
+  }
+  return [...years.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([year, decades]) => ({
+      year,
+      decades: [...decades.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([decade, plays]) => ({ decade, plays })),
+    }));
 };
 
 // Plays per genre. An artist has up to 6 genres and counts for each, so the

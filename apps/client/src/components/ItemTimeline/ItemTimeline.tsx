@@ -13,16 +13,10 @@ import {
 } from "recharts";
 
 import { api, TimelineCounts } from "../../services/apis/api";
-import {
-  DateFormatter,
-  getAppropriateTimesplitFromRange,
-} from "../../services/date";
+import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
-import { useNavigate } from "../../services/hooks/useNavigate";
-import { setDataInterval } from "../../services/redux/modules/user/reducer";
+import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { selectStatMeasurement } from "../../services/redux/modules/user/selector";
-import { intervalDetailToRedux } from "../../services/redux/modules/user/utils";
-import { useAppDispatch } from "../../services/redux/tools";
 import {
   buildFromDateId,
   buildXYData,
@@ -63,8 +57,7 @@ interface ItemTimelineProps {
 export default function ItemTimeline({ type, id }: ItemTimelineProps) {
   const timeline = useAPI(api.getTimeline, type, id);
   const measurement = useSelector(selectStatMeasurement);
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
+  const openPeriod = useOpenPeriod();
 
   if (timeline && ("code" in timeline || timeline.months.length === 0)) {
     return null;
@@ -145,22 +138,8 @@ export default function ItemTimeline({ type, id }: ItemTimelineProps) {
   const keyOf = (date: Date) =>
     monthKey({ year: date.getFullYear(), month: date.getMonth() + 1 });
 
-  const openMonth = (date: Date) => {
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-    // Like a custom range from the period picker
-    const interval = {
-      start,
-      end,
-      timesplit: getAppropriateTimesplitFromRange(start, end),
-    };
-    dispatch(
-      setDataInterval(
-        intervalDetailToRedux({ type: "custom", name: "custom", interval }),
-      ),
-    );
-    navigate(topsPage[type].path);
-  };
+  const openMonth = (date: Date) =>
+    openPeriod(startOfMonth(date), endOfMonth(date), topsPage[type].path);
 
   const monthTooltipValue = (payload: { x: number }, value: number) => {
     const date = dateOf(payload.x);

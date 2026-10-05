@@ -21,10 +21,12 @@ import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
 import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
+import Habits from "./scenes/Habits";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
 import LongestSessions from "./scenes/LongestSessions";
 import Settings from "./scenes/Settings";
+import Taste from "./scenes/Taste";
 import Albums from "./scenes/Tops/Albums";
 import Artists from "./scenes/Tops/Artists";
 import Songs from "./scenes/Tops/Songs";
@@ -83,6 +85,22 @@ function App() {
                   element={
                     <PrivateRoute>
                       <AllStats />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/taste"
+                  element={
+                    <PrivateRoute>
+                      <Taste />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/habits"
+                  element={
+                    <PrivateRoute>
+                      <Habits />
                     </PrivateRoute>
                   }
                 />

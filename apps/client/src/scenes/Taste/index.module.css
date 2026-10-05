@@ -1,0 +1,90 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.chart {
+  height: 300px;
+}
+
+.note {
+  margin: 0 0 12px 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) minmax(60px, 1fr) 40px auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.rowLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowValue {
+  text-align: right;
+}
+
+.track {
+  height: 8px;
+  border-radius: 4px;
+  background-color: rgba(var(--primary-tuple), 0.07);
+}
+
+.bar {
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--primary);
+}
+
+.artists {
+  display: flex;
+  gap: 4px;
+  width: 80px;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.years {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.year {
+  display: grid;
+  grid-template-columns: 48px 40px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.yearTrack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.median {
+  fill: var(--text-grey);
+  font-size: 12px;
+}
+
+.legend {
+  color: var(--text-on-light);
+}

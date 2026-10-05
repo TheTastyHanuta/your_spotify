@@ -48,6 +48,14 @@ export const DateFormatter = {
       year: "numeric",
     }).format(date);
   },
+  toWeekdayDayMonthYear(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  },
   toMonthStringYear(date: Date) {
     return new Intl.DateTimeFormat(currentUsedDateFormat, {
       month: "long",

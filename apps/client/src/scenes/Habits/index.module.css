@@ -1,0 +1,65 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-grey);
+  white-space: nowrap;
+}
+
+/* Scrolls inside the card on narrow screens */
+.calendar {
+  overflow-x: auto;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: auto;
+  grid-auto-columns: 12px;
+  grid-template-rows: auto;
+  grid-auto-rows: 12px;
+  gap: 3px;
+  width: max-content;
+}
+
+.day {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  outline: 1px solid var(--text-on-light);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-grey);
+}
+
+.week {
+  display: grid;
+  grid-template-columns: auto repeat(24, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  gap: 3px;
+}
+
+.cell {
+  height: 24px;
+  border-radius: 3px;
+}

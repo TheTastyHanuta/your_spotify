@@ -106,6 +106,55 @@ export type TimelineCounts = {
 // The item's listens, and all listens between its first and last listen
 export type TimelineResponse = TimelineCounts & { overall: TimelineCounts };
 
+// Listening of a period, see the server's insights queries. Days are
+// "YYYY-MM-DD" in the stats timezone.
+type Counts = { plays: number; durationMs: number };
+export type OverviewResponse = Counts & {
+  tracks: number;
+  artists: number;
+  albums: number;
+  // Listened to for the first time ever in the period
+  newArtists: number;
+  newTracks: number;
+  activeDays: number;
+  busiestDay?: Counts & { date: string };
+  streaks: {
+    longest: { days: number; start: string; end: string } | null;
+    // Up to the end of the period, or today when it is not over
+    current: number;
+  };
+  // 1 is Monday
+  heatmap: (Counts & { weekday: number; hour: number })[];
+};
+export type CalendarResponse = (Counts & { date: string })[];
+export type TasteResponse = {
+  years: (Counts & {
+    year: number;
+    top: {
+      track?: Track & { full_album: Album; full_artists: Artist[] };
+      plays: number;
+    };
+  })[];
+  ageWhenPlayed: { fresh: number; nostalgic: number };
+  albumTypes: Record<string, number>;
+  explicit: { explicit: number; clean: number };
+  // Plays of songs < 2 min, 2-3, 3-4, 4-5, 5 min and more
+  lengths: number[];
+};
+export type DecadesPerYearResponse = {
+  year: number;
+  decades: { decade: number; plays: number }[];
+}[];
+export type GenresResponse = {
+  totalPlays: number;
+  // Plays of artists with at least one genre
+  coveredPlays: number;
+  genres: (Counts & {
+    genre: string;
+    artists: Pick<Artist, "id" | "name" | "images">[];
+  })[];
+};
+
 export type TrackStatsResponse = {
   track: Track;
   artists: Artist[];
@@ -232,6 +281,16 @@ export const api = {
       results: { id: string; count: number }[];
     }>(`/album/${id}/rank`),
   getArtists: (ids: string[]) => get<Artist[]>(`/artist/${ids.join(",")}`),
+  getOverview: (start: Date, end: Date) =>
+    get<OverviewResponse>("/spotify/overview", { start, end }),
+  getCalendar: (start: Date, end: Date) =>
+    get<CalendarResponse>("/spotify/calendar", { start, end }),
+  getTaste: (start: Date, end: Date) =>
+    get<TasteResponse>("/spotify/taste", { start, end }),
+  getDecadesPerYear: () =>
+    get<DecadesPerYearResponse>("/spotify/taste/decades"),
+  getGenres: (start: Date, end: Date, nb: number) =>
+    get<GenresResponse>("/spotify/genres", { start, end, nb }),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,
