@@ -672,8 +672,12 @@ function TopReleaseYear({
   const top = years.reduce((best, y) => (y.plays > best.plays ? y : best));
   return (
     <Fact title="Most played release year">
-      {top.year}, {plural(top.plays, "play")}
-      {top.top.track && <>, led by {top.top.track.name}</>}
+      {top.year}: {plural(top.plays, "play")} of songs from that year
+      {top.top.track && (
+        <>
+          , most of all {top.top.track.name} ({plural(top.top.plays, "play")})
+        </>
+      )}
     </Fact>
   );
 }

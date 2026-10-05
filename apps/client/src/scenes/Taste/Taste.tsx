@@ -323,22 +323,32 @@ function TopYears({ years }: { years: TasteResponse["years"] }) {
                     size="normal"
                     className={s.ellipsis}
                   />
-                  <Text size="normal" greyed className={s.ellipsis}>
-                    {track.full_artists.map((artist, index) => (
-                      <span key={artist.id}>
-                        {index > 0 && ", "}
-                        <InlineArtist artist={artist} size="normal" noStyle />
-                      </span>
-                    ))}
-                  </Text>
+                  {/* Only the artists are cut when the line is too long */}
+                  <div className={s.yearArtists}>
+                    <Text size="normal" greyed className={s.ellipsis}>
+                      {track.full_artists.map((artist, index) => (
+                        <span key={artist.id}>
+                          {index > 0 && ", "}
+                          <InlineArtist artist={artist} size="normal" noStyle />
+                        </span>
+                      ))}
+                    </Text>
+                    <Text size="normal" greyed className={s.nowrap}>
+                      {`· ${plural(year.top.plays, "play")}`}
+                    </Text>
+                  </div>
                 </div>
               </>
             ) : (
               <span />
             )}
-            <Text size="normal" greyed>
-              {plural(year.plays, "play")}
-            </Text>
+            {/* All songs of the year, the song is only the most played */}
+            <div className={s.yearTotal}>
+              <Text size="normal">{plural(year.plays, "play")}</Text>
+              <Text size="small" greyed>
+                all songs from {year.year}
+              </Text>
+            </div>
           </div>
         );
       })}
