@@ -29,6 +29,7 @@ import {
 import {
   getCalendar,
   getDecadesPerYear,
+  getDiscoveries,
   getGenres,
   getOverview,
   getTaste,
@@ -529,6 +530,16 @@ router.get("/genres", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, nb } = validate(req.query, genresSchema);
   res.status(200).send(await getGenres(user, start, end, nb));
+});
+
+const discoveriesSchema = interval.extend({
+  nb: z.preprocess(toNumber, z.number().int().min(1).max(20).default(5)),
+});
+
+router.get("/discoveries", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, nb } = validate(req.query, discoveriesSchema);
+  res.status(200).send(await getDiscoveries(user, start, end, nb));
 });
 
 const timelineSchema = z.object({

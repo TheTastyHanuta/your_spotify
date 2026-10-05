@@ -20,6 +20,8 @@ import {
   PaletteOutlined,
   CalendarMonth,
   CalendarMonthOutlined,
+  Summarize,
+  SummarizeOutlined,
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 
@@ -63,6 +65,12 @@ export function useLinks() {
           link: "/habits",
           icon: <CalendarMonthOutlined />,
           iconOn: <CalendarMonth />,
+        },
+        {
+          label: "Recap",
+          link: "/recap",
+          icon: <SummarizeOutlined />,
+          iconOn: <Summarize />,
         },
       ],
     },

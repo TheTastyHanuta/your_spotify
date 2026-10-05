@@ -155,6 +155,13 @@ export type GenresResponse = {
   })[];
 };
 
+export type DiscoveriesResponse = {
+  plays: number;
+  // First listen ever
+  first: string;
+  artist: Pick<Artist, "id" | "name" | "images">;
+}[];
+
 export type TrackStatsResponse = {
   track: Track;
   artists: Artist[];
@@ -291,6 +298,8 @@ export const api = {
     get<DecadesPerYearResponse>("/spotify/taste/decades"),
   getGenres: (start: Date, end: Date, nb: number) =>
     get<GenresResponse>("/spotify/genres", { start, end, nb }),
+  getDiscoveries: (start: Date, end: Date, nb: number) =>
+    get<DiscoveriesResponse>("/spotify/discoveries", { start, end, nb }),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,

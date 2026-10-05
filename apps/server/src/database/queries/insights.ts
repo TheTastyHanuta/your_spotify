@@ -68,6 +68,65 @@ const countFirstListens = async (
   return (result?.count ?? 0) as number;
 };
 
+// Artists heard for the first time ever during the period, most played
+// in the period first
+export const getDiscoveries = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const rows: {
+    plays: number;
+    first: Date;
+    artist?: { id: string; name: string; images: unknown[] };
+  }[] = await InfosModel.aggregate([
+    {
+      $match: {
+        owner: user._id,
+        blacklistedBy: { $exists: 0 },
+        played_at: { $lt: end },
+      },
+    },
+    {
+      $group: {
+        _id: "$primaryArtistId",
+        first: { $min: "$played_at" },
+        plays: { $sum: { $cond: [{ $gt: ["$played_at", start] }, 1, 0] } },
+      },
+    },
+    { $match: { first: { $gt: start } } },
+    { $sort: { plays: -1 } },
+    { $limit: nb },
+    {
+      $lookup: {
+        from: "artists",
+        localField: "_id",
+        foreignField: "id",
+        as: "artist",
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        plays: 1,
+        first: 1,
+        artist: { $arrayElemAt: ["$artist", 0] },
+      },
+    },
+    {
+      $project: {
+        plays: 1,
+        first: 1,
+        "artist.id": 1,
+        "artist.name": 1,
+        "artist.images": 1,
+      },
+    },
+  ]);
+  return rows.filter((row) => row.artist?.id);
+};
+
 export const getOverview = async (user: User, start: Date, end: Date) => {
   const timezone = getTimezone(user.settings.timezone);
   const distinct = (field: string) => [

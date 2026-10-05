@@ -30,12 +30,10 @@ import {
 } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
+import { medianYear, musicalAge } from "./taste";
 
 import s from "./index.module.css";
 
-// People tend to love most the music of their late teens (the
-// "reminiscence bump"), so the median release year hints at when they were 17
-const REMINISCENCE_AGE = 17;
 const NB_GENRES = 12;
 const NB_TOP_YEARS = 8;
 // Decades shown in the years chart, the older ones are put together
@@ -59,16 +57,6 @@ const percent = (part: number, total: number) =>
   Math.round(exactPercent(part, total));
 const plural = (n: number, word: string) =>
   `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
-
-// Weighted by plays
-const medianYear = (years: TasteResponse["years"]) => {
-  const total = years.reduce((sum, y) => sum + y.plays, 0);
-  let cumulated = 0;
-  return years.find((y) => {
-    cumulated += y.plays;
-    return cumulated >= total / 2;
-  })?.year;
-};
 
 export default function Taste() {
   const { interval } = useSelector(selectRawIntervalDetail);
@@ -112,15 +100,7 @@ export default function Taste() {
       title: "Musical age",
       info: "A playful estimate. People tend to love the music of their late teens most, so the median release year of what you listen to hints at when you were 17.",
       main:
-        median === undefined
-          ? undefined
-          : plural(
-              Math.max(
-                REMINISCENCE_AGE,
-                new Date().getFullYear() - (median - REMINISCENCE_AGE),
-              ),
-              "year",
-            ),
+        median === undefined ? undefined : plural(musicalAge(median), "year"),
       sub:
         median === undefined
           ? undefined

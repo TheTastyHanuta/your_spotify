@@ -25,6 +25,7 @@ import Habits from "./scenes/Habits";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
 import LongestSessions from "./scenes/LongestSessions";
+import Recap from "./scenes/Recap";
 import Settings from "./scenes/Settings";
 import Taste from "./scenes/Taste";
 import Albums from "./scenes/Tops/Albums";
@@ -101,6 +102,14 @@ function App() {
                   element={
                     <PrivateRoute>
                       <Habits />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/recap"
+                  element={
+                    <PrivateRoute>
+                      <Recap />
                     </PrivateRoute>
                   }
                 />

@@ -1,0 +1,98 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.chart {
+  height: 300px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.headline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+}
+
+.more {
+  color: green;
+}
+
+.less {
+  color: red;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.rank {
+  text-align: right;
+}
+
+.image {
+  object-fit: cover;
+}
+
+.round {
+  border-radius: 50%;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.right {
+  margin-left: auto;
+}
+
+.hint {
+  color: var(--text-grey);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.taste {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
