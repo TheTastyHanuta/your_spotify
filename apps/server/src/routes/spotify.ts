@@ -533,5 +533,10 @@ const timelineSchema = z.object({
 router.get("/timeline", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { type, id } = validate(req.query, timelineSchema);
-  res.status(200).send(await getTimeline(user, type, id));
+  const timeline = await getTimeline(user, type, id);
+  if (!timeline) {
+    res.status(200).send({ code: "NEVER_LISTENED" });
+    return;
+  }
+  res.status(200).send(timeline);
 });

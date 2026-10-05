@@ -4,6 +4,7 @@ import Header from "../../components/Header";
 import { AlbumStatsResponse } from "../../services/apis/api";
 import InlineArtist from "../../components/InlineArtist";
 import IdealImage from "../../components/IdealImage";
+import ItemTimeline from "../../components/ItemTimeline";
 import FirstAndLast from "../ArtistStats/FirstAndLast";
 import InlineTrack from "../../components/InlineTrack";
 import TitleCard from "../../components/TitleCard";
@@ -123,6 +124,9 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
                 </div>
               ))}
             </TitleCard>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <ItemTimeline type="album" id={stats.album.id} />
           </Grid>
         </Grid>
       </div>

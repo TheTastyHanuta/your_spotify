@@ -94,8 +94,17 @@ export type ArtistStatsResponse = {
   mostListened: { _id: string; count: number; track: TrackWithAlbum }[];
   albumMostListened: { _id: string; count: number; album: Album }[];
   total: { count: number; primaryCount: number; featuredCount: number };
-  dayRepartition: { _id: number; count: number; duration: number }[];
 };
+
+type Counted<Id> = { _id: Id; plays: number; durationMs: number }[];
+export type TimelineCounts = {
+  months: Counted<DateId>;
+  // 1 is Monday
+  weekdays: Counted<number>;
+  hours: Counted<number>;
+};
+// The item's listens, and all listens between its first and last listen
+export type TimelineResponse = TimelineCounts & { overall: TimelineCounts };
 
 export type TrackStatsResponse = {
   track: Track;
@@ -223,6 +232,11 @@ export const api = {
       results: { id: string; count: number }[];
     }>(`/album/${id}/rank`),
   getArtists: (ids: string[]) => get<Artist[]>(`/artist/${ids.join(",")}`),
+  getTimeline: (type: "artist" | "album" | "track", id: string) =>
+    get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
+      type,
+      id,
+    }),
   getArtistStats: (id: string) =>
     get<ArtistStatsResponse | { code: "NEVER_LISTENED" }>(
       `/artist/${id}/stats`,

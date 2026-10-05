@@ -6,6 +6,7 @@ import IdealImage from "../../components/IdealImage";
 import ImageTwoLines from "../../components/ImageTwoLines";
 import InlineAlbum from "../../components/InlineAlbum";
 import InlineArtist from "../../components/InlineArtist";
+import ItemTimeline from "../../components/ItemTimeline";
 import Text from "../../components/Text";
 import TitleCard from "../../components/TitleCard";
 import { TrackStatsResponse } from "../../services/apis/api";
@@ -157,6 +158,9 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
                 );
               })}
             </TitleCard>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <ItemTimeline type="track" id={trackId} />
           </Grid>
         </Grid>
       </div>

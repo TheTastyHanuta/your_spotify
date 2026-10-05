@@ -8,7 +8,6 @@ import {
   bestPeriodOfArtist,
   getTotalListeningOfArtist,
   searchArtist,
-  getDayRepartitionOfArtist,
   blacklistArtist,
   unblacklistArtist,
   blacklistByArtist,
@@ -51,16 +50,9 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     getMostListenedAlbumOfArtist(user, id),
     bestPeriodOfArtist(user, id),
     getTotalListeningOfArtist(user, id),
-    getDayRepartitionOfArtist(user, id),
   ];
-  const [
-    firstLast,
-    mostListened,
-    albumMostListened,
-    bestPeriod,
-    total,
-    dayRepartition,
-  ] = await Promise.all(promises);
+  const [firstLast, mostListened, albumMostListened, bestPeriod, total] =
+    await Promise.all(promises);
   // firstLast is empty when the oldest or newest listen points at a track that
   // no longer exists, which the missing-track repair normally prevents. The
   // client dereferences it unguarded, so treat it like having no stats at all.
@@ -77,7 +69,6 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
       albumMostListened,
       bestPeriod,
       total,
-      dayRepartition,
     });
 });
 

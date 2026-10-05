@@ -342,8 +342,42 @@ export const getGenres = async (
 
 export type TimelineType = "artist" | "album" | "track";
 
-// Listens of one item over its whole history, per month, weekday and hour.
-// Like the other detail pages, blacklisted listens are counted.
+type Counted<Id> = { _id: Id; plays: number; durationMs: number }[];
+type TimelineFacets = {
+  months: Counted<{ year: number; month: number }>;
+  weekdays: Counted<number>;
+  hours: Counted<number>;
+};
+
+// Plays per month, ISO weekday (1 is Monday) and hour. Months are
+// { year, month } like the other per-month stats, so the client can fill the
+// months without listens. Embedded _id documents sort field by field, so
+// months sort by year first.
+const timelineFacets = (timezone: string) => {
+  const count = (key: object) => [
+    {
+      $group: {
+        _id: key,
+        plays: { $sum: 1 },
+        durationMs: { $sum: "$durationMs" },
+      },
+    },
+    { $sort: { _id: 1 as const } },
+  ];
+  return {
+    months: count({
+      year: { $year: { date: "$played_at", timezone } },
+      month: { $month: { date: "$played_at", timezone } },
+    }),
+    weekdays: count({ $isoDayOfWeek: { date: "$played_at", timezone } }),
+    hours: count({ $hour: { date: "$played_at", timezone } }),
+  };
+};
+
+// Listens of one item over its whole history, and all the user's listens
+// between its first and last listen, to compare the item with the usual
+// listening and give its share of each month. Like the other detail pages,
+// blacklisted listens count, in both, so a share never exceeds 100%.
 export const getTimeline = async (
   user: User,
   type: TimelineType,
@@ -355,37 +389,38 @@ export const getTimeline = async (
     album: { owner: user._id, albumId: id },
     track: { owner: user._id, id },
   }[type];
-  const count = (key: object) => [
-    {
-      $group: {
-        _id: key,
-        plays: { $sum: 1 },
-        durationMs: { $sum: "$durationMs" },
-      },
-    },
-    { $sort: { _id: 1 as const } },
-  ];
-  const [facets] = await InfosModel.aggregate([
+  const [item] = await InfosModel.aggregate<
+    TimelineFacets & { range: { first: Date; last: Date }[] }
+  >([
     { $match: match },
     {
       $facet: {
-        months: count({
-          $dateToString: { format: "%Y-%m", date: "$played_at", timezone },
-        }),
-        weekdays: count({ $isoDayOfWeek: { date: "$played_at", timezone } }),
-        hours: count({ $hour: { date: "$played_at", timezone } }),
+        ...timelineFacets(timezone),
+        range: [
+          {
+            $group: {
+              _id: null,
+              first: { $min: "$played_at" },
+              last: { $max: "$played_at" },
+            },
+          },
+        ],
       },
     },
   ]);
-  const rename = (key: string) => (rows: any[]) =>
-    rows.map(({ _id, plays, durationMs }) => ({
-      [key]: _id,
-      plays: plays as number,
-      durationMs: durationMs as number,
-    }));
-  return {
-    months: rename("month")(facets.months),
-    weekdays: rename("weekday")(facets.weekdays),
-    hours: rename("hour")(facets.hours),
-  };
+  const range = item?.range[0];
+  if (!item || !range) {
+    return null;
+  }
+  const [overall] = await InfosModel.aggregate<TimelineFacets>([
+    {
+      $match: {
+        owner: user._id,
+        played_at: { $gte: range.first, $lte: range.last },
+      },
+    },
+    { $facet: timelineFacets(timezone) },
+  ]);
+  const { months, weekdays, hours } = item;
+  return { months, weekdays, hours, overall: overall! };
 };

@@ -36,6 +36,18 @@ export const DateFormatter = {
       hour: "2-digit",
     }).format(d);
   },
+  // 1 is Monday like MongoDB's $isoDayOfWeek, 1 January 2024 was a Monday
+  fromIsoWeekday(weekday: number) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      weekday: "short",
+    }).format(new Date(2024, 0, weekday));
+  },
+  toShortMonthYear(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  },
   toMonthStringYear(date: Date) {
     return new Intl.DateTimeFormat(currentUsedDateFormat, {
       month: "long",
