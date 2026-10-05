@@ -1,5 +1,6 @@
 import { CircularProgress, Grid } from "@mui/material";
 import { TimelapseOutlined } from "@mui/icons-material";
+import { Fragment } from "react";
 import Header from "../../components/Header";
 import { AlbumStatsResponse } from "../../services/apis/api";
 import InlineArtist from "../../components/InlineArtist";
@@ -36,10 +37,10 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
         }
         title={stats.album.name}
         subtitle={stats.artists.map((artist, k) => (
-          <>
-            <InlineArtist size="normal" artist={artist} key={artist.id} />
+          <Fragment key={artist.id}>
+            <InlineArtist size="normal" artist={artist} />
             {k < stats.artists.length - 1 && ", "}
-          </>
+          </Fragment>
         ))}
         hideInterval
       />
