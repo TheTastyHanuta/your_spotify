@@ -17,14 +17,15 @@
   overflow-x: auto;
 }
 
+/* The weeks share the card's width, cells are at least 10px */
 .calendarGrid {
   display: grid;
-  grid-template-columns: auto;
-  grid-auto-columns: 12px;
-  grid-template-rows: auto;
-  grid-auto-rows: 12px;
   gap: 3px;
-  width: max-content;
+}
+
+.calendarGrid .cell {
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .day {

@@ -88,3 +88,9 @@
 .legend {
   color: var(--text-on-light);
 }
+
+.separator {
+  height: 1px;
+  margin: 8px 0;
+  background-color: var(--border-color);
+}

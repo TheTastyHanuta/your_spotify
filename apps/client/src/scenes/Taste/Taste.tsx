@@ -165,25 +165,32 @@ export default function Taste() {
               />
             )}
           </Grid>
-          <Grid size={{ xs: 12, lg: 4 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TitleCard title="Release types" className={s.card}>
               {taste ? (
-                Object.entries(ALBUM_TYPES).map(([type, label]) => (
+                <>
+                  {Object.entries(ALBUM_TYPES).map(([type, label]) => (
+                    <ShareRow
+                      key={type}
+                      label={label}
+                      share={exactPercent(
+                        taste.albumTypes[type] ?? 0,
+                        totalPlays,
+                      )}
+                    />
+                  ))}
+                  <div className={s.separator} />
                   <ShareRow
-                    key={type}
-                    label={label}
-                    share={exactPercent(
-                      taste.albumTypes[type] ?? 0,
-                      totalPlays,
-                    )}
+                    label="Explicit songs"
+                    share={exactPercent(taste.explicit.explicit, totalPlays)}
                   />
-                ))
+                </>
               ) : (
                 <RowsSkeleton />
               )}
             </TitleCard>
           </Grid>
-          <Grid size={{ xs: 12, lg: 4 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TitleCard title="Song length" className={s.card}>
               {taste ? (
                 taste.lengths.map((plays, index) => (
@@ -196,20 +203,6 @@ export default function Taste() {
               ) : (
                 <RowsSkeleton />
               )}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 4 }}>
-            <TitleCard title="Explicit" className={s.card}>
-              <Text element="div" size="huge">
-                {taste ? (
-                  `${percent(taste.explicit.explicit, totalPlays)}%`
-                ) : (
-                  <Skeleton width={120} />
-                )}
-              </Text>
-              <Text element="div" size="normal" greyed>
-                of your plays were of songs marked explicit
-              </Text>
             </TitleCard>
           </Grid>
         </Grid>
@@ -325,7 +318,11 @@ function TopYears({ years }: { years: TasteResponse["years"] }) {
               <>
                 <IdealImage images={track.full_album.images} size={40} />
                 <div className={s.yearTrack}>
-                  <InlineTrack track={track} size="normal" noStyle />
+                  <InlineTrack
+                    track={track}
+                    size="normal"
+                    className={s.ellipsis}
+                  />
                   <Text size="normal" greyed className={s.ellipsis}>
                     {track.full_artists.map((artist, index) => (
                       <span key={artist.id}>

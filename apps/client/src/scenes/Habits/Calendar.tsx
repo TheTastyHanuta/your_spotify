@@ -99,7 +99,11 @@ export default function Calendar({
         )
       }>
       <div className={s.calendar}>
-        <div className={s.calendarGrid}>
+        <div
+          className={s.calendarGrid}
+          style={{
+            gridTemplateColumns: `auto repeat(${Math.ceil((offset + dates.length) / 7)}, minmax(10px, 1fr))`,
+          }}>
           {MONTHS.map((month) => (
             <span
               key={month}
@@ -151,7 +155,7 @@ export default function Calendar({
                   </>
                 }>
                 <span
-                  className={clsx(s.day, { [s.clickable]: v > 0 })}
+                  className={clsx(s.cell, { [s.clickable]: v > 0 })}
                   style={{
                     ...style,
                     backgroundColor: `rgba(var(--primary-tuple), ${opacity(v)})`,

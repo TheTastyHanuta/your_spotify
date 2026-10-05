@@ -19,6 +19,7 @@ import IdealImage from "../../components/IdealImage";
 import LoadingImplementedChart from "../../components/ImplementedCharts/LoadingImplementedChart";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
+import Masonry from "../../components/Masonry";
 import Text from "../../components/Text";
 import TitleCard from "../../components/TitleCard";
 import ChartTooltip from "../../components/Tooltip";
@@ -30,7 +31,7 @@ import { alertMessage } from "../../services/redux/modules/message/reducer";
 import { selectUser } from "../../services/redux/modules/user/selector";
 import { useAppDispatch } from "../../services/redux/tools";
 import { getPercentMore, msToMinutes } from "../../services/stats";
-import { getAtLeastImage } from "../../services/tools";
+import { compact, getAtLeastImage } from "../../services/tools";
 import { Artist, SpotifyImage, Timesplit } from "../../services/types";
 import { fromDay } from "../Habits/Calendar";
 import { listeningTraits } from "../Habits/traits";
@@ -190,6 +191,8 @@ export default function Recap() {
               variant="outlined"
               color="inherit"
               size="small"
+              // The header's own colour stays black in dark mode
+              sx={{ color: "var(--text-on-light)" }}
               disabled={sharing || !songs || !artists || !taste || !genres}
               onClick={() => {
                 share().catch(console.error);
@@ -281,13 +284,19 @@ export default function Recap() {
       <div className={s.content}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, lg: 6 }}>
-            <TitleCard title={`${year} in music`} className={s.card}>
+            <TitleCard
+              title={`${year} in music`}
+              className={s.card}
+              contentClassName={s.fill}>
               <div className={s.headline}>
                 {headline
                   ? headline.map((item) => (
                       <div key={item.label}>
-                        <Text element="div" size="huge">
-                          {item.value.toLocaleString()} {item.label}
+                        <div className={s.number}>
+                          {item.value.toLocaleString()}
+                        </div>
+                        <Text element="div" size="big">
+                          {item.label}
                         </Text>
                         {hasPrevious && item.old !== undefined && (
                           <Text
@@ -357,17 +366,19 @@ export default function Recap() {
                 albums[0] && (
                   <div className={s.album}>
                     <IdealImage images={albums[0].album.images} size={160} />
-                    <Link
-                      to={`/album/${albums[0].album.id}`}
-                      className={s.link}>
-                      <Text size="big" weight="bold">
-                        {albums[0].album.name}
+                    <div className={s.albumText}>
+                      <Link
+                        to={`/album/${albums[0].album.id}`}
+                        className={s.link}>
+                        <Text size="big" weight="bold">
+                          {albums[0].album.name}
+                        </Text>
+                      </Link>
+                      <Artists artists={albums[0].album_artists} />
+                      <Text size="normal" greyed>
+                        {plural(albums[0].count, "play")}
                       </Text>
-                    </Link>
-                    <Artists artists={albums[0].album_artists} />
-                    <Text size="normal" greyed>
-                      {plural(albums[0].count, "play")}
-                    </Text>
+                    </div>
                   </div>
                 )
               ) : (
@@ -444,102 +455,102 @@ export default function Recap() {
               />
             )}
           </Grid>
-          {artistMoves && (
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <TitleCard
-                title={`Artists since ${previousYear}`}
-                className={s.card}>
-                <Moves
-                  moves={artistMoves}
-                  previousYear={previousYear}
-                  render={(item) => ({
-                    image: item.artist.images,
-                    round: true,
-                    title: <InlineArtist artist={item.artist} size="normal" />,
-                  })}
-                />
-              </TitleCard>
-            </Grid>
-          )}
-          {songMoves && (
-            <Grid size={{ xs: 12, lg: 6 }}>
-              <TitleCard
-                title={`Songs since ${previousYear}`}
-                className={s.card}>
-                <Moves
-                  moves={songMoves}
-                  previousYear={previousYear}
-                  render={(item) => ({
-                    image: item.album.images,
-                    title: <InlineTrack track={item.track} size="normal" />,
-                    subtitle: <Artists artists={item.track_artists} />,
-                  })}
-                />
-              </TitleCard>
-            </Grid>
-          )}
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <TitleCard
-              title="Best discoveries"
-              info="Artists you heard for the first time this year, most played first"
-              className={s.card}>
-              {discoveries ? (
-                discoveries.length > 0 ? (
-                  discoveries.map((item, index) => (
-                    <Row
-                      key={item.artist.id}
-                      rank={index + 1}
-                      image={item.artist.images}
-                      round
-                      title={
-                        <InlineArtist
-                          artist={item.artist as Artist}
-                          size="normal"
-                        />
-                      }
-                      subtitle={`First heard on ${DateFormatter.toDayMonthYear(new Date(item.first))}`}
-                      right={plural(item.plays, "play")}
+          <Grid size={{ xs: 12 }} className={s.masonry}>
+            {/* Two columns of cards with lists of different length, so no card
+                is stretched to the height of its neighbour */}
+            <Masonry>
+              {compact([
+                artistMoves && (
+                  <TitleCard
+                    key="artists"
+                    title={`Artists since ${previousYear}`}>
+                    <Moves
+                      moves={artistMoves}
+                      previousYear={previousYear}
+                      render={(item) => ({
+                        image: item.artist.images,
+                        round: true,
+                        title: (
+                          <InlineArtist artist={item.artist} size="normal" />
+                        ),
+                      })}
                     />
-                  ))
-                ) : (
-                  <Text size="normal">No new artists this year.</Text>
-                )
-              ) : (
-                <RowsSkeleton />
-              )}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <TitleCard title="Habits" className={s.card}>
-              {overview && traits ? (
-                <div className={s.facts}>
-                  {traits.map((trait) => (
-                    <Fact key={trait.title} title={trait.title}>
-                      {trait.text}
-                    </Fact>
-                  ))}
-                  {overview.busiestDay && (
-                    <Fact title="Busiest day">
-                      {DateFormatter.toWeekdayDayMonthYear(
-                        fromDay(overview.busiestDay.date),
-                      )}
-                      , {minutes(overview.busiestDay.durationMs)} min
-                    </Fact>
+                  </TitleCard>
+                ),
+                songMoves && (
+                  <TitleCard key="songs" title={`Songs since ${previousYear}`}>
+                    <Moves
+                      moves={songMoves}
+                      previousYear={previousYear}
+                      render={(item) => ({
+                        image: item.album.images,
+                        title: <InlineTrack track={item.track} size="normal" />,
+                        subtitle: <Artists artists={item.track_artists} />,
+                      })}
+                    />
+                  </TitleCard>
+                ),
+                <TitleCard
+                  key="discoveries"
+                  title="Best discoveries"
+                  info="Artists you heard for the first time this year, most played first">
+                  {discoveries ? (
+                    discoveries.length > 0 ? (
+                      discoveries.map((item, index) => (
+                        <Row
+                          key={item.artist.id}
+                          rank={index + 1}
+                          image={item.artist.images}
+                          round
+                          title={
+                            <InlineArtist
+                              artist={item.artist as Artist}
+                              size="normal"
+                            />
+                          }
+                          subtitle={`First heard on ${DateFormatter.toDayMonthYear(new Date(item.first))}`}
+                          right={plural(item.plays, "play")}
+                        />
+                      ))
+                    ) : (
+                      <Text size="normal">No new artists this year.</Text>
+                    )
+                  ) : (
+                    <RowsSkeleton />
                   )}
-                  {overview.streaks.longest && (
-                    <Fact title="Longest streak">
-                      {plural(overview.streaks.longest.days, "day")} in a row,
-                      from{" "}
-                      {DateFormatter.toDayMonthYear(
-                        fromDay(overview.streaks.longest.start),
+                </TitleCard>,
+                <TitleCard key="habits" title="Habits">
+                  {overview && traits ? (
+                    <div className={s.facts}>
+                      {traits.map((trait) => (
+                        <Fact key={trait.title} title={trait.title}>
+                          {trait.text}
+                        </Fact>
+                      ))}
+                      {overview.busiestDay && (
+                        <Fact title="Busiest day">
+                          {DateFormatter.toWeekdayDayMonthYear(
+                            fromDay(overview.busiestDay.date),
+                          )}
+                          , {minutes(overview.busiestDay.durationMs)} min
+                        </Fact>
                       )}
-                    </Fact>
+                      {overview.streaks.longest && (
+                        <Fact title="Longest streak">
+                          {plural(overview.streaks.longest.days, "day")} in a
+                          row, from{" "}
+                          {DateFormatter.toDayMonthYear(
+                            fromDay(overview.streaks.longest.start),
+                          )}
+                        </Fact>
+                      )}
+                    </div>
+                  ) : (
+                    <RowsSkeleton />
                   )}
-                </div>
-              ) : (
-                <RowsSkeleton />
-              )}
-            </TitleCard>
+                </TitleCard>,
+              ])}
+            </Masonry>
           </Grid>
           <Grid size={{ xs: 12 }}>
             <TitleCard title="Taste" className={s.card}>
