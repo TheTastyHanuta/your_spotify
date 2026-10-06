@@ -94,8 +94,194 @@ export type ArtistStatsResponse = {
   mostListened: { _id: string; count: number; track: TrackWithAlbum }[];
   albumMostListened: { _id: string; count: number; album: Album }[];
   total: { count: number; primaryCount: number; featuredCount: number };
-  dayRepartition: { _id: number; count: number; duration: number }[];
 };
+
+type Counted<Id> = { _id: Id; plays: number; durationMs: number }[];
+export type TimelineCounts = {
+  months: Counted<DateId>;
+  // 1 is Monday
+  weekdays: Counted<number>;
+  hours: Counted<number>;
+};
+// The item's listens, and all listens between its first and last listen
+export type TimelineResponse = TimelineCounts & { overall: TimelineCounts };
+
+// Listening of a period, see the server's insights queries. Days are
+// "YYYY-MM-DD" in the stats timezone.
+type Counts = { plays: number; durationMs: number };
+export type OverviewResponse = Counts & {
+  tracks: number;
+  artists: number;
+  albums: number;
+  // Listened to for the first time ever in the period
+  newArtists: number;
+  newTracks: number;
+  activeDays: number;
+  // Plays per listened hour, weighted by plays (1 if plays came one by one)
+  clump: number;
+  busiestDay?: Counts & { date: string };
+  streaks: {
+    longest: { days: number; start: string; end: string } | null;
+    // Up to the end of the period, or today when it is not over
+    current: number;
+  };
+  // 1 is Monday
+  heatmap: (Counts & { weekday: number; hour: number })[];
+};
+export type CalendarResponse = (Counts & { date: string })[];
+export type TasteResponse = {
+  years: (Counts & {
+    year: number;
+    top: {
+      track?: Track & { full_album: Album; full_artists: Artist[] };
+      plays: number;
+    };
+  })[];
+  ageWhenPlayed: { fresh: number; nostalgic: number };
+  albumTypes: Record<string, number>;
+  explicit: { explicit: number; clean: number };
+  // Plays of songs < 2 min, 2-3, 3-4, 4-5, 5 min and more
+  lengths: number[];
+};
+export type DecadesPerYearResponse = {
+  year: number;
+  decades: { decade: number; plays: number }[];
+}[];
+export type GenresResponse = {
+  totalPlays: number;
+  // Plays of artists with at least one genre
+  coveredPlays: number;
+  genres: (Counts & {
+    genre: string;
+    artists: Pick<Artist, "id" | "name" | "images">[];
+  })[];
+};
+
+type ShortArtist = Pick<Artist, "id" | "name" | "images">;
+// The fields the part of day query selects
+type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
+  full_album: Pick<Album, "id" | "name" | "images">;
+  full_artists: Pick<Artist, "id" | "name">[];
+};
+export type DiscoveryOverviewResponse = {
+  plays: number;
+  newArtists: number;
+  newTracks: number;
+  newTracksByKnownArtists: number;
+  // Plays of the songs new in the period
+  newTrackPlays: number;
+  // New songs by artists played before the period, most played first
+  knownArtistTracks: { track: ShortTrack; plays: number; first: string }[];
+  // Last play before the break and first play after it
+  comebacks: {
+    artist: ShortArtist;
+    plays: number;
+    lastBefore: string;
+    back: string;
+  }[];
+  // Artists discovered in the period with at least 3 plays; the stuck ones
+  // with their plays from 3 months after the first listen
+  stick: {
+    stuck: number;
+    faded: number;
+    early: number;
+    artists: { artist: ShortArtist; late: number }[];
+  };
+};
+// The best 7 days of each song, "YYYY-MM-DD"
+export type OnRepeatResponse = {
+  track: ShortTrack;
+  plays: number;
+  from: string;
+  to: string;
+}[];
+// newCount: plays of songs first heard in the period and in that step
+export type NewPlaysPerResponse = {
+  _id: DateId | null;
+  count: number;
+  newCount: number;
+}[];
+// Most played of all time, not played lately. peak: "YYYY-MM", the month
+// with the most plays
+type ForgottenItem = {
+  total: number;
+  last: string;
+  peak: string;
+  peakPlays: number;
+};
+export type ForgottenResponse = {
+  tracks: (ForgottenItem & { track: ShortTrack })[];
+  artists: (ForgottenItem & { artist: ShortArtist })[];
+};
+// Months as "YYYY-MM" in the stats timezone, oldest era first. plays: the
+// artist's or genre's plays during the era, total: all plays during it
+type Era = { from: string; to: string; plays: number; total: number };
+export type ErasResponse = {
+  // First and last month with plays, null without listens
+  first: string | null;
+  last: string | null;
+  artists: (Era & {
+    artist: ShortArtist;
+    // The most played song of the artist during the era
+    track: Pick<Track, "id" | "name"> | null;
+  })[];
+  // artists: the genre's most played artists during the era
+  genres: (Era & { genre: string; artists: ShortArtist[] })[];
+};
+// Today ("YYYY-MM-DD", stats timezone) in earlier years, newest first: the
+// day's plays and its most played song (the first played on ties)
+export type OnThisDayResponse = {
+  today: string;
+  years: {
+    date: string;
+    plays: number;
+    track: ShortTrack;
+    trackPlays: number;
+  }[];
+};
+// Played in the most different months. first: "YYYY-MM" in the stats
+// timezone, years: plays per year with plays, oldest first
+type LoyalItem = {
+  months: number;
+  total: number;
+  first: string;
+  years: { year: number; plays: number }[];
+};
+export type LoyalResponse = {
+  tracks: (LoyalItem & { track: ShortTrack })[];
+  artists: (LoyalItem & { artist: ShortArtist })[];
+};
+export type ArtistSharesResponse = {
+  plays: number;
+  // The period's top 10 artists
+  top: { artist: ShortArtist; plays: number }[];
+  // Plays of the top 8 artists in each time step, by artist id
+  steps: {
+    _id: DateId | null;
+    plays: number;
+    artists: Record<string, number>;
+  }[];
+};
+// Plays per release year in each time step, oldest year first
+export type ReleaseYearsPerResponse = {
+  _id: DateId | null;
+  years: { year: number; plays: number }[];
+}[];
+export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
+// Plays or milliseconds, following the stat measurement setting
+export type BestOfPartOfDayResponse<T> = {
+  part: PartOfDay;
+  total: number;
+  items: { total: number; item: T }[];
+}[];
+
+export type DiscoveriesResponse = {
+  plays: number;
+  // First listen ever, and the song it was
+  first: string;
+  firstTrack: Pick<Track, "id" | "name"> | null;
+  artist: Pick<Artist, "id" | "name" | "images">;
+}[];
 
 export type TrackStatsResponse = {
   track: Track;
@@ -150,58 +336,29 @@ export const api = {
       "/spotify/most_listened",
       { start, end, timeSplit },
     ),
-  mostListenedArtist: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ _id: DateId | undefined; artists: Artist[]; counts: number[] }[]>(
-      "/spotify/most_listened_artist",
-      { start, end, timeSplit },
-    ),
   listened_to: (start: Date, end: Date) =>
     get("/spotify/listened_to", { start, end }),
   songsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ count: number; _id: DateId | null; differents: number }[]>(
-      "/spotify/songs_per",
-      { start, end, timeSplit },
-    ),
+    get<
+      {
+        _id: DateId | null;
+        // Plays
+        count: number;
+        differents: number;
+        differentArtists: number;
+      }[]
+    >("/spotify/songs_per", { start, end, timeSplit }),
   timePer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ count: number; _id: DateId | null }[]>("/spotify/time_per", {
       start,
       end,
       timeSplit,
     }),
-  featRatio: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<
-      {
-        0: number;
-        1: number;
-        2: number;
-        3: number;
-        4: number;
-        5: number;
-        average: number;
-        count: number;
-        totalPeople: number;
-        _id: DateId | null;
-      }[]
-    >("/spotify/feat_ratio", { start, end, timeSplit }),
-  albumDateRatio: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ count: number; totalYear: number; _id: DateId | null }[]>(
-      "/spotify/album_date_ratio",
-      { start, end, timeSplit },
-    ),
   bestArtistsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ artists: Artist[]; counts: number[]; _id: DateId | null }[]>(
       "/spotify/best_artists_per",
       { start, end, timeSplit },
     ),
-  differentArtistsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<
-      {
-        artists: Artist[];
-        counts: number[];
-        differents: number;
-        _id: DateId | null;
-      }[]
-    >("/spotify/different_artists_per", { start, end, timeSplit }),
   setSetting: (settingName: keyof User["settings"], settingValue: any) =>
     axios.post("/settings", { [settingName]: settingValue }),
   timePerHourOfDay: (start: Date, end: Date) =>
@@ -223,6 +380,61 @@ export const api = {
       results: { id: string; count: number }[];
     }>(`/album/${id}/rank`),
   getArtists: (ids: string[]) => get<Artist[]>(`/artist/${ids.join(",")}`),
+  getOverview: (start: Date, end: Date) =>
+    get<OverviewResponse>("/spotify/overview", { start, end }),
+  getCalendar: (start: Date, end: Date) =>
+    get<CalendarResponse>("/spotify/calendar", { start, end }),
+  getTaste: (start: Date, end: Date) =>
+    get<TasteResponse>("/spotify/taste", { start, end }),
+  getArtistShares: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<ArtistSharesResponse>("/spotify/taste/artist_shares", {
+      start,
+      end,
+      timeSplit,
+    }),
+  getReleaseYearsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<ReleaseYearsPerResponse>("/spotify/taste/release_years_per", {
+      start,
+      end,
+      timeSplit,
+    }),
+  getBestOfPartOfDay: <T extends "artists" | "tracks">(
+    start: Date,
+    end: Date,
+    type: T,
+  ) =>
+    get<
+      BestOfPartOfDayResponse<T extends "artists" ? ShortArtist : ShortTrack>
+    >("/spotify/top/part-of-day", { start, end, type }),
+  getDecadesPerYear: () =>
+    get<DecadesPerYearResponse>("/spotify/taste/decades"),
+  getGenres: (start: Date, end: Date, nb: number) =>
+    get<GenresResponse>("/spotify/genres", { start, end, nb }),
+  getDiscoveries: (start: Date, end: Date, nb: number) =>
+    get<DiscoveriesResponse>("/spotify/discoveries", { start, end, nb }),
+  getDiscoveryOverview: (start: Date, end: Date) =>
+    get<DiscoveryOverviewResponse>("/spotify/discoveries/overview", {
+      start,
+      end,
+    }),
+  getOnRepeat: (start: Date, end: Date) =>
+    get<OnRepeatResponse>("/spotify/discoveries/on-repeat", { start, end }),
+  getNewPlaysPer: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<NewPlaysPerResponse>("/spotify/discoveries/per", {
+      start,
+      end,
+      timeSplit,
+    }),
+  getForgotten: (days: number) =>
+    get<ForgottenResponse>("/spotify/story/forgotten", { days }),
+  getEras: () => get<ErasResponse>("/spotify/story/eras"),
+  getLoyal: () => get<LoyalResponse>("/spotify/story/loyal"),
+  getOnThisDay: () => get<OnThisDayResponse>("/spotify/on-this-day"),
+  getTimeline: (type: "artist" | "album" | "track", id: string) =>
+    get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
+      type,
+      id,
+    }),
   getArtistStats: (id: string) =>
     get<ArtistStatsResponse | { code: "NEVER_LISTENED" }>(
       `/artist/${id}/stats`,
@@ -332,33 +544,6 @@ export const api = {
     ),
   generatePublicToken: () => post<string>("/generate-public-token"),
   deletePublicToken: () => post<string>("/delete-public-token"),
-  getBestSongsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Track>;
-      }[]
-    >("/spotify/top/hour-repartition/songs", { start, end }),
-  getBestAlbumsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Album>;
-      }[]
-    >("/spotify/top/hour-repartition/albums", { start, end }),
-  getBestArtistsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Artist>;
-      }[]
-    >("/spotify/top/hour-repartition/artists", { start, end }),
   getPlaylists: () => get<Playlist[]>("/spotify/playlists"),
   addToPlaylist: (
     id: string | undefined,

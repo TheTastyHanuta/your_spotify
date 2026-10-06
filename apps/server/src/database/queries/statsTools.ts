@@ -103,38 +103,22 @@ export const sortByTimeSplit = (
   return [];
 };
 
-export const getGroupByDateProjection = (userTimezone: string | undefined) => ({
-  year: {
-    $year: {
-      date: "$played_at",
-      timezone: userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris"),
-    },
-  },
-  month: {
-    $month: {
-      date: "$played_at",
-      timezone: userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris"),
-    },
-  },
-  day: {
-    $dayOfMonth: {
-      date: "$played_at",
-      timezone: userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris"),
-    },
-  },
-  week: {
-    $week: {
-      date: "$played_at",
-      timezone: userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris"),
-    },
-  },
-  hour: {
-    $hour: {
-      date: "$played_at",
-      timezone: userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris"),
-    },
-  },
-});
+export const getTimezone = (userTimezone: string | undefined) =>
+  userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris");
+
+export const getGroupByDateProjection = (
+  userTimezone: string | undefined,
+  date = "$played_at",
+) => {
+  const timezone = getTimezone(userTimezone);
+  return {
+    year: { $year: { date, timezone } },
+    month: { $month: { date, timezone } },
+    day: { $dayOfMonth: { date, timezone } },
+    week: { $week: { date, timezone } },
+    hour: { $hour: { date, timezone } },
+  };
+};
 
 export const getTrackSumType = (user: User, idField = "$track.duration_ms") => {
   if (user.settings.metricUsed === "number") {

@@ -15,6 +15,8 @@
     - [Playlist Management](#playlist-management)
   - [History & Statistics](#history--statistics)
     - [Top Items](#top-items)
+    - [Discoveries](#discoveries)
+    - [Your Story](#your-story)
     - [Collaborative Features](#collaborative-features)
   - [Search](#search)
   - [Artist](#artist)
@@ -297,23 +299,9 @@ Get most listened songs in a time period.
 
 - `200`: Array of most listened songs with counts
 
-#### `GET /spotify/most_listened_artist`
-
-Get most listened artists in a time period.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-- `timeSplit`: string - Time unit for grouping (day, week, month, year)
-
-**Response:**
-
-- `200`: Array of most listened artists with counts
-
 #### `GET /spotify/songs_per`
 
-Get song count per time unit.
+Get the number of plays, different songs and different artists per time unit.
 
 **Query Parameters:**
 
@@ -323,7 +311,7 @@ Get song count per time unit.
 
 **Response:**
 
-- `200`: Array of time periods with song counts
+- `200`: Array of time periods with `count` (plays), `differents` (different songs) and `differentArtists`
 
 #### `GET /spotify/time_per`
 
@@ -339,9 +327,83 @@ Get listening time per time unit.
 
 - `200`: Array of time periods with listening durations
 
-#### `GET /spotify/album_date_ratio`
+#### `GET /spotify/overview`
 
-Get album release date distribution for listened tracks.
+Get the numbers behind the Habits page for a period: plays, listening time, different songs, artists and albums, songs and artists heard for the first time ever, active days, the busiest day, the longest and current streaks, plays per weekday and hour (in the stats timezone), and `clump`, the plays per listened hour weighted by plays (1 when plays come one by one), used to tell real changes from chance.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with `plays`, `durationMs`, `tracks`, `artists`, `albums`, `newArtists`, `newTracks`, `activeDays`, `busiestDay`, `streaks`, `clump` and `heatmap` (weekday 1–7 from Monday, hour, plays, durationMs)
+
+#### `GET /spotify/calendar`
+
+Get the plays and listening time of each day with listens, in the stats timezone.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Array of days with `date` (`YYYY-MM-DD`), `plays` and `durationMs`
+
+#### `GET /spotify/taste`
+
+Get the plays per album release year (each with its most played song), how old the songs were when played (at most a year old, or at least 10 years old), plays per release type, explicit plays and plays per song length.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with `years`, `ageWhenPlayed`, `albumTypes`, `explicit` and `lengths` (under 2 min, 2–3, 3–4, 4–5, 5 min and more)
+
+#### `GET /spotify/taste/decades`
+
+Get the plays per release decade for each year of the whole history.
+
+**Response:**
+
+- `200`: Array of years with `decades` (decade and plays, oldest first)
+
+#### `GET /spotify/genres`
+
+Get the most played genres, using MusicBrainz genres first and Spotify's otherwise. An artist's plays count for each of its genres, so genres overlap.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of genres to return (1-50, default 20)
+
+**Response:**
+
+- `200`: Object with `totalPlays`, `coveredPlays` (plays with a known genre) and `genres` (each with plays, listening time and up to 3 artists)
+
+#### `GET /spotify/timeline`
+
+Get an artist's, album's or song's plays per month from its first listen up to now, and per weekday and hour, next to all your listening between its first and last listen.
+
+**Query Parameters:**
+
+- `type`: string - `artist`, `album` or `track`
+- `id`: string - Spotify ID
+
+**Response:**
+
+- `200`: Object with `months`, `weekdays`, `hours` and `overall`, or `{ code: "NEVER_LISTENED" }`
+
+#### `GET /spotify/taste/artist_shares`
+
+Get the period's top 10 artists by plays, and the plays of its top 8 artists in each time unit, with each time unit's total plays.
 
 **Query Parameters:**
 
@@ -351,25 +413,11 @@ Get album release date distribution for listened tracks.
 
 **Response:**
 
-- `200`: Distribution of tracks by album release date
+- `200`: Object with `plays`, `top` (artists with their plays) and `steps` (time periods with `plays` and the top artists' plays by artist ID)
 
-#### `GET /spotify/feat_ratio`
+#### `GET /spotify/taste/release_years_per`
 
-Get ratio of songs featuring multiple artists.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-- `timeSplit`: string - Time unit for grouping (day, week, month, year)
-
-**Response:**
-
-- `200`: Ratio data for featured vs. non-featured tracks
-
-#### `GET /spotify/different_artists_per`
-
-Get count of unique artists listened to per time unit.
+Get the plays per album release year for each time unit.
 
 **Query Parameters:**
 
@@ -379,7 +427,7 @@ Get count of unique artists listened to per time unit.
 
 **Response:**
 
-- `200`: Count of unique artists per time unit
+- `200`: Array of time periods with `years` (release year and plays, oldest first)
 
 #### `GET /spotify/time_per_hour_of_day`
 
@@ -458,44 +506,19 @@ Get top albums in a time period.
 
 - `200`: Array of top album objects
 
-#### `GET /spotify/top/hour-repartition/songs`
+#### `GET /spotify/top/part-of-day`
 
-Get top songs by hour of day.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-
-**Response:**
-
-- `200`: Top songs for each hour of the day
-
-#### `GET /spotify/top/hour-repartition/albums`
-
-Get top albums by hour of day.
+Get the top 5 artists or songs of each part of the day: morning (5–11), afternoon (11–17), evening (17–22) and night (22–5), in the stats timezone. Counts plays or listening time, following the user's statistics setting.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
+- `type`: string - `artists` or `tracks`
 
 **Response:**
 
-- `200`: Top albums for each hour of the day
-
-#### `GET /spotify/top/hour-repartition/artists`
-
-Get top artists by hour of day.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-
-**Response:**
-
-- `200`: Top artists for each hour of the day
+- `200`: Array of parts of the day, each with its total and its top items with their totals
 
 #### `GET /spotify/top/sessions`
 
@@ -509,6 +532,102 @@ Get longest listening sessions.
 **Response:**
 
 - `200`: Array of listening session data
+
+### Discoveries
+
+A song or artist is new when its first listen ever is in the period. All of these count plays.
+
+#### `GET /spotify/discoveries`
+
+Get the artists heard for the first time in the period, most played first, with the first song heard.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of artists to return (1-20, default 5)
+
+**Response:**
+
+- `200`: Array of artists with their plays in the period, first listen and first song
+
+#### `GET /spotify/discoveries/overview`
+
+Get the numbers of new artists and songs, the new songs by artists played before the period, the artists back after a break (at least 10 plays, then none for 6 months) and whether the artists discovered in the period stuck (at least 3 plays from 3 months after the first listen).
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with the counts, `knownArtistTracks`, `comebacks` and `stick`
+
+#### `GET /spotify/discoveries/on-repeat`
+
+Get the 20 songs with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Array of songs with `plays`, `from` and `to` (`YYYY-MM-DD` in the stats timezone)
+
+#### `GET /spotify/discoveries/per`
+
+Get the plays of each time step, and the plays of songs heard for the first time in the period and in that same step.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `timeSplit`: string - Time unit for grouping (hour, day, week, month, year)
+
+**Response:**
+
+- `200`: Array of steps with `count` and `newCount`
+
+### Your Story
+
+#### `GET /spotify/story/forgotten`
+
+Get the 20 most played songs and 20 most played artists of all time (at least 10 plays) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
+
+**Query Parameters:**
+
+- `days`: number - `91`, `182` or `365`
+
+**Response:**
+
+- `200`: Object with `tracks` and `artists`
+
+#### `GET /spotify/story/eras`
+
+Get the stretches of at least 3 months when one artist or genre (an artist's first genre) clearly led the listening: over the month and the months next to it, at least 1.2 times the plays of number two and at least 3% (artists) or 5% (genres) of all plays, played in the month itself, in months with at least 30 plays. One month without a leader inside an era is bridged.
+
+**Response:**
+
+- `200`: Object with the first and last month with plays (`YYYY-MM` in the stats timezone), `artists` (each with its most played song during the era) and `genres` (each with its 3 most played artists), oldest first
+
+#### `GET /spotify/story/loyal`
+
+Get the 20 songs and 20 artists played in the most different months (months in the stats timezone), the most played first on ties.
+
+**Response:**
+
+- `200`: Object with `tracks` and `artists`, each with the number of months, total plays, first month (`YYYY-MM`) and plays per year
+
+#### `GET /spotify/on-this-day`
+
+Get today's date (in the stats timezone) in earlier years: for each year with plays that day, newest first, the day's plays and its most played song (the first one played on ties).
+
+**Response:**
+
+- `200`: Object with `today` (`YYYY-MM-DD`) and `years`
 
 ### Collaborative Features
 

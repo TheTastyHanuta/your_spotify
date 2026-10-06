@@ -1,0 +1,18 @@
+.chart {
+  height: 300px;
+}
+
+.peak {
+  fill: var(--text-on-light);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.legend {
+  color: var(--text-on-light);
+}
+
+.hint {
+  color: var(--text-grey);
+  font-size: 0.9em;
+}

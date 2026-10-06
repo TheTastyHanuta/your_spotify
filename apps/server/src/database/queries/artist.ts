@@ -181,27 +181,3 @@ export const getMostListenedAlbumOfArtist = async (
   ]);
   return res;
 };
-
-export const getDayRepartitionOfArtist = (user: User, artistId: string) =>
-  // Non sense to compute blacklist here
-  InfosModel.aggregate([
-    { $match: matchArtistListens(user, artistId) },
-    { $addFields: getGroupByDateProjection(user.settings.timezone) },
-    {
-      $lookup: {
-        from: "tracks",
-        localField: "id",
-        foreignField: "id",
-        as: "track",
-      },
-    },
-    { $unwind: "$track" },
-    {
-      $group: {
-        _id: "$hour",
-        count: { $sum: 1 },
-        duration: { $sum: "$track.duration_ms" },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);

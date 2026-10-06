@@ -1,6 +1,8 @@
+import { subDays, subMonths, subWeeks, subYears } from "date-fns";
+
 import { TitleFormatter, ValueFormatter } from "../components/Tooltip/Tooltip";
-import { DateId, Precision } from "./types";
 import { DateFormatter } from "./date";
+import { DateId, Precision } from "./types";
 
 export const fresh = (d: Date, eraseHour = false) => {
   const date = new Date(d.getTime());
@@ -307,11 +309,31 @@ export const msToDuration = (ms: number) => {
   return parts.join(" ");
 };
 
-export const getLastPeriod = (start: Date, end: Date) => {
+const SHIFT_BY_UNIT: Record<string, (date: Date) => Date> = {
+  day: (date) => subDays(date, 1),
+  week: (date) => subWeeks(date, 1),
+  month: (date) => subMonths(date, 1),
+  year: (date) => subYears(date, 1),
+};
+
+// The period to compare with. "This year" so far compares with the same days
+// of the previous year, like the recap. Other ranges compare with the range
+// of the same length just before.
+export const getLastPeriod = (start: Date, end: Date, unit: string) => {
+  const shift = SHIFT_BY_UNIT[unit];
+  if (shift) {
+    return {
+      start: shift(start),
+      end: shift(end),
+      label: unit === "day" ? "this time yesterday" : `this time last ${unit}`,
+    };
+  }
   const diff = end.getTime() - start.getTime();
-  const oldStart = new Date(start.getTime() - diff);
-  const oldEnd = new Date(end.getTime() - diff);
-  return { start: oldStart, end: oldEnd };
+  return {
+    start: new Date(start.getTime() - diff),
+    end: new Date(end.getTime() - diff),
+    label: "the period before",
+  };
 };
 
 export const getPercentMore = (old: number, now: number) => {

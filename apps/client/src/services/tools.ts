@@ -64,6 +64,9 @@ export function uniq<T>(array: T[]) {
   return uniqd;
 }
 
+export const plural = (n: number, word: string) =>
+  `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+
 export function noop() {}
 
 export const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));

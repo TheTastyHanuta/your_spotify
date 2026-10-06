@@ -1,0 +1,96 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.chart {
+  height: 300px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.fill {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Spread over the height of the card next to it */
+.headline {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: space-evenly;
+  gap: 24px 16px;
+}
+
+.number {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-on-light);
+}
+
+.more {
+  color: green;
+}
+
+.less {
+  color: red;
+}
+
+/* The text goes next to the cover when there is room */
+.album {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.albumText {
+  flex: 1 1 180px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.right {
+  margin-left: auto;
+}
+
+.hint {
+  color: var(--text-grey);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.taste {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Masonry leaves a margin under each card, the grid has its own spacing */
+.masonry {
+  margin-bottom: -16px;
+}

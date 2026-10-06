@@ -2,7 +2,13 @@ import { useMediaQuery } from "@mui/material";
 import { ThemeProvider } from "@mui/system";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Message from "./components/Message";
@@ -12,19 +18,23 @@ import SpotifyAuthRefreshDialog from "./components/SpotifyAuthRefreshDialog";
 import Wrapper from "./components/Wrapper";
 import Login from "./scenes/Account/Login";
 import AlbumStats from "./scenes/AlbumStats";
-import AllStats from "./scenes/AllStats";
 import ArtistStats from "./scenes/ArtistStats";
 import Benchmarks from "./scenes/Benchmarks";
 import Affinity from "./scenes/Collaborative/Affinity";
 import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
 import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
+import Discoveries from "./scenes/Discoveries";
 import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
+import Habits from "./scenes/Habits";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
 import LongestSessions from "./scenes/LongestSessions";
+import Recap from "./scenes/Recap";
 import Settings from "./scenes/Settings";
+import Story from "./scenes/Story";
+import Taste from "./scenes/Taste";
 import Albums from "./scenes/Tops/Albums";
 import Artists from "./scenes/Tops/Artists";
 import Songs from "./scenes/Tops/Songs";
@@ -78,11 +88,45 @@ function App() {
                     </PrivateRoute>
                   }
                 />
+                {/* "All stats" was split into Habits and Taste */}
+                <Route path="/all" element={<AllStatsRedirect />} />
                 <Route
-                  path="/all"
+                  path="/taste"
                   element={
                     <PrivateRoute>
-                      <AllStats />
+                      <Taste />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/habits"
+                  element={
+                    <PrivateRoute>
+                      <Habits />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/discoveries"
+                  element={
+                    <PrivateRoute>
+                      <Discoveries />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/story"
+                  element={
+                    <PrivateRoute>
+                      <Story />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/recap"
+                  element={
+                    <PrivateRoute>
+                      <Recap />
                     </PrivateRoute>
                   }
                 />
@@ -202,3 +246,9 @@ function App() {
 }
 
 export default App;
+
+// Keeps the query, shared links carry the period in it
+function AllStatsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/habits${search}`} replace />;
+}

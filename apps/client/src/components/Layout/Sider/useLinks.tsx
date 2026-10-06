@@ -1,8 +1,8 @@
 import {
+  AutoStories,
+  AutoStoriesOutlined,
   Home,
   HomeOutlined,
-  BarChart,
-  BarChartOutlined,
   MusicNote,
   MusicNoteOutlined,
   Album,
@@ -16,8 +16,17 @@ import {
   ShareOutlined,
   Speed,
   SpeedOutlined,
+  Palette,
+  PaletteOutlined,
+  CalendarMonth,
+  CalendarMonthOutlined,
+  Explore,
+  ExploreOutlined,
+  Summarize,
+  SummarizeOutlined,
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
+
 import { selectAffinityEnabled } from "../../../services/redux/modules/settings/selector";
 import { compact } from "../../../services/tools";
 import { SiderCategory } from "./types";
@@ -36,11 +45,40 @@ export function useLinks() {
           icon: <SpeedOutlined />,
           iconOn: <Speed />,
         },
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
         {
-          label: "All stats",
-          link: "/all",
-          icon: <BarChartOutlined />,
-          iconOn: <BarChart />,
+          label: "Taste",
+          link: "/taste",
+          icon: <PaletteOutlined />,
+          iconOn: <Palette />,
+        },
+        {
+          label: "Habits",
+          link: "/habits",
+          icon: <CalendarMonthOutlined />,
+          iconOn: <CalendarMonth />,
+        },
+        {
+          label: "Discoveries",
+          link: "/discoveries",
+          icon: <ExploreOutlined />,
+          iconOn: <Explore />,
+        },
+        {
+          label: "Your story",
+          link: "/story",
+          icon: <AutoStoriesOutlined />,
+          iconOn: <AutoStories />,
+        },
+        {
+          label: "Recap",
+          link: "/recap",
+          icon: <SummarizeOutlined />,
+          iconOn: <Summarize />,
         },
       ],
     },

@@ -1,4 +1,4 @@
-import { useSelector } from "react-redux";
+import { PlayArrow } from "@mui/icons-material";
 import {
   Button,
   IconButton,
@@ -7,17 +7,18 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import { PlayArrow } from "@mui/icons-material";
 import { ReactNode, useState } from "react";
+import { useSelector } from "react-redux";
+
 import Header from "../../components/Header";
+import Text from "../../components/Text";
+import TitleCard from "../../components/TitleCard";
+import { api } from "../../services/apis/api";
 import {
   selectRawIntervalDetail,
   selectUser,
 } from "../../services/redux/modules/user/selector";
-import { api } from "../../services/apis/api";
 import { Timesplit } from "../../services/types";
-import TitleCard from "../../components/TitleCard";
-import Text from "../../components/Text";
 
 interface Request<T> {
   title: string;
@@ -53,31 +54,12 @@ export default function Benchmarks() {
         api.mostListened(interval.start, interval.end, Timesplit.all),
     },
     {
-      title: "Get most listened artists",
-      request: () =>
-        api.mostListenedArtist(interval.start, interval.end, Timesplit.all),
-    },
-    {
       title: "Get songs per",
       request: () => api.songsPer(interval.start, interval.end, Timesplit.all),
     },
     {
       title: "Get time per",
       request: () => api.timePer(interval.start, interval.end, Timesplit.all),
-    },
-    {
-      title: "Get feat ratio",
-      request: () => api.featRatio(interval.start, interval.end, Timesplit.all),
-    },
-    {
-      title: "Get album date ratio",
-      request: () =>
-        api.albumDateRatio(interval.start, interval.end, Timesplit.all),
-    },
-    {
-      title: "Get different artists per",
-      request: () =>
-        api.differentArtistsPer(interval.start, interval.end, Timesplit.all),
     },
     {
       title: "Get time per hour of day",
@@ -98,16 +80,57 @@ export default function Benchmarks() {
         api.getBestAlbums(interval.start, interval.end, NB, OFFSET),
     },
     {
-      title: "Get best songs of hour",
-      request: () => api.getBestSongsOfHour(interval.start, interval.end),
+      title: "Get artist shares",
+      request: () =>
+        api.getArtistShares(interval.start, interval.end, Timesplit.month),
     },
     {
-      title: "Get best albums of hour",
-      request: () => api.getBestAlbumsOfHour(interval.start, interval.end),
+      title: "Get release years per",
+      request: () =>
+        api.getReleaseYearsPer(interval.start, interval.end, Timesplit.month),
     },
     {
-      title: "Get best artists of hour",
-      request: () => api.getBestArtistsOfHour(interval.start, interval.end),
+      title: "Get best artists of part of day",
+      request: () =>
+        api.getBestOfPartOfDay(interval.start, interval.end, "artists"),
+    },
+    {
+      title: "Get best songs of part of day",
+      request: () =>
+        api.getBestOfPartOfDay(interval.start, interval.end, "tracks"),
+    },
+    {
+      title: "Get discoveries",
+      request: () => api.getDiscoveries(interval.start, interval.end, 10),
+    },
+    {
+      title: "Get discovery overview",
+      request: () => api.getDiscoveryOverview(interval.start, interval.end),
+    },
+    {
+      title: "Get songs on repeat",
+      request: () => api.getOnRepeat(interval.start, interval.end),
+    },
+    {
+      title: "Get new plays per",
+      request: () =>
+        api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),
+    },
+    {
+      title: "Get forgotten favorites",
+      request: () => api.getForgotten(182),
+    },
+    {
+      title: "Get eras",
+      request: () => api.getEras(),
+    },
+    {
+      title: "Get on this day",
+      request: () => api.getOnThisDay(),
+    },
+    {
+      title: "Get loyal songs and artists",
+      request: () => api.getLoyal(),
     },
     {
       title: "Get longest sessions",

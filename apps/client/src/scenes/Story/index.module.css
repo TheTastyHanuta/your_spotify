@@ -1,0 +1,107 @@
+.content {
+  padding: var(--page-padding);
+}
+
+/* The picker reads as part of the sentence */
+.since {
+  font-size: inherit;
+  color: var(--text-on-light);
+}
+
+.section {
+  margin: 0 0 4px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nextSection {
+  margin-top: 24px;
+}
+
+/* Eras: two lanes and the years under them */
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lane {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.laneLabel {
+  white-space: nowrap;
+}
+
+.track,
+.years {
+  position: relative;
+}
+
+.track {
+  height: 20px;
+}
+
+.years {
+  height: 16px;
+}
+
+/* 1px off each side (in the inline style), so eras next to each other are
+   2px apart */
+.artistEra,
+.genreEra {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: 4px;
+}
+
+.artistEra {
+  background-color: var(--series-1);
+}
+
+.genreEra {
+  background-color: var(--series-2);
+}
+
+.year {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  line-height: 16px;
+}
+
+/* Every other year on narrow screens, the labels would touch */
+@media (max-width: 600px) {
+  .oddYear {
+    display: none;
+  }
+}
+
+/* Loyalty: one small cell per year, hidden on phones where the text needs
+   the width */
+.yearStrip {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.yearCell {
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+  .yearStrip,
+  .wideOnly {
+    display: none;
+  }
+}

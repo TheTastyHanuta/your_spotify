@@ -8,13 +8,13 @@ import Text from "../../components/Text";
 import InlineTrack from "../../components/InlineTrack";
 import { selectBlacklistedArtist } from "../../services/redux/modules/user/selector";
 import IdealImage from "../../components/IdealImage";
+import ItemTimeline from "../../components/ItemTimeline";
 import ImageTwoLines from "../../components/ImageTwoLines";
 import InlineAlbum from "../../components/InlineAlbum";
 import { DateFormatter } from "../../services/date";
 import ArtistContextMenu from "./ArtistContextMenu";
 import FirstAndLast from "./FirstAndLast";
 import ArtistRank from "./ArtistRank/ArtistRank";
-import DayRepartition from "./DayRepartition";
 import s from "./index.module.css";
 import { MostListenedTracksContextMenuButton } from "./mostListenedTracksContextMenuButton/mostListenedTracksContextMenuButton";
 
@@ -31,6 +31,10 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
   }
 
   const [bestPeriod, secondBestPeriod] = stats.bestPeriod;
+  // MusicBrainz's genres when it has some, like the genre stats
+  const genres = stats.artist.mbGenres?.length
+    ? stats.artist.mbGenres
+    : stats.artist.genres;
 
   return (
     <div>
@@ -51,7 +55,7 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
           />
         }
         title={stats.artist.name}
-        subtitle={stats.artist.genres.join(", ")}
+        subtitle={genres.join(", ")}
         hideInterval
       />
       <div className={s.content}>
@@ -149,12 +153,6 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
                 )}
               </TitleCard>
             </Grid>
-            <Grid size={{ xs: 12 }}>
-              <DayRepartition
-                stats={stats.dayRepartition}
-                className={s.chart}
-              />
-            </Grid>
           </Grid>
           <Grid container size={{ xs: 12, lg: 6 }} spacing={2}>
             <Grid size={{ xs: 12 }}>
@@ -207,6 +205,9 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
                 ))}
               </TitleCard>
             </Grid>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <ItemTimeline type="artist" id={artistId} />
           </Grid>
         </Grid>
       </div>

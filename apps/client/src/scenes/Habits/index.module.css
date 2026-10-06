@@ -1,0 +1,131 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.label {
+  font-size: 11px;
+  color: var(--text-grey);
+  white-space: nowrap;
+}
+
+/* Scrolls inside the card on narrow screens */
+.calendar {
+  overflow-x: auto;
+}
+
+/* The weeks share the card's width, cells are at least 10px */
+.calendarGrid {
+  display: grid;
+  gap: 3px;
+}
+
+.calendarGrid .cell {
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.day {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  outline: 1px solid var(--text-on-light);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-grey);
+}
+
+.week {
+  display: grid;
+  grid-template-columns: auto repeat(24, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  gap: 3px;
+}
+
+.cell {
+  height: 24px;
+  border-radius: 3px;
+}
+
+.parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.partItem {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.partName {
+  min-width: 0;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart {
+  height: 300px;
+}
+
+.legendText {
+  color: var(--text-on-light);
+}
+
+.summary {
+  margin-bottom: 12px;
+}
+
+/* Swatches next to their words, wrapping on phones */
+.weekLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-grey);
+}
+
+.weekLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}

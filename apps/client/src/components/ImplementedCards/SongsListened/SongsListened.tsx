@@ -1,15 +1,17 @@
-import { useSelector } from "react-redux";
-import clsx from "clsx";
 import { Skeleton } from "@mui/material";
+import clsx from "clsx";
+import { useSelector } from "react-redux";
+
 import { api } from "../../../services/apis/api";
 import { useAPI } from "../../../services/hooks/hooks";
+import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
+import { getLastPeriod, getPercentMore } from "../../../services/stats";
 import { Timesplit } from "../../../services/types";
+import Text from "../../Text";
 import TitleCard from "../../TitleCard";
 import { ImplementedCardProps } from "../types";
+
 import s from "../index.module.css";
-import { getLastPeriod, getPercentMore } from "../../../services/stats";
-import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
-import Text from "../../Text";
 
 interface SongsListenedProps extends ImplementedCardProps {}
 
@@ -21,7 +23,7 @@ export default function SongsListened({ className }: SongsListenedProps) {
     interval.end,
     Timesplit.all,
   );
-  const lastPeriod = getLastPeriod(interval.start, interval.end);
+  const lastPeriod = getLastPeriod(interval.start, interval.end, unit);
   const resultOld = useAPI(
     api.songsPer,
     lastPeriod.start,
@@ -31,7 +33,7 @@ export default function SongsListened({ className }: SongsListenedProps) {
 
   if (!result || !resultOld) {
     return (
-      <TitleCard title="Songs listened" className={className} fade>
+      <TitleCard title="Plays" className={className} fade>
         <div className={s.root}>
           <Text size="big">
             <Skeleton width={50} />
@@ -52,11 +54,11 @@ export default function SongsListened({ className }: SongsListenedProps) {
   const percentMore = getPercentMore(oldCount, count);
 
   return (
-    <TitleCard title="Songs listened" className={className} fade>
+    <TitleCard title="Plays" className={className} fade>
       <div className={s.root}>
         <div className={s.twonumbers}>
-          <Text size="huge">{count}</Text>
-          <Text size="small">{different} diff.</Text>
+          <Text size="huge">{count.toLocaleString()}</Text>
+          <Text size="small">{different.toLocaleString()} different songs</Text>
         </div>
         <Text size="normal">
           <Text
@@ -70,7 +72,7 @@ export default function SongsListened({ className }: SongsListenedProps) {
           </Text>
           <Text element="span" size="normal">
             &nbsp;
-            {percentMore < 0 ? "less" : "more"} than last {unit}
+            {percentMore < 0 ? "less" : "more"} than {lastPeriod.label}
           </Text>
         </Text>
       </div>

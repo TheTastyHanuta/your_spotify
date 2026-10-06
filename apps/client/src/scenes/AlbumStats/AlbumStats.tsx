@@ -1,9 +1,11 @@
 import { CircularProgress, Grid } from "@mui/material";
 import { TimelapseOutlined } from "@mui/icons-material";
+import { Fragment } from "react";
 import Header from "../../components/Header";
 import { AlbumStatsResponse } from "../../services/apis/api";
 import InlineArtist from "../../components/InlineArtist";
 import IdealImage from "../../components/IdealImage";
+import ItemTimeline from "../../components/ItemTimeline";
 import FirstAndLast from "../ArtistStats/FirstAndLast";
 import InlineTrack from "../../components/InlineTrack";
 import TitleCard from "../../components/TitleCard";
@@ -35,10 +37,10 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
         }
         title={stats.album.name}
         subtitle={stats.artists.map((artist, k) => (
-          <>
-            <InlineArtist size="normal" artist={artist} key={artist.id} />
+          <Fragment key={artist.id}>
+            <InlineArtist size="normal" artist={artist} />
             {k < stats.artists.length - 1 && ", "}
-          </>
+          </Fragment>
         ))}
         hideInterval
       />
@@ -123,6 +125,9 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
                 </div>
               ))}
             </TitleCard>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <ItemTimeline type="album" id={stats.album.id} />
           </Grid>
         </Grid>
       </div>

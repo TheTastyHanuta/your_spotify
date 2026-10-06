@@ -5,6 +5,7 @@ import { checkBlacklistConsistency, connect } from "../database";
 import { fixRunningImportsAtStart } from "../database/queries/importer";
 import { dbLoop } from "../spotify/looper";
 import { get, getWithDefault } from "../tools/env";
+import { genresLoop } from "../tools/genres";
 import { logger } from "../tools/logger";
 
 export function startServer() {
@@ -49,6 +50,7 @@ export function startServer() {
       server.on("listening", onListening);
       fixRunningImportsAtStart().catch(logger.error);
       checkBlacklistConsistency().catch(logger.error);
+      genresLoop().catch(logger.error);
       const domain = get("CLIENT_ENDPOINT");
       if (domain.toLowerCase().includes("spotify")) {
         logger.warn(
