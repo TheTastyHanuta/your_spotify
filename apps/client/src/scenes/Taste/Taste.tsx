@@ -94,6 +94,11 @@ export default function Taste() {
 
   const datedPlays = taste?.years.reduce((sum, y) => sum + y.plays, 0) ?? 0;
   const median = taste ? medianYear(taste.years) : undefined;
+  // The age at the end of the period, so a past period is not measured
+  // against today, like the points of the musical age chart
+  const ageYear = new Date(
+    Math.min(interval.end.getTime(), Date.now()),
+  ).getFullYear();
   const totalPlays = taste
     ? Object.values(taste.albumTypes).reduce((sum, n) => sum + n, 0)
     : 0;
@@ -113,7 +118,9 @@ export default function Taste() {
       loaded: Boolean(taste),
       info: "A playful estimate. People tend to love the music of their late teens most, so the median release year of what you listen to hints at when you were 17.",
       main:
-        median === undefined ? undefined : plural(musicalAge(median), "year"),
+        median === undefined
+          ? undefined
+          : plural(musicalAge(median, ageYear), "year"),
       sub:
         median === undefined
           ? undefined
@@ -195,7 +202,9 @@ export default function Taste() {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <MusicalAgeOverTime
-              overall={median === undefined ? undefined : musicalAge(median)}
+              overall={
+                median === undefined ? undefined : musicalAge(median, ageYear)
+              }
             />
           </Grid>
           <Grid size={{ xs: 12 }}>

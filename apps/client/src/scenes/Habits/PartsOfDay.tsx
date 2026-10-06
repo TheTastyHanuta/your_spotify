@@ -25,19 +25,13 @@ interface PartsOfDayProps {
 export default function PartsOfDay({ format }: PartsOfDayProps) {
   const { interval } = useSelector(selectRawIntervalDetail);
   const [type, setType] = useState<Type>("artists");
-  const artists = useAPI(
+  // Only the shown type, both are as slow as each other on a long period
+  const result = useAPI(
     api.getBestOfPartOfDay,
     interval.start,
     interval.end,
-    "artists",
+    type,
   );
-  const tracks = useAPI(
-    api.getBestOfPartOfDay,
-    interval.start,
-    interval.end,
-    "tracks",
-  );
-  const result = type === "artists" ? artists : tracks;
 
   return (
     <TitleCard

@@ -605,6 +605,9 @@ export const getArtistShares = async (
         plays: { $sum: 1 },
       },
     },
+    // ponytail: every artist of a step in one document, fine up to about
+    // 200k different artists in a step (16 MB). Two passes (top artists
+    // first, then their plays per step) if that ever gets close.
     {
       $group: {
         _id: getGroupingByTimeSplit(timeSplit, "_id"),
@@ -698,6 +701,9 @@ export const getBestOfPartOfDay = async (
       },
     },
     { $sort: { total: -1, "_id.item": 1 } },
+    // ponytail: every item of a part of the day in one document before the
+    // slice, fine up to about 200k different songs in one part (16 MB). A
+    // $facet with a $limit per part if that ever gets close.
     {
       $group: {
         _id: "$_id.part",
@@ -738,57 +744,59 @@ export const getReleaseYearsPer = async (
   end: Date,
   timeSplit: Timesplit,
 ) => {
-  const steps: {
-    _id: StepId;
-    albums: { releaseDate?: string; plays: number }[];
-  }[] = await InfosModel.aggregate([
-    ...basicMatch(user._id, start, end),
-    {
-      $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
-        albumId: 1,
-      },
-    },
-    {
-      $group: {
-        _id: { ...getGroupingByTimeSplit(timeSplit), album: "$albumId" },
-        plays: { $sum: 1 },
-      },
-    },
-    {
-      $lookup: {
-        from: "albums",
-        localField: "_id.album",
-        foreignField: "id",
-        as: "album",
-      },
-    },
-    {
-      $group: {
-        _id: getGroupingByTimeSplit(timeSplit, "_id"),
-        albums: {
-          $push: {
-            releaseDate: { $arrayElemAt: ["$album.release_date", 0] },
-            plays: "$plays",
-          },
+  const steps: { _id: StepId; years: { year: string; plays: number }[] }[] =
+    await InfosModel.aggregate([
+      ...basicMatch(user._id, start, end),
+      {
+        $project: {
+          ...getGroupByDateProjection(user.settings.timezone),
+          albumId: 1,
         },
       },
-    },
-    ...sortByTimeSplit(timeSplit, "_id"),
-  ]);
-  return steps.map((step) => {
-    const years = new Map<number, number>();
-    for (const album of step.albums) {
-      const year = Number(album.releaseDate?.slice(0, 4));
-      if (year > 1900) {
-        years.set(year, (years.get(year) ?? 0) + album.plays);
-      }
-    }
-    return {
-      _id: step._id,
-      years: [...years.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([year, plays]) => ({ year, plays })),
-    };
-  });
+      {
+        $group: {
+          _id: { ...getGroupingByTimeSplit(timeSplit), album: "$albumId" },
+          plays: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "albums",
+          localField: "_id.album",
+          foreignField: "id",
+          as: "album",
+        },
+      },
+      // Per release year in the database, so a step holds at most a year per
+      // release year, not an entry per album
+      {
+        $group: {
+          _id: {
+            step: getGroupingByTimeSplit(timeSplit, "_id"),
+            year: {
+              $substrCP: [
+                { $ifNull: [{ $arrayElemAt: ["$album.release_date", 0] }, ""] },
+                0,
+                4,
+              ],
+            },
+          },
+          plays: { $sum: "$plays" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.step",
+          years: { $push: { year: "$_id.year", plays: "$plays" } },
+        },
+      },
+      ...sortByTimeSplit(timeSplit, "_id"),
+    ]);
+  return steps.map((step) => ({
+    _id: step._id,
+    years: step.years
+      .map(({ year, plays }) => ({ year: Number(year), plays }))
+      .filter(({ year }) => year > 1900)
+      .sort((a, b) => a.year - b.year),
+  }));
 };

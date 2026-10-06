@@ -297,23 +297,9 @@ Get most listened songs in a time period.
 
 - `200`: Array of most listened songs with counts
 
-#### `GET /spotify/most_listened_artist`
-
-Get most listened artists in a time period.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-- `timeSplit`: string - Time unit for grouping (day, week, month, year)
-
-**Response:**
-
-- `200`: Array of most listened artists with counts
-
 #### `GET /spotify/songs_per`
 
-Get song count per time unit.
+Get the number of plays, different songs and different artists per time unit.
 
 **Query Parameters:**
 
@@ -323,7 +309,7 @@ Get song count per time unit.
 
 **Response:**
 
-- `200`: Array of time periods with song counts
+- `200`: Array of time periods with `count` (plays), `differents` (different songs) and `differentArtists`
 
 #### `GET /spotify/time_per`
 
@@ -339,23 +325,9 @@ Get listening time per time unit.
 
 - `200`: Array of time periods with listening durations
 
-#### `GET /spotify/album_date_ratio`
+#### `GET /spotify/taste/artist_shares`
 
-Get album release date distribution for listened tracks.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-- `timeSplit`: string - Time unit for grouping (day, week, month, year)
-
-**Response:**
-
-- `200`: Distribution of tracks by album release date
-
-#### `GET /spotify/feat_ratio`
-
-Get ratio of songs featuring multiple artists.
+Get the period's top 10 artists by plays, and the plays of its top 8 artists in each time unit, with each time unit's total plays.
 
 **Query Parameters:**
 
@@ -365,11 +337,11 @@ Get ratio of songs featuring multiple artists.
 
 **Response:**
 
-- `200`: Ratio data for featured vs. non-featured tracks
+- `200`: Object with `plays`, `top` (artists with their plays) and `steps` (time periods with `plays` and the top artists' plays by artist ID)
 
-#### `GET /spotify/different_artists_per`
+#### `GET /spotify/taste/release_years_per`
 
-Get count of unique artists listened to per time unit.
+Get the plays per album release year for each time unit.
 
 **Query Parameters:**
 
@@ -379,7 +351,7 @@ Get count of unique artists listened to per time unit.
 
 **Response:**
 
-- `200`: Count of unique artists per time unit
+- `200`: Array of time periods with `years` (release year and plays, oldest first)
 
 #### `GET /spotify/time_per_hour_of_day`
 
@@ -458,44 +430,19 @@ Get top albums in a time period.
 
 - `200`: Array of top album objects
 
-#### `GET /spotify/top/hour-repartition/songs`
+#### `GET /spotify/top/part-of-day`
 
-Get top songs by hour of day.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-
-**Response:**
-
-- `200`: Top songs for each hour of the day
-
-#### `GET /spotify/top/hour-repartition/albums`
-
-Get top albums by hour of day.
+Get the top 5 artists or songs of each part of the day: morning (5–11), afternoon (11–17), evening (17–22) and night (22–5), in the stats timezone. Counts plays or listening time, following the user's statistics setting.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
+- `type`: string - `artists` or `tracks`
 
 **Response:**
 
-- `200`: Top albums for each hour of the day
-
-#### `GET /spotify/top/hour-repartition/artists`
-
-Get top artists by hour of day.
-
-**Query Parameters:**
-
-- `start`: date - Start date
-- `end`: date - End date (defaults to current time)
-
-**Response:**
-
-- `200`: Top artists for each hour of the day
+- `200`: Array of parts of the day, each with its total and its top items with their totals
 
 #### `GET /spotify/top/sessions`
 

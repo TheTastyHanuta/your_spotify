@@ -156,11 +156,16 @@ export type GenresResponse = {
 };
 
 type ShortArtist = Pick<Artist, "id" | "name" | "images">;
+// The fields the part of day query selects
+type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
+  full_album: Pick<Album, "id" | "name" | "images">;
+  full_artists: Pick<Artist, "id" | "name">[];
+};
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
   top: { artist: ShortArtist; plays: number }[];
-  // Plays of the top 5 artists in each time step, by artist id
+  // Plays of the top 8 artists in each time step, by artist id
   steps: {
     _id: DateId | null;
     plays: number;
@@ -308,9 +313,7 @@ export const api = {
     type: T,
   ) =>
     get<
-      BestOfPartOfDayResponse<
-        T extends "artists" ? ShortArtist : TrackWithFullArtistAlbum
-      >
+      BestOfPartOfDayResponse<T extends "artists" ? ShortArtist : ShortTrack>
     >("/spotify/top/part-of-day", { start, end, type }),
   getDecadesPerYear: () =>
     get<DecadesPerYearResponse>("/spotify/taste/decades"),
