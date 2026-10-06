@@ -38,7 +38,7 @@ import {
   getTaste,
   getTimeline,
 } from "../database/queries/insights";
-import { getForgotten } from "../database/queries/story";
+import { getEras, getForgotten } from "../database/queries/story";
 import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
@@ -534,6 +534,11 @@ router.get("/story/forgotten", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { days } = validate(req.query, forgottenSchema);
   res.status(200).send(await getForgotten(user, days));
+});
+
+router.get("/story/eras", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  res.status(200).send(await getEras(user));
 });
 
 const timelineSchema = z.object({

@@ -6,6 +6,11 @@
   padding: 4px 0;
 }
 
+/* Rows without a rank don't keep its column */
+.noRank {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
 .rank {
   text-align: right;
 }

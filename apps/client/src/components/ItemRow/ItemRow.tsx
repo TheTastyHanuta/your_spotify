@@ -61,10 +61,12 @@ export default function ItemRow({
 }: ItemRowProps) {
   const size = big ? 64 : 40;
   return (
-    <div className={s.row}>
-      <Text size="normal" greyed className={s.rank}>
-        {rank}
-      </Text>
+    <div className={clsx(s.row, { [s.noRank]: rank === undefined })}>
+      {rank !== undefined && (
+        <Text size="normal" greyed className={s.rank}>
+          {rank}
+        </Text>
+      )}
       <IdealImage
         images={image}
         size={size}

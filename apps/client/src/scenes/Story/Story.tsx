@@ -14,6 +14,7 @@ import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
+import Eras from "./Eras";
 
 import s from "./index.module.css";
 
@@ -149,6 +150,18 @@ export default function Story() {
                 </TitleCard>,
               ]}
             </Masonry>
+          </Grid>
+          <Grid size={{ xs: 12 }} className={s.nextSection}>
+            <Text element="h2" size="huge" className={s.section}>
+              Eras
+            </Text>
+            <Text element="div" size="normal" greyed>
+              Stretches of at least 3 months when one artist or genre clearly
+              led your listening.
+            </Text>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Eras />
           </Grid>
         </Grid>
       </div>

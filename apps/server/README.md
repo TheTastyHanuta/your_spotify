@@ -529,6 +529,14 @@ Get the 20 most played songs and 10 most played artists of all time (at least 10
 
 - `200`: Object with `tracks` and `artists`
 
+#### `GET /spotify/story/eras`
+
+Get the stretches of at least 3 months when one artist or genre (an artist's first genre) clearly led the listening: over the month and the months next to it, at least 1.2 times the plays of number two and at least 3% (artists) or 5% (genres) of all plays, played in the month itself, in months with at least 30 plays. One month without a leader inside an era is bridged.
+
+**Response:**
+
+- `200`: Object with the first and last month with plays (`YYYY-MM` in the stats timezone), `artists` (each with its most played song during the era) and `genres` (each with its 3 most played artists), oldest first
+
 ### Collaborative Features
 
 #### `GET /spotify/collaborative/top/songs`

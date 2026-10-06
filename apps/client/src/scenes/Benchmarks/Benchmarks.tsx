@@ -121,6 +121,10 @@ export default function Benchmarks() {
       request: () => api.getForgotten(182),
     },
     {
+      title: "Get eras",
+      request: () => api.getEras(),
+    },
+    {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
     },

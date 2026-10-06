@@ -211,6 +211,21 @@ export type ForgottenResponse = {
   tracks: (ForgottenItem & { track: ShortTrack })[];
   artists: (ForgottenItem & { artist: ShortArtist })[];
 };
+// Months as "YYYY-MM" in the stats timezone, oldest era first. plays: the
+// artist's or genre's plays during the era, total: all plays during it
+type Era = { from: string; to: string; plays: number; total: number };
+export type ErasResponse = {
+  // First and last month with plays, null without listens
+  first: string | null;
+  last: string | null;
+  artists: (Era & {
+    artist: ShortArtist;
+    // The most played song of the artist during the era
+    track: Pick<Track, "id" | "name"> | null;
+  })[];
+  // artists: the genre's most played artists during the era
+  genres: (Era & { genre: string; artists: ShortArtist[] })[];
+};
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
@@ -387,6 +402,7 @@ export const api = {
     }),
   getForgotten: (days: number) =>
     get<ForgottenResponse>("/spotify/story/forgotten", { days }),
+  getEras: () => get<ErasResponse>("/spotify/story/eras"),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,
