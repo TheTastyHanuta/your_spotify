@@ -117,6 +117,10 @@ export default function Benchmarks() {
         api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),
     },
     {
+      title: "Get forgotten favorites",
+      request: () => api.getForgotten(182),
+    },
+    {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
     },

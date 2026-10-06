@@ -30,7 +30,7 @@ const STICK_MIN_PLAYS = 3;
 const STICK_DAYS = 91;
 const FADED_DAYS = STICK_DAYS + 30;
 
-const allListens = (user: User) => ({
+export const allListens = (user: User) => ({
   $match: { owner: user._id, blacklistedBy: { $exists: 0 } },
 });
 
@@ -38,20 +38,20 @@ const inPeriod = (start: Date, end: Date, field = "$played_at") => ({
   $and: [{ $gt: [field, start] }, { $lt: [field, end] }],
 });
 
-const findArtists = (ids: string[]) =>
+export const findArtists = (ids: string[]) =>
   ArtistModel.find({ id: { $in: ids } })
     .select("id name images")
     .lean();
 
 // Same fields as the part of day query
-const findTracks = (ids: string[]) =>
+export const findTracks = (ids: string[]) =>
   getTracks(ids)
     .select("id name album artists")
     .populate("full_album", "id name images")
     .populate("full_artists", "id name")
     .lean();
 
-const keepOrder = <T extends { id: string }, R>(
+export const keepOrder = <T extends { id: string }, R>(
   ids: string[],
   docs: T[],
   build: (doc: T, index: number) => R,

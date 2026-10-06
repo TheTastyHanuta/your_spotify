@@ -199,6 +199,18 @@ export type NewPlaysPerResponse = {
   count: number;
   newCount: number;
 }[];
+// Most played of all time, not played lately. peak: "YYYY-MM", the month
+// with the most plays
+type ForgottenItem = {
+  total: number;
+  last: string;
+  peak: string;
+  peakPlays: number;
+};
+export type ForgottenResponse = {
+  tracks: (ForgottenItem & { track: ShortTrack })[];
+  artists: (ForgottenItem & { artist: ShortArtist })[];
+};
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
@@ -373,6 +385,8 @@ export const api = {
       end,
       timeSplit,
     }),
+  getForgotten: (days: number) =>
+    get<ForgottenResponse>("/spotify/story/forgotten", { days }),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,

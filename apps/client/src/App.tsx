@@ -33,6 +33,7 @@ import Logout from "./scenes/Logout";
 import LongestSessions from "./scenes/LongestSessions";
 import Recap from "./scenes/Recap";
 import Settings from "./scenes/Settings";
+import Story from "./scenes/Story";
 import Taste from "./scenes/Taste";
 import Albums from "./scenes/Tops/Albums";
 import Artists from "./scenes/Tops/Artists";
@@ -110,6 +111,14 @@ function App() {
                   element={
                     <PrivateRoute>
                       <Discoveries />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/story"
+                  element={
+                    <PrivateRoute>
+                      <Story />
                     </PrivateRoute>
                   }
                 />

@@ -1,0 +1,19 @@
+.content {
+  padding: var(--page-padding);
+}
+
+/* The picker reads as part of the sentence */
+.since {
+  font-size: inherit;
+  color: var(--text-on-light);
+}
+
+.section {
+  margin: 0 0 4px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

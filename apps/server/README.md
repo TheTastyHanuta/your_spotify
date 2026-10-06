@@ -515,6 +515,20 @@ Get the plays of each time step, and the plays of songs heard for the first time
 
 - `200`: Array of steps with `count` and `newCount`
 
+### Your Story
+
+#### `GET /spotify/story/forgotten`
+
+Get the 20 most played songs and 10 most played artists of all time (at least 10 plays) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
+
+**Query Parameters:**
+
+- `days`: number - `91`, `182` or `365`
+
+**Response:**
+
+- `200`: Object with `tracks` and `artists`
+
 ### Collaborative Features
 
 #### `GET /spotify/collaborative/top/songs`

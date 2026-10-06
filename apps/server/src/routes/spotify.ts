@@ -38,6 +38,7 @@ import {
   getTaste,
   getTimeline,
 } from "../database/queries/insights";
+import { getForgotten } from "../database/queries/story";
 import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
@@ -519,6 +520,20 @@ router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
   res.status(200).send(await getNewPlaysPer(user, start, end, timeSplit));
+});
+
+// 3 months, 6 months, 1 year
+const forgottenSchema = z.object({
+  days: z.preprocess(
+    toNumber,
+    z.union([z.literal(91), z.literal(182), z.literal(365)]),
+  ),
+});
+
+router.get("/story/forgotten", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { days } = validate(req.query, forgottenSchema);
+  res.status(200).send(await getForgotten(user, days));
 });
 
 const timelineSchema = z.object({

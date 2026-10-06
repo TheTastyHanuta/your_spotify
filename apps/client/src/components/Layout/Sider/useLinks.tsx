@@ -1,4 +1,6 @@
 import {
+  AutoStories,
+  AutoStoriesOutlined,
   Home,
   HomeOutlined,
   MusicNote,
@@ -65,6 +67,12 @@ export function useLinks() {
           link: "/discoveries",
           icon: <ExploreOutlined />,
           iconOn: <Explore />,
+        },
+        {
+          label: "Your story",
+          link: "/story",
+          icon: <AutoStoriesOutlined />,
+          iconOn: <AutoStories />,
         },
         {
           label: "Recap",
