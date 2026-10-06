@@ -38,7 +38,12 @@ import {
   getTaste,
   getTimeline,
 } from "../database/queries/insights";
-import { getEras, getForgotten, getOnThisDay } from "../database/queries/story";
+import {
+  getEras,
+  getForgotten,
+  getLoyal,
+  getOnThisDay,
+} from "../database/queries/story";
 import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
@@ -539,6 +544,11 @@ router.get("/story/forgotten", isLoggedOrGuest, async (req, res) => {
 router.get("/on-this-day", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   res.status(200).send(await getOnThisDay(user));
+});
+
+router.get("/story/loyal", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  res.status(200).send(await getLoyal(user));
 });
 
 router.get("/story/eras", isLoggedOrGuest, async (req, res) => {

@@ -537,6 +537,14 @@ Get the stretches of at least 3 months when one artist or genre (an artist's fir
 
 - `200`: Object with the first and last month with plays (`YYYY-MM` in the stats timezone), `artists` (each with its most played song during the era) and `genres` (each with its 3 most played artists), oldest first
 
+#### `GET /spotify/story/loyal`
+
+Get the 20 songs and 10 artists played in the most different months (months in the stats timezone), the most played first on ties.
+
+**Response:**
+
+- `200`: Object with `tracks` and `artists`, each with the number of months, total plays, first month (`YYYY-MM`) and plays per year
+
 #### `GET /spotify/on-this-day`
 
 Get today's date (in the stats timezone) in earlier years: for each year with plays that day, newest first, the day's plays and its most played song (the first one played on ties).

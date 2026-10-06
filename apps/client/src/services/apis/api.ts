@@ -239,6 +239,18 @@ export type OnThisDayResponse = {
     trackPlays: number;
   }[];
 };
+// Played in the most different months. first: "YYYY-MM" in the stats
+// timezone, years: plays per year with plays, oldest first
+type LoyalItem = {
+  months: number;
+  total: number;
+  first: string;
+  years: { year: number; plays: number }[];
+};
+export type LoyalResponse = {
+  tracks: (LoyalItem & { track: ShortTrack })[];
+  artists: (LoyalItem & { artist: ShortArtist })[];
+};
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
@@ -416,6 +428,7 @@ export const api = {
   getForgotten: (days: number) =>
     get<ForgottenResponse>("/spotify/story/forgotten", { days }),
   getEras: () => get<ErasResponse>("/spotify/story/eras"),
+  getLoyal: () => get<LoyalResponse>("/spotify/story/loyal"),
   getOnThisDay: () => get<OnThisDayResponse>("/spotify/on-this-day"),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {

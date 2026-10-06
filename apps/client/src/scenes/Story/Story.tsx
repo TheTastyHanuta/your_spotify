@@ -15,6 +15,7 @@ import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
 import Eras from "./Eras";
+import Loyal from "./Loyal";
 
 import s from "./index.module.css";
 
@@ -162,6 +163,20 @@ export default function Story() {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <Eras />
+          </Grid>
+          <Grid size={{ xs: 12 }} className={s.nextSection}>
+            <Text element="h2" size="huge" className={s.section}>
+              Always there
+            </Text>
+            <Text element="div" size="normal" greyed>
+              The songs and artists you played in the most different months.{" "}
+              <span className={s.wideOnly}>
+                The small bars show your plays in each year.
+              </span>
+            </Text>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Loyal />
           </Grid>
         </Grid>
       </div>

@@ -381,3 +381,96 @@ export const getOnThisDay = async (user: User) => {
     }),
   };
 };
+
+// Loyalty: the songs and artists played in the most different months, the
+// most played first on ties
+const NB_LOYAL_TRACKS = 20;
+const NB_LOYAL_ARTISTS = 10;
+
+type Loyal = {
+  _id: string;
+  months: number;
+  total: number;
+  // "YYYY-MM" in the stats timezone
+  first: string;
+  perMonth: { month: string; plays: number }[];
+};
+
+const loyalOf = (
+  user: User,
+  field: "id" | "primaryArtistId",
+  nb: number,
+): Promise<Loyal[]> =>
+  InfosModel.aggregate([
+    allListens(user),
+    {
+      $group: {
+        _id: {
+          item: `$${field}`,
+          month: {
+            $dateToString: {
+              format: "%Y-%m",
+              date: "$played_at",
+              timezone: getTimezone(user.settings.timezone),
+            },
+          },
+        },
+        plays: { $sum: 1 },
+      },
+    },
+    // ponytail: every month of every item in one document per item before
+    // the limit, small (an item has at most one entry per month)
+    {
+      $group: {
+        _id: "$_id.item",
+        months: { $sum: 1 },
+        total: { $sum: "$plays" },
+        first: { $min: "$_id.month" },
+        perMonth: { $push: { month: "$_id.month", plays: "$plays" } },
+      },
+    },
+    { $sort: { months: -1, total: -1, _id: 1 } },
+    { $limit: nb },
+  ]);
+
+// Plays per year, oldest first
+const perYear = (perMonth: Loyal["perMonth"]) => {
+  const years = new Map<number, number>();
+  for (const { month, plays } of perMonth) {
+    const year = Number(month.slice(0, 4));
+    years.set(year, (years.get(year) ?? 0) + plays);
+  }
+  return [...years.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, plays]) => ({ year, plays }));
+};
+
+const loyalFields = ({ months, total, first, perMonth }: Loyal) => ({
+  months,
+  total,
+  first,
+  years: perYear(perMonth),
+});
+
+export const getLoyal = async (user: User) => {
+  const [tracks, artists] = await Promise.all([
+    loyalOf(user, "id", NB_LOYAL_TRACKS),
+    loyalOf(user, "primaryArtistId", NB_LOYAL_ARTISTS),
+  ]);
+  const [trackDocs, artistDocs] = await Promise.all([
+    findTracks(tracks.map((t) => t._id)),
+    findArtists(artists.map((a) => a._id)),
+  ]);
+  return {
+    tracks: keepOrder(
+      tracks.map((t) => t._id),
+      trackDocs,
+      (track, index) => ({ track, ...loyalFields(tracks[index]!) }),
+    ),
+    artists: keepOrder(
+      artists.map((a) => a._id),
+      artistDocs,
+      (artist, index) => ({ artist, ...loyalFields(artists[index]!) }),
+    ),
+  };
+};

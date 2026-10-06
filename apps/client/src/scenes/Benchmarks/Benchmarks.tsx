@@ -129,6 +129,10 @@ export default function Benchmarks() {
       request: () => api.getOnThisDay(),
     },
     {
+      title: "Get loyal songs and artists",
+      request: () => api.getLoyal(),
+    },
+    {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
     },

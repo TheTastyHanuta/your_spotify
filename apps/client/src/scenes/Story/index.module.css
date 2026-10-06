@@ -85,3 +85,23 @@
     display: none;
   }
 }
+
+/* Loyalty: one small cell per year, hidden on phones where the text needs
+   the width */
+.yearStrip {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.yearCell {
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+  .yearStrip,
+  .wideOnly {
+    display: none;
+  }
+}

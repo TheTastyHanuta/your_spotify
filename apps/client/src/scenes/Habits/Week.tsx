@@ -21,7 +21,7 @@ const MAX_RATIO = 4;
 
 // From the background through the middle of the scale to its strongest
 // step, so quiet hours fade out
-const heat = (share: number) => {
+export const heat = (share: number) => {
   const f = 0.1 + 0.9 * share;
   return f < 0.5
     ? `color-mix(in oklab, var(--scale-3) ${Math.round(f * 200)}%, var(--background))`
