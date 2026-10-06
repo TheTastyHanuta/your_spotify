@@ -3,6 +3,7 @@ import clsx from "clsx";
 import {
   addDays,
   getDayOfYear,
+  getDaysInMonth,
   getISODay,
   isAfter,
   startOfDay,
@@ -63,8 +64,25 @@ export default function Calendar({
   const firstDay = startOfDay(start);
   const byDay = new Map(days.map((day) => [day.date, day]));
   const firstDate = new Date(year, 0, 1);
-  // Weeks start on Monday, the first one has days of the previous year
-  const offset = getISODay(firstDate) - 1;
+  // Each month has its own week columns, weeks start on Monday. A narrow
+  // empty column separates the months, like GitHub's calendar.
+  const months = MONTHS.map((month) => {
+    const first = new Date(year, month, 1);
+    const offset = getISODay(first) - 1;
+    return {
+      first,
+      offset,
+      weeks: Math.ceil((offset + getDaysInMonth(first)) / 7),
+    };
+  });
+  const startColumns: number[] = [];
+  months.reduce((column, month) => {
+    startColumns.push(column);
+    return column + month.weeks + 1;
+  }, 2);
+  const columnOf = (date: Date) =>
+    startColumns[date.getMonth()]! +
+    Math.floor((months[date.getMonth()]!.offset + date.getDate() - 1) / 7);
   const dates = Array.from(
     Array(getDayOfYear(new Date(year, 11, 31))).keys(),
   ).map((index) => addDays(firstDate, index));
@@ -102,23 +120,19 @@ export default function Calendar({
         <div
           className={s.calendarGrid}
           style={{
-            gridTemplateColumns: `auto repeat(${Math.ceil((offset + dates.length) / 7)}, minmax(10px, 1fr))`,
+            gridTemplateColumns: `auto ${months
+              .map((month) => `repeat(${month.weeks}, minmax(10px, 1fr))`)
+              .join(" 4px ")}`,
           }}>
-          {MONTHS.map((month) => (
+          {months.map((month, index) => (
             <span
-              key={month}
+              key={index}
               className={s.label}
               style={{
                 gridRow: 1,
-                gridColumn:
-                  Math.floor(
-                    (offset + getDayOfYear(new Date(year, month, 1)) - 1) / 7,
-                  ) + 2,
+                gridColumn: `${startColumns[index]} / span ${month.weeks}`,
               }}>
-              {DateFormatter.toMonthString(new Date(year, month, 1)).slice(
-                0,
-                3,
-              )}
+              {DateFormatter.toMonthString(month.first).slice(0, 3)}
             </span>
           ))}
           {WEEKDAY_LABELS.map((weekday) => (
@@ -132,7 +146,7 @@ export default function Calendar({
           {dates.map((date, index) => {
             const style = {
               gridRow: getISODay(date) + 1,
-              gridColumn: Math.floor((offset + index) / 7) + 2,
+              gridColumn: columnOf(date),
             };
             if (date < firstDay || date > end) {
               return <span key={index} style={style} />;

@@ -113,6 +113,7 @@ export default function Habits() {
           <Link
             component="button"
             color="inherit"
+            sx={{ verticalAlign: "baseline" }}
             onClick={() => openDay(fromDay(overview.busiestDay!.date))}>
             top songs
           </Link>
