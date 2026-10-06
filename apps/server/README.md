@@ -15,6 +15,8 @@
     - [Playlist Management](#playlist-management)
   - [History & Statistics](#history--statistics)
     - [Top Items](#top-items)
+    - [Discoveries](#discoveries)
+    - [Your Story](#your-story)
     - [Collaborative Features](#collaborative-features)
   - [Search](#search)
   - [Artist](#artist)
@@ -324,6 +326,80 @@ Get listening time per time unit.
 **Response:**
 
 - `200`: Array of time periods with listening durations
+
+#### `GET /spotify/overview`
+
+Get the numbers behind the Habits page for a period: plays, listening time, different songs, artists and albums, songs and artists heard for the first time ever, active days, the busiest day, the longest and current streaks, plays per weekday and hour (in the stats timezone), and `clump`, the plays per listened hour weighted by plays (1 when plays come one by one), used to tell real changes from chance.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with `plays`, `durationMs`, `tracks`, `artists`, `albums`, `newArtists`, `newTracks`, `activeDays`, `busiestDay`, `streaks`, `clump` and `heatmap` (weekday 1–7 from Monday, hour, plays, durationMs)
+
+#### `GET /spotify/calendar`
+
+Get the plays and listening time of each day with listens, in the stats timezone.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Array of days with `date` (`YYYY-MM-DD`), `plays` and `durationMs`
+
+#### `GET /spotify/taste`
+
+Get the plays per album release year (each with its most played song), how old the songs were when played (at most a year old, or at least 10 years old), plays per release type, explicit plays and plays per song length.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with `years`, `ageWhenPlayed`, `albumTypes`, `explicit` and `lengths` (under 2 min, 2–3, 3–4, 4–5, 5 min and more)
+
+#### `GET /spotify/taste/decades`
+
+Get the plays per release decade for each year of the whole history.
+
+**Response:**
+
+- `200`: Array of years with `decades` (decade and plays, oldest first)
+
+#### `GET /spotify/genres`
+
+Get the most played genres, using MusicBrainz genres first and Spotify's otherwise. An artist's plays count for each of its genres, so genres overlap.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of genres to return (1-50, default 20)
+
+**Response:**
+
+- `200`: Object with `totalPlays`, `coveredPlays` (plays with a known genre) and `genres` (each with plays, listening time and up to 3 artists)
+
+#### `GET /spotify/timeline`
+
+Get an artist's, album's or song's plays per month from its first listen up to now, and per weekday and hour, next to all your listening between its first and last listen.
+
+**Query Parameters:**
+
+- `type`: string - `artist`, `album` or `track`
+- `id`: string - Spotify ID
+
+**Response:**
+
+- `200`: Object with `months`, `weekdays`, `hours` and `overall`, or `{ code: "NEVER_LISTENED" }`
 
 #### `GET /spotify/taste/artist_shares`
 
