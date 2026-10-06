@@ -23,7 +23,7 @@ export default function ArtistsListened({ className }: ArtistsListenedProps) {
     interval.end,
     Timesplit.all,
   );
-  const lastPeriod = getLastPeriod(interval.start, interval.end);
+  const lastPeriod = getLastPeriod(interval.start, interval.end, unit);
   const resultOld = useAPI(
     api.songsPer,
     lastPeriod.start,
@@ -67,7 +67,7 @@ export default function ArtistsListened({ className }: ArtistsListenedProps) {
           </Text>
           <Text size="normal">
             &nbsp;
-            {percentMore < 0 ? "less" : "more"} than last {unit}
+            {percentMore < 0 ? "less" : "more"} than {lastPeriod.label}
           </Text>
         </Text>
       </div>

@@ -1,19 +1,21 @@
-import { useSelector } from "react-redux";
-import clsx from "clsx";
 import { Skeleton } from "@mui/material";
+import clsx from "clsx";
+import { useSelector } from "react-redux";
+
 import { api } from "../../../services/apis/api";
 import { useAPI } from "../../../services/hooks/hooks";
-import { Timesplit } from "../../../services/types";
-import TitleCard from "../../TitleCard";
-import { ImplementedCardProps } from "../types";
-import s from "../index.module.css";
+import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
 import {
   getLastPeriod,
   getPercentMore,
   msToMinutes,
 } from "../../../services/stats";
-import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
+import { Timesplit } from "../../../services/types";
 import Text from "../../Text";
+import TitleCard from "../../TitleCard";
+import { ImplementedCardProps } from "../types";
+
+import s from "../index.module.css";
 
 interface TimeListenedProps extends ImplementedCardProps {}
 
@@ -25,7 +27,7 @@ export default function TimeListened({ className }: TimeListenedProps) {
     interval.end,
     Timesplit.all,
   );
-  const lastPeriod = getLastPeriod(interval.start, interval.end);
+  const lastPeriod = getLastPeriod(interval.start, interval.end, unit);
   const resultOld = useAPI(
     api.timePer,
     lastPeriod.start,
@@ -71,7 +73,7 @@ export default function TimeListened({ className }: TimeListenedProps) {
           </Text>
           <Text element="span" size="normal">
             &nbsp;
-            {percentMore < 0 ? "less" : "more"} than last {unit}
+            {percentMore < 0 ? "less" : "more"} than {lastPeriod.label}
           </Text>
         </Text>
       </div>
