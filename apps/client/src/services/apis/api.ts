@@ -117,6 +117,8 @@ export type OverviewResponse = Counts & {
   newArtists: number;
   newTracks: number;
   activeDays: number;
+  // Plays per listened hour, weighted by plays (1 if plays came one by one)
+  clump: number;
   busiestDay?: Counts & { date: string };
   streaks: {
     longest: { days: number; start: string; end: string } | null;

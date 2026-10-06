@@ -89,6 +89,7 @@ h6 {
   --scale-3: #3aa456;
   --scale-4: #60c877;
   --scale-5: #a3e4ad;
+  --diverge-mid: #383835;
 }
 
 .light-vars {
@@ -131,6 +132,7 @@ h6 {
   --scale-3: #0b8c3c;
   --scale-4: #076e2e;
   --scale-5: #045120;
+  --diverge-mid: #f0efec;
 }
 
 @media (hover: none) and (pointer: coarse) {

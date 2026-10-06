@@ -5,7 +5,7 @@ type Cell = OverviewResponse["heatmap"][number];
 export type Trait = { title: string; text: string };
 
 // Differences smaller than this, in percentage points, count as usual
-const NOTABLE = 3;
+export const NOTABLE = 3;
 
 // The server's part of day queries use the same bounds
 export const PARTS_OF_DAY = [
@@ -44,7 +44,7 @@ export const PARTS_OF_DAY = [
 ] as const;
 type PartOfDay = (typeof PARTS_OF_DAY)[number];
 
-const inPart = (hour: number, { from, to }: PartOfDay) =>
+export const inPart = (hour: number, { from, to }: PartOfDay) =>
   from < to ? hour >= from && hour < to : hour >= from || hour < to;
 
 const percent = (share: number) => Math.round(share * 100);

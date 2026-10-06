@@ -149,6 +149,26 @@ export const getOverview = async (user: User, start: Date, end: Date) => {
           artists: distinct("primaryArtistId"),
           albums: distinct("albumId"),
           days: perDay(timezone),
+          // Plays per listened hour, weighted by plays, for the Habits
+          // comparison: plays come in sessions, not one by one
+          clump: [
+            {
+              $group: {
+                _id: {
+                  day: dayString(timezone),
+                  hour: { $hour: { date: "$played_at", timezone } },
+                },
+                plays: { $sum: 1 },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                plays: { $sum: "$plays" },
+                squares: { $sum: { $multiply: ["$plays", "$plays"] } },
+              },
+            },
+          ],
           heatmap: [
             {
               $group: {
@@ -198,6 +218,9 @@ export const getOverview = async (user: User, start: Date, end: Date) => {
       days.map((day) => day._id),
       today,
     ),
+    clump: facets.clump[0]
+      ? (facets.clump[0].squares as number) / (facets.clump[0].plays as number)
+      : 1,
     heatmap: (facets.heatmap as any[]).map((cell) => ({
       weekday: cell._id.weekday as number,
       hour: cell._id.hour as number,

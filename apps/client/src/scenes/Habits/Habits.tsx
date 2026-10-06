@@ -1,4 +1,4 @@
-import { Grid, Link, Skeleton, Tooltip } from "@mui/material";
+import { Grid, Link, Skeleton } from "@mui/material";
 import {
   differenceInCalendarDays,
   endOfDay,
@@ -11,7 +11,7 @@ import { useSelector } from "react-redux";
 import Header from "../../components/Header";
 import Text from "../../components/Text";
 import TitleCard from "../../components/TitleCard";
-import { api, OverviewResponse } from "../../services/apis/api";
+import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
@@ -25,13 +25,13 @@ import Calendar, { fromDay } from "./Calendar";
 import PartsOfDay from "./PartsOfDay";
 import { listeningTraits } from "./traits";
 import Variety from "./Variety";
+import Week from "./Week";
 
 import s from "./index.module.css";
 
-type Counts = { plays: number; durationMs: number };
+export type Counts = { plays: number; durationMs: number };
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
-const HOURS = Array.from(Array(24).keys());
 // Since the start of times, for the whole history
 const HISTORY_START = new Date(0);
 
@@ -231,17 +231,12 @@ export default function Habits() {
             )}
           </Grid>
           <Grid size={{ xs: 12 }}>
-            <TitleCard title="Week">
-              {overview ? (
-                <WeekGrid
-                  heatmap={overview.heatmap}
-                  value={value}
-                  format={format}
-                />
-              ) : (
-                <Skeleton variant="rectangular" height={200} />
-              )}
-            </TitleCard>
+            <Week
+              heatmap={overview?.heatmap}
+              usual={usual}
+              value={value}
+              format={format}
+            />
           </Grid>
           <Grid size={{ xs: 12 }}>
             <PartsOfDay format={format} />
@@ -251,73 +246,6 @@ export default function Habits() {
           </Grid>
         </Grid>
       </div>
-    </div>
-  );
-}
-
-// From the background through the middle of the scale to its strongest
-// step, so quiet hours fade out
-const heat = (share: number) => {
-  const f = 0.1 + 0.9 * share;
-  return f < 0.5
-    ? `color-mix(in oklab, var(--scale-3) ${Math.round(f * 200)}%, var(--background))`
-    : `color-mix(in oklab, var(--scale-5) ${Math.round((f - 0.5) * 200)}%, var(--scale-3))`;
-};
-
-interface WeekGridProps {
-  heatmap: OverviewResponse["heatmap"];
-  value: (counts: Counts) => number;
-  format: (value: number) => string;
-}
-
-function WeekGrid({ heatmap, value, format }: WeekGridProps) {
-  const cells = new Map(
-    heatmap.map((cell) => [`${cell.weekday}-${cell.hour}`, value(cell)]),
-  );
-  const total = [...cells.values()].reduce((sum, v) => sum + v, 0) || 1;
-  const max = Math.max(1, ...cells.values());
-
-  return (
-    <div className={s.week}>
-      {HOURS.filter((hour) => hour % 3 === 0).map((hour) => (
-        <span
-          key={hour}
-          className={s.label}
-          style={{ gridRow: 1, gridColumn: `${hour + 2} / span 3` }}>
-          {DateFormatter.fromNumberToHour(hour)}
-        </span>
-      ))}
-      {WEEKDAYS.map((weekday) => (
-        <span
-          key={weekday}
-          className={s.label}
-          style={{ gridRow: weekday + 1, gridColumn: 1 }}>
-          {DateFormatter.fromIsoWeekday(weekday)}
-        </span>
-      ))}
-      {WEEKDAYS.flatMap((weekday) =>
-        HOURS.map((hour) => {
-          const v = cells.get(`${weekday}-${hour}`) ?? 0;
-          return (
-            <Tooltip
-              key={`${weekday}-${hour}`}
-              disableInteractive
-              title={`${DateFormatter.fromIsoWeekday(weekday)} ${DateFormatter.fromNumberToHour(hour)}: ${format(v)}, ${Math.round((v / total) * 1000) / 10}% of your listening`}>
-              <span
-                className={s.cell}
-                style={{
-                  gridRow: weekday + 1,
-                  gridColumn: hour + 2,
-                  backgroundColor:
-                    v === 0
-                      ? "rgba(var(--primary-tuple), 0.07)"
-                      : heat(v / max),
-                }}
-              />
-            </Tooltip>
-          );
-        }),
-      )}
     </div>
   );
 }
