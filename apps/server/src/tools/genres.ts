@@ -92,7 +92,7 @@ export async function genresLoop() {
     try {
       const done = await enrichBatch();
       if (done > 0) {
-        logger.debug(`[genres] looked up ${done} artists on MusicBrainz`);
+        logger.info(`[genres] looked up ${done} artists on MusicBrainz`);
         continue;
       }
     } catch (error) {
