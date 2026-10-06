@@ -1,0 +1,81 @@
+.content {
+  padding: var(--page-padding);
+}
+
+.card {
+  height: 100%;
+}
+
+.chart {
+  height: 300px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One bar split into stuck, faded and too early, 2px apart */
+.stickBar {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  margin: 16px 0 8px;
+}
+
+.stickBar > div {
+  min-width: 4px;
+}
+
+.stickBar > div:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.stickBar > div:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.stickBar > div:only-child {
+  border-radius: 4px;
+}
+
+.stuck {
+  background-color: var(--series-1);
+}
+
+.faded {
+  background-color: var(--text-grey);
+  opacity: 0.5;
+}
+
+.early {
+  background-color: color-mix(in srgb, var(--series-1) 30%, transparent);
+}
+
+.stickLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+}
+
+.stuckArtists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.avatar {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}

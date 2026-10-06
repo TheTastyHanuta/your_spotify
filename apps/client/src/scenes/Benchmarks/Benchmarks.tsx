@@ -100,6 +100,23 @@ export default function Benchmarks() {
         api.getBestOfPartOfDay(interval.start, interval.end, "tracks"),
     },
     {
+      title: "Get discoveries",
+      request: () => api.getDiscoveries(interval.start, interval.end, 10),
+    },
+    {
+      title: "Get discovery overview",
+      request: () => api.getDiscoveryOverview(interval.start, interval.end),
+    },
+    {
+      title: "Get songs on repeat",
+      request: () => api.getOnRepeat(interval.start, interval.end),
+    },
+    {
+      title: "Get new plays per",
+      request: () =>
+        api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),
+    },
+    {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
     },

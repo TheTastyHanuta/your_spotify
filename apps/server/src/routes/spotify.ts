@@ -22,6 +22,11 @@ import {
   getCollaborativeBestSongs,
 } from "../database/queries/collaborative";
 import {
+  getDiscoveryOverview,
+  getNewPlaysPer,
+  getOnRepeat,
+} from "../database/queries/discoveries";
+import {
   getCalendar,
   getDecadesPerYear,
   getDiscoveries,
@@ -496,6 +501,24 @@ router.get("/discoveries", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, nb } = validate(req.query, discoveriesSchema);
   res.status(200).send(await getDiscoveries(user, start, end, nb));
+});
+
+router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end } = validate(req.query, interval);
+  res.status(200).send(await getDiscoveryOverview(user, start, end));
+});
+
+router.get("/discoveries/on-repeat", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end } = validate(req.query, interval);
+  res.status(200).send(await getOnRepeat(user, start, end));
+});
+
+router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
+  res.status(200).send(await getNewPlaysPer(user, start, end, timeSplit));
 });
 
 const timelineSchema = z.object({

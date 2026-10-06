@@ -16,9 +16,9 @@ import { getTracks } from "./track";
 // Only aggregation features of MongoDB 4.4 are used here, some instances
 // cannot run a newer MongoDB.
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
-const dayString = (timezone: string) => ({
+export const dayString = (timezone: string) => ({
   $dateToString: { format: "%Y-%m-%d", date: "$played_at", timezone },
 });
 
@@ -33,7 +33,8 @@ const perDay = (timezone: string) => [
   { $sort: { _id: 1 as const } },
 ];
 
-const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / DAY_MS;
+export const dayNumber = (day: string) =>
+  Date.parse(`${day}T00:00:00Z`) / DAY_MS;
 
 // days: sorted "YYYY-MM-DD" in the user's timezone. The current streak still
 // counts when its last day is yesterday, since today may not be over.
@@ -77,7 +78,7 @@ const countFirstListens = async (
 };
 
 // Artists heard for the first time ever during the period, most played
-// in the period first
+// in the period first, with the first song heard
 export const getDiscoveries = async (
   user: User,
   start: Date,
@@ -85,9 +86,9 @@ export const getDiscoveries = async (
   nb: number,
 ) => {
   const rows: {
+    _id: string;
     plays: number;
-    first: Date;
-    artist?: { id: string; name: string; images: unknown[] };
+    firstPlay: { played_at: Date; id: string };
   }[] = await InfosModel.aggregate([
     {
       $match: {
@@ -99,40 +100,38 @@ export const getDiscoveries = async (
     {
       $group: {
         _id: "$primaryArtistId",
-        first: { $min: "$played_at" },
+        // Documents compare field by field, so this is the earliest play
+        firstPlay: { $min: { played_at: "$played_at", id: "$id" } },
         plays: { $sum: { $cond: [{ $gt: ["$played_at", start] }, 1, 0] } },
       },
     },
-    { $match: { first: { $gt: start } } },
-    { $sort: { plays: -1 } },
+    { $match: { "firstPlay.played_at": { $gt: start } } },
+    { $sort: { plays: -1, _id: 1 } },
     { $limit: nb },
-    {
-      $lookup: {
-        from: "artists",
-        localField: "_id",
-        foreignField: "id",
-        as: "artist",
-      },
-    },
-    {
-      $project: {
-        _id: 0,
-        plays: 1,
-        first: 1,
-        artist: { $arrayElemAt: ["$artist", 0] },
-      },
-    },
-    {
-      $project: {
-        plays: 1,
-        first: 1,
-        "artist.id": 1,
-        "artist.name": 1,
-        "artist.images": 1,
-      },
-    },
   ]);
-  return rows.filter((row) => row.artist?.id);
+  const [artists, tracks] = await Promise.all([
+    ArtistModel.find({ id: { $in: rows.map((row) => row._id) } })
+      .select("id name images")
+      .lean(),
+    getTracks(rows.map((row) => row.firstPlay.id))
+      .select("id name")
+      .lean(),
+  ]);
+  const artistById = new Map(artists.map((artist) => [artist.id, artist]));
+  const trackById = new Map(tracks.map((track) => [track.id, track]));
+  return rows.flatMap((row) => {
+    const artist = artistById.get(row._id);
+    return artist
+      ? [
+          {
+            plays: row.plays,
+            first: row.firstPlay.played_at,
+            firstTrack: trackById.get(row.firstPlay.id) ?? null,
+            artist,
+          },
+        ]
+      : [];
+  });
 };
 
 export const getOverview = async (user: User, start: Date, end: Date) => {

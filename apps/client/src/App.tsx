@@ -24,6 +24,7 @@ import Affinity from "./scenes/Collaborative/Affinity";
 import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
 import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
+import Discoveries from "./scenes/Discoveries";
 import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
 import Habits from "./scenes/Habits";
@@ -101,6 +102,14 @@ function App() {
                   element={
                     <PrivateRoute>
                       <Habits />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/discoveries"
+                  element={
+                    <PrivateRoute>
+                      <Discoveries />
                     </PrivateRoute>
                   }
                 />

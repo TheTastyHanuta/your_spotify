@@ -161,6 +161,44 @@ type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
   full_album: Pick<Album, "id" | "name" | "images">;
   full_artists: Pick<Artist, "id" | "name">[];
 };
+export type DiscoveryOverviewResponse = {
+  plays: number;
+  newArtists: number;
+  newTracks: number;
+  newTracksByKnownArtists: number;
+  // Plays of the songs new in the period
+  newTrackPlays: number;
+  // New songs by artists played before the period, most played first
+  knownArtistTracks: { track: ShortTrack; plays: number; first: string }[];
+  // Last play before the break and first play after it
+  comebacks: {
+    artist: ShortArtist;
+    plays: number;
+    lastBefore: string;
+    back: string;
+  }[];
+  // Artists discovered in the period with at least 3 plays; the stuck ones
+  // with their plays from 3 months after the first listen
+  stick: {
+    stuck: number;
+    faded: number;
+    early: number;
+    artists: { artist: ShortArtist; late: number }[];
+  };
+};
+// The best 7 days of each song, "YYYY-MM-DD"
+export type OnRepeatResponse = {
+  track: ShortTrack;
+  plays: number;
+  from: string;
+  to: string;
+}[];
+// newCount: plays of songs first heard in the period and in that step
+export type NewPlaysPerResponse = {
+  _id: DateId | null;
+  count: number;
+  newCount: number;
+}[];
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
@@ -187,8 +225,9 @@ export type BestOfPartOfDayResponse<T> = {
 
 export type DiscoveriesResponse = {
   plays: number;
-  // First listen ever
+  // First listen ever, and the song it was
   first: string;
+  firstTrack: Pick<Track, "id" | "name"> | null;
   artist: Pick<Artist, "id" | "name" | "images">;
 }[];
 
@@ -321,6 +360,19 @@ export const api = {
     get<GenresResponse>("/spotify/genres", { start, end, nb }),
   getDiscoveries: (start: Date, end: Date, nb: number) =>
     get<DiscoveriesResponse>("/spotify/discoveries", { start, end, nb }),
+  getDiscoveryOverview: (start: Date, end: Date) =>
+    get<DiscoveryOverviewResponse>("/spotify/discoveries/overview", {
+      start,
+      end,
+    }),
+  getOnRepeat: (start: Date, end: Date) =>
+    get<OnRepeatResponse>("/spotify/discoveries/on-repeat", { start, end }),
+  getNewPlaysPer: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<NewPlaysPerResponse>("/spotify/discoveries/per", {
+      start,
+      end,
+      timeSplit,
+    }),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,

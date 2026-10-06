@@ -1,0 +1,31 @@
+.row {
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.rank {
+  text-align: right;
+}
+
+.image {
+  object-fit: cover;
+}
+
+.round {
+  border-radius: 50%;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -106,14 +106,17 @@ export const sortByTimeSplit = (
 export const getTimezone = (userTimezone: string | undefined) =>
   userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris");
 
-export const getGroupByDateProjection = (userTimezone: string | undefined) => {
+export const getGroupByDateProjection = (
+  userTimezone: string | undefined,
+  date = "$played_at",
+) => {
   const timezone = getTimezone(userTimezone);
   return {
-    year: { $year: { date: "$played_at", timezone } },
-    month: { $month: { date: "$played_at", timezone } },
-    day: { $dayOfMonth: { date: "$played_at", timezone } },
-    week: { $week: { date: "$played_at", timezone } },
-    hour: { $hour: { date: "$played_at", timezone } },
+    year: { $year: { date, timezone } },
+    month: { $month: { date, timezone } },
+    day: { $dayOfMonth: { date, timezone } },
+    week: { $week: { date, timezone } },
+    hour: { $hour: { date, timezone } },
   };
 };
 

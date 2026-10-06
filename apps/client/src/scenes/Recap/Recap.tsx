@@ -15,10 +15,11 @@ import {
 
 import ChartCard from "../../components/ChartCard";
 import Header from "../../components/Header";
-import IdealImage from "../../components/IdealImage";
 import LoadingImplementedChart from "../../components/ImplementedCharts/LoadingImplementedChart";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
+import IdealImage from "../../components/IdealImage";
+import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
 import Masonry from "../../components/Masonry";
 import Text from "../../components/Text";
 import TitleCard from "../../components/TitleCard";
@@ -335,7 +336,7 @@ export default function Recap() {
                 artists
                   .slice(0, NB_SHOWN)
                   .map((item, index) => (
-                    <Row
+                    <ItemRow
                       key={item.artist.id}
                       rank={index + 1}
                       image={item.artist.images}
@@ -358,12 +359,12 @@ export default function Recap() {
                 songs
                   .slice(0, NB_SHOWN)
                   .map((item, index) => (
-                    <Row
+                    <ItemRow
                       key={item.track.id}
                       rank={index + 1}
                       image={item.album.images}
                       title={<InlineTrack track={item.track} size="normal" />}
-                      subtitle={<Artists artists={item.track_artists} />}
+                      subtitle={<ArtistNames artists={item.track_artists} />}
                       right={plural(item.count, "play")}
                     />
                   ))
@@ -386,7 +387,7 @@ export default function Recap() {
                           {albums[0].album.name}
                         </Text>
                       </Link>
-                      <Artists artists={albums[0].album_artists} />
+                      <ArtistNames artists={albums[0].album_artists} />
                       <Text size="normal" greyed>
                         {plural(albums[0].count, "play")}
                       </Text>
@@ -497,7 +498,7 @@ export default function Recap() {
                       render={(item) => ({
                         image: item.album.images,
                         title: <InlineTrack track={item.track} size="normal" />,
-                        subtitle: <Artists artists={item.track_artists} />,
+                        subtitle: <ArtistNames artists={item.track_artists} />,
                       })}
                     />
                   </TitleCard>
@@ -509,7 +510,7 @@ export default function Recap() {
                   {discoveries ? (
                     discoveries.length > 0 ? (
                       discoveries.map((item, index) => (
-                        <Row
+                        <ItemRow
                           key={item.artist.id}
                           rank={index + 1}
                           image={item.artist.images}
@@ -614,68 +615,6 @@ export default function Recap() {
 const imageOf = (images: SpotifyImage[], size: number) =>
   images.length > 0 ? getAtLeastImage(images, size) : undefined;
 
-function RowsSkeleton() {
-  return (
-    <>
-      {[0, 1, 2, 3, 4].map((index) => (
-        <Skeleton key={index} height={48} />
-      ))}
-    </>
-  );
-}
-
-function Artists({ artists }: { artists: Artist[] }) {
-  return (
-    <Text size="normal" greyed className={s.ellipsis}>
-      {artists.map((artist, index) => (
-        <span key={artist.id}>
-          {index > 0 && ", "}
-          <InlineArtist artist={artist} size="normal" noStyle />
-        </span>
-      ))}
-    </Text>
-  );
-}
-
-interface RowProps {
-  rank?: number;
-  image: SpotifyImage[];
-  round?: boolean;
-  big?: boolean;
-  title: ReactNode;
-  subtitle?: ReactNode;
-  right?: ReactNode;
-}
-
-function Row({ rank, image, round, big, title, subtitle, right }: RowProps) {
-  const size = big ? 64 : 40;
-  return (
-    <div className={s.row}>
-      <Text size="normal" greyed className={s.rank}>
-        {rank}
-      </Text>
-      <IdealImage
-        images={image}
-        size={size}
-        className={clsx(s.image, { [s.round]: round })}
-      />
-      <div className={s.rowText}>
-        {title}
-        {typeof subtitle === "string" ? (
-          <Text size="normal" greyed className={s.ellipsis}>
-            {subtitle}
-          </Text>
-        ) : (
-          subtitle
-        )}
-      </div>
-      <Text size="normal" greyed>
-        {right}
-      </Text>
-    </div>
-  );
-}
-
 function Fact({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
@@ -754,7 +693,7 @@ function Moves<T>({ moves, previousYear, render }: MovesProps<T>) {
             {section.title}
           </Text>
           {section.moves.map((move, index) => (
-            <Row
+            <ItemRow
               key={index}
               {...render(move.item)}
               right={section.label(move)}

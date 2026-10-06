@@ -18,6 +18,8 @@ import {
   PaletteOutlined,
   CalendarMonth,
   CalendarMonthOutlined,
+  Explore,
+  ExploreOutlined,
   Summarize,
   SummarizeOutlined,
 } from "@mui/icons-material";
@@ -57,6 +59,12 @@ export function useLinks() {
           link: "/habits",
           icon: <CalendarMonthOutlined />,
           iconOn: <CalendarMonth />,
+        },
+        {
+          label: "Discoveries",
+          link: "/discoveries",
+          icon: <ExploreOutlined />,
+          iconOn: <Explore />,
         },
         {
           label: "Recap",

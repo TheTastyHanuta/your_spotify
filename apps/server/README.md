@@ -457,6 +457,64 @@ Get longest listening sessions.
 
 - `200`: Array of listening session data
 
+### Discoveries
+
+A song or artist is new when its first listen ever is in the period. All of these count plays.
+
+#### `GET /spotify/discoveries`
+
+Get the artists heard for the first time in the period, most played first, with the first song heard.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of artists to return (1-20, default 5)
+
+**Response:**
+
+- `200`: Array of artists with their plays in the period, first listen and first song
+
+#### `GET /spotify/discoveries/overview`
+
+Get the numbers of new artists and songs, the new songs by artists played before the period, the artists back after a break (at least 10 plays, then none for 6 months) and whether the artists discovered in the period stuck (at least 3 plays from 3 months after the first listen).
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Object with the counts, `knownArtistTracks`, `comebacks` and `stick`
+
+#### `GET /spotify/discoveries/on-repeat`
+
+Get the 10 songs with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+
+**Response:**
+
+- `200`: Array of songs with `plays`, `from` and `to` (`YYYY-MM-DD` in the stats timezone)
+
+#### `GET /spotify/discoveries/per`
+
+Get the plays of each time step, and the plays of songs heard for the first time in the period and in that same step.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `timeSplit`: string - Time unit for grouping (hour, day, week, month, year)
+
+**Response:**
+
+- `200`: Array of steps with `count` and `newCount`
+
 ### Collaborative Features
 
 #### `GET /spotify/collaborative/top/songs`
