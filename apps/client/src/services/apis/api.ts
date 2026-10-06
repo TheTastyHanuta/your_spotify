@@ -155,6 +155,31 @@ export type GenresResponse = {
   })[];
 };
 
+type ShortArtist = Pick<Artist, "id" | "name" | "images">;
+export type ArtistSharesResponse = {
+  plays: number;
+  // The period's top 10 artists
+  top: { artist: ShortArtist; plays: number }[];
+  // Plays of the top 5 artists in each time step, by artist id
+  steps: {
+    _id: DateId | null;
+    plays: number;
+    artists: Record<string, number>;
+  }[];
+};
+// Plays per release year in each time step, oldest year first
+export type ReleaseYearsPerResponse = {
+  _id: DateId | null;
+  years: { year: number; plays: number }[];
+}[];
+export type PartOfDay = "morning" | "afternoon" | "evening" | "night";
+// Plays or milliseconds, following the stat measurement setting
+export type BestOfPartOfDayResponse<T> = {
+  part: PartOfDay;
+  total: number;
+  items: { total: number; item: T }[];
+}[];
+
 export type DiscoveriesResponse = {
   plays: number;
   // First listen ever
@@ -215,58 +240,29 @@ export const api = {
       "/spotify/most_listened",
       { start, end, timeSplit },
     ),
-  mostListenedArtist: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ _id: DateId | undefined; artists: Artist[]; counts: number[] }[]>(
-      "/spotify/most_listened_artist",
-      { start, end, timeSplit },
-    ),
   listened_to: (start: Date, end: Date) =>
     get("/spotify/listened_to", { start, end }),
   songsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ count: number; _id: DateId | null; differents: number }[]>(
-      "/spotify/songs_per",
-      { start, end, timeSplit },
-    ),
+    get<
+      {
+        _id: DateId | null;
+        // Plays
+        count: number;
+        differents: number;
+        differentArtists: number;
+      }[]
+    >("/spotify/songs_per", { start, end, timeSplit }),
   timePer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ count: number; _id: DateId | null }[]>("/spotify/time_per", {
       start,
       end,
       timeSplit,
     }),
-  featRatio: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<
-      {
-        0: number;
-        1: number;
-        2: number;
-        3: number;
-        4: number;
-        5: number;
-        average: number;
-        count: number;
-        totalPeople: number;
-        _id: DateId | null;
-      }[]
-    >("/spotify/feat_ratio", { start, end, timeSplit }),
-  albumDateRatio: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ count: number; totalYear: number; _id: DateId | null }[]>(
-      "/spotify/album_date_ratio",
-      { start, end, timeSplit },
-    ),
   bestArtistsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ artists: Artist[]; counts: number[]; _id: DateId | null }[]>(
       "/spotify/best_artists_per",
       { start, end, timeSplit },
     ),
-  differentArtistsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<
-      {
-        artists: Artist[];
-        counts: number[];
-        differents: number;
-        _id: DateId | null;
-      }[]
-    >("/spotify/different_artists_per", { start, end, timeSplit }),
   setSetting: (settingName: keyof User["settings"], settingValue: any) =>
     axios.post("/settings", { [settingName]: settingValue }),
   timePerHourOfDay: (start: Date, end: Date) =>
@@ -294,6 +290,28 @@ export const api = {
     get<CalendarResponse>("/spotify/calendar", { start, end }),
   getTaste: (start: Date, end: Date) =>
     get<TasteResponse>("/spotify/taste", { start, end }),
+  getArtistShares: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<ArtistSharesResponse>("/spotify/taste/artist_shares", {
+      start,
+      end,
+      timeSplit,
+    }),
+  getReleaseYearsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
+    get<ReleaseYearsPerResponse>("/spotify/taste/release_years_per", {
+      start,
+      end,
+      timeSplit,
+    }),
+  getBestOfPartOfDay: <T extends "artists" | "tracks">(
+    start: Date,
+    end: Date,
+    type: T,
+  ) =>
+    get<
+      BestOfPartOfDayResponse<
+        T extends "artists" ? ShortArtist : TrackWithFullArtistAlbum
+      >
+    >("/spotify/top/part-of-day", { start, end, type }),
   getDecadesPerYear: () =>
     get<DecadesPerYearResponse>("/spotify/taste/decades"),
   getGenres: (start: Date, end: Date, nb: number) =>
@@ -414,33 +432,6 @@ export const api = {
     ),
   generatePublicToken: () => post<string>("/generate-public-token"),
   deletePublicToken: () => post<string>("/delete-public-token"),
-  getBestSongsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Track>;
-      }[]
-    >("/spotify/top/hour-repartition/songs", { start, end }),
-  getBestAlbumsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Album>;
-      }[]
-    >("/spotify/top/hour-repartition/albums", { start, end }),
-  getBestArtistsOfHour: (start: Date, end: Date) =>
-    get<
-      {
-        hour: number;
-        total: number;
-        items: { itemId: string; total: number }[];
-        full_items: Record<string, Artist>;
-      }[]
-    >("/spotify/top/hour-repartition/artists", { start, end }),
   getPlaylists: () => get<Playlist[]>("/spotify/playlists"),
   addToPlaylist: (
     id: string | undefined,

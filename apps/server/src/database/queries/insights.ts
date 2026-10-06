@@ -1,8 +1,16 @@
 import { genresOf } from "../../tools/genres";
+import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
 import { matchArtistListens } from "./artist";
-import { basicMatch, getTimezone } from "./statsTools";
+import {
+  basicMatch,
+  getGroupByDateProjection,
+  getGroupingByTimeSplit,
+  getTimezone,
+  getTrackSumType,
+  sortByTimeSplit,
+} from "./statsTools";
 import { getTracks } from "./track";
 
 // Only aggregation features of MongoDB 4.4 are used here, some instances
@@ -560,4 +568,227 @@ export const getTimeline = async (
   ]);
   const { months, weekdays, hours } = item;
   return { months, weekdays, hours, overall: overall! };
+};
+
+type StepId = Record<string, number> | null;
+
+const NB_TOP_ARTISTS = 10;
+// Fewer artists over time, more would not tell apart in a stacked chart
+const NB_ARTISTS_OVER_TIME = 8;
+
+// Plays of the period's top artists, and of its top few artists in each time
+// step. Each step's plays are given too, so the rest can be shown as others.
+export const getArtistShares = async (
+  user: User,
+  start: Date,
+  end: Date,
+  timeSplit: Timesplit,
+) => {
+  const steps: {
+    _id: StepId;
+    plays: number;
+    artists: { id: string; plays: number }[];
+  }[] = await InfosModel.aggregate([
+    ...basicMatch(user._id, start, end),
+    {
+      $project: {
+        ...getGroupByDateProjection(user.settings.timezone),
+        primaryArtistId: 1,
+      },
+    },
+    {
+      $group: {
+        _id: {
+          ...getGroupingByTimeSplit(timeSplit),
+          artist: "$primaryArtistId",
+        },
+        plays: { $sum: 1 },
+      },
+    },
+    {
+      $group: {
+        _id: getGroupingByTimeSplit(timeSplit, "_id"),
+        plays: { $sum: "$plays" },
+        artists: { $push: { id: "$_id.artist", plays: "$plays" } },
+      },
+    },
+    ...sortByTimeSplit(timeSplit, "_id"),
+  ]);
+
+  const perArtist = new Map<string, number>();
+  for (const step of steps) {
+    for (const artist of step.artists) {
+      perArtist.set(artist.id, (perArtist.get(artist.id) ?? 0) + artist.plays);
+    }
+  }
+  const best = [...perArtist.entries()]
+    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
+    .slice(0, NB_TOP_ARTISTS);
+  const artists = await ArtistModel.find({
+    id: { $in: best.map(([id]) => id) },
+  })
+    .select("id name images")
+    .lean();
+  const byId = new Map(artists.map((artist) => [artist.id, artist]));
+  const top = best.flatMap(([id, plays]) => {
+    const artist = byId.get(id);
+    return artist ? [{ artist, plays }] : [];
+  });
+  const overTime = new Set(
+    top.slice(0, NB_ARTISTS_OVER_TIME).map(({ artist }) => artist.id),
+  );
+
+  return {
+    plays: steps.reduce((sum, step) => sum + step.plays, 0),
+    top,
+    steps: steps.map((step) => ({
+      _id: step._id,
+      plays: step.plays,
+      artists: Object.fromEntries(
+        step.artists
+          .filter((artist) => overTime.has(artist.id))
+          .map((artist) => [artist.id, artist.plays]),
+      ),
+    })),
+  };
+};
+
+// Same bounds as the client's Habits traits (scenes/Habits/traits.ts), the
+// hours left are the night
+const PARTS_OF_DAY = [
+  { name: "morning", from: 5, to: 11 },
+  { name: "afternoon", from: 11, to: 17 },
+  { name: "evening", from: 17, to: 22 },
+];
+const NB_BEST_OF_PART = 5;
+
+// The most listened artists or tracks of each part of the day, by the
+// user's plays or minutes setting
+export const getBestOfPartOfDay = async (
+  user: User,
+  start: Date,
+  end: Date,
+  type: "artists" | "tracks",
+) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const hour = { $hour: { date: "$played_at", timezone } };
+  const parts: {
+    _id: string;
+    total: number;
+    items: { id: string; total: number }[];
+  }[] = await InfosModel.aggregate([
+    ...basicMatch(user._id, start, end),
+    {
+      $group: {
+        _id: {
+          part: {
+            $switch: {
+              branches: PARTS_OF_DAY.map((part) => ({
+                case: {
+                  $and: [{ $gte: [hour, part.from] }, { $lt: [hour, part.to] }],
+                },
+                then: part.name,
+              })),
+              default: "night",
+            },
+          },
+          item: type === "artists" ? "$primaryArtistId" : "$id",
+        },
+        total: { $sum: getTrackSumType(user, "$durationMs") },
+      },
+    },
+    { $sort: { total: -1, "_id.item": 1 } },
+    {
+      $group: {
+        _id: "$_id.part",
+        total: { $sum: "$total" },
+        items: { $push: { id: "$_id.item", total: "$total" } },
+      },
+    },
+    { $project: { total: 1, items: { $slice: ["$items", NB_BEST_OF_PART] } } },
+  ]);
+
+  const ids = parts.flatMap((part) => part.items.map((item) => item.id));
+  const docs: { id: string }[] =
+    type === "artists"
+      ? await ArtistModel.find({ id: { $in: ids } })
+          .select("id name images")
+          .lean()
+      : await getTracks(ids)
+          .select("id name album artists")
+          .populate("full_album", "id name images")
+          .populate("full_artists", "id name")
+          .lean();
+  const byId = new Map(docs.map((doc) => [doc.id, doc]));
+  return parts.map((part) => ({
+    part: part._id,
+    total: part.total,
+    items: part.items.flatMap((item) => {
+      const doc = byId.get(item.id);
+      return doc ? [{ total: item.total, item: doc }] : [];
+    }),
+  }));
+};
+
+// Plays per release year in each time step, for the musical age over time.
+// Per album, as the release date is the album's.
+export const getReleaseYearsPer = async (
+  user: User,
+  start: Date,
+  end: Date,
+  timeSplit: Timesplit,
+) => {
+  const steps: {
+    _id: StepId;
+    albums: { releaseDate?: string; plays: number }[];
+  }[] = await InfosModel.aggregate([
+    ...basicMatch(user._id, start, end),
+    {
+      $project: {
+        ...getGroupByDateProjection(user.settings.timezone),
+        albumId: 1,
+      },
+    },
+    {
+      $group: {
+        _id: { ...getGroupingByTimeSplit(timeSplit), album: "$albumId" },
+        plays: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "albums",
+        localField: "_id.album",
+        foreignField: "id",
+        as: "album",
+      },
+    },
+    {
+      $group: {
+        _id: getGroupingByTimeSplit(timeSplit, "_id"),
+        albums: {
+          $push: {
+            releaseDate: { $arrayElemAt: ["$album.release_date", 0] },
+            plays: "$plays",
+          },
+        },
+      },
+    },
+    ...sortByTimeSplit(timeSplit, "_id"),
+  ]);
+  return steps.map((step) => {
+    const years = new Map<number, number>();
+    for (const album of step.albums) {
+      const year = Number(album.releaseDate?.slice(0, 4));
+      if (year > 1900) {
+        years.set(year, (years.get(year) ?? 0) + album.plays);
+      }
+    }
+    return {
+      _id: step._id,
+      years: [...years.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([year, plays]) => ({ year, plays })),
+    };
+  });
 };

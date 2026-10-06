@@ -22,7 +22,9 @@ import {
 } from "../../services/redux/modules/user/selector";
 import { msToMinutes } from "../../services/stats";
 import Calendar, { fromDay } from "./Calendar";
+import PartsOfDay from "./PartsOfDay";
 import { listeningTraits } from "./traits";
+import Variety from "./Variety";
 
 import s from "./index.module.css";
 
@@ -96,6 +98,16 @@ export default function Habits() {
   );
   const ongoing = !isAfter(startOfToday(), interval.end);
 
+  const perWeekday = WEEKDAYS.map((weekday) => ({
+    weekday,
+    value:
+      overview?.heatmap
+        .filter((cell) => cell.weekday === weekday)
+        .reduce((sum, cell) => sum + value(cell), 0) ?? 0,
+  }));
+  const weekTotal = perWeekday.reduce((sum, day) => sum + day.value, 0);
+  const favourite = perWeekday.reduce((a, b) => (b.value > a.value ? b : a));
+
   const cards: {
     title: string;
     main?: string | null;
@@ -139,6 +151,21 @@ export default function Habits() {
             title: "Current streak",
             main: overview && plural(overview.streaks.current, "day"),
             sub: "Days in a row with music, up to today",
+          },
+        ]
+      : []),
+    // Needs every weekday at least once
+    ...(daysInPeriod >= 7
+      ? [
+          {
+            title: "Favourite weekday",
+            main:
+              weekTotal > 0
+                ? DateFormatter.fromIsoWeekdayLong(favourite.weekday)
+                : null,
+            sub:
+              weekTotal > 0 &&
+              `${Math.round((favourite.value / weekTotal) * 100)}% of your listening, ${format(favourite.value)}`,
           },
         ]
       : []),
@@ -216,11 +243,26 @@ export default function Habits() {
               )}
             </TitleCard>
           </Grid>
+          <Grid size={{ xs: 12 }}>
+            <PartsOfDay format={format} />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Variety />
+          </Grid>
         </Grid>
       </div>
     </div>
   );
 }
+
+// From the background through the middle of the scale to its strongest
+// step, so quiet hours fade out
+const heat = (share: number) => {
+  const f = 0.1 + 0.9 * share;
+  return f < 0.5
+    ? `color-mix(in oklab, var(--scale-3) ${Math.round(f * 200)}%, var(--background))`
+    : `color-mix(in oklab, var(--scale-5) ${Math.round((f - 0.5) * 200)}%, var(--scale-3))`;
+};
 
 interface WeekGridProps {
   heatmap: OverviewResponse["heatmap"];
@@ -266,7 +308,10 @@ function WeekGrid({ heatmap, value, format }: WeekGridProps) {
                 style={{
                   gridRow: weekday + 1,
                   gridColumn: hour + 2,
-                  backgroundColor: `rgba(var(--primary-tuple), ${0.07 + 0.93 * (v / max)})`,
+                  backgroundColor:
+                    v === 0
+                      ? "rgba(var(--primary-tuple), 0.07)"
+                      : heat(v / max),
                 }}
               />
             </Tooltip>

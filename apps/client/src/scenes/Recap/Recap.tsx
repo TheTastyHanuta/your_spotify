@@ -36,7 +36,7 @@ import { Artist, SpotifyImage, Timesplit } from "../../services/types";
 import { fromDay } from "../Habits/Calendar";
 import { listeningTraits } from "../Habits/traits";
 import { medianYear, musicalAge } from "../Taste/taste";
-import { compareTops, Move } from "./movers";
+import { compareTops, Move, TOP } from "./movers";
 import { renderRecapImage, shareRecapImage } from "./recapImage";
 
 import s from "./index.module.css";
@@ -44,7 +44,7 @@ import s from "./index.module.css";
 // Top lists compared with the previous year
 const NB_TOP = 30;
 const NB_SHOWN = 5;
-const NB_DISCOVERIES = 5;
+const NB_DISCOVERIES = 10;
 
 const plural = (n: number, word: string) =>
   `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
@@ -268,6 +268,18 @@ export default function Recap() {
           { than, wholeHistory: false },
         )
       : undefined;
+
+  // The hour of the day with the most minutes
+  const perHour = Array.from(Array(24).keys()).map((hour) => ({
+    hour,
+    durationMs:
+      overview?.heatmap
+        .filter((cell) => cell.hour === hour)
+        .reduce((sum, cell) => sum + cell.durationMs, 0) ?? 0,
+  }));
+  const goldenHour = perHour.reduce((a, b) =>
+    b.durationMs > a.durationMs ? b : a,
+  );
 
   const artistMoves =
     artists && previousArtists && hasPrevious
@@ -535,6 +547,19 @@ export default function Recap() {
                           , {minutes(overview.busiestDay.durationMs)} min
                         </Fact>
                       )}
+                      {overview.durationMs > 0 && (
+                        <Fact title="Golden hour">
+                          {DateFormatter.fromNumberToHour(goldenHour.hour)} –{" "}
+                          {DateFormatter.fromNumberToHour(
+                            (goldenHour.hour + 1) % 24,
+                          )}
+                          ,{" "}
+                          {Math.round(
+                            (goldenHour.durationMs / overview.durationMs) * 100,
+                          )}
+                          % of your minutes
+                        </Fact>
+                      )}
                       {overview.streaks.longest && (
                         <Fact title="Longest streak">
                           {plural(overview.streaks.longest.days, "day")} in a
@@ -705,12 +730,12 @@ function Moves<T>({ moves, previousYear, render }: MovesProps<T>) {
       label: (m) => `#${m.before} → #${m.rank}`,
     },
     {
-      title: `New in your top 10, not in your ${previousYear} top 30`,
+      title: `New in your top ${TOP}, not in your ${previousYear} top ${NB_TOP}`,
       moves: moves.newcomers,
       label: (m) => `#${m.rank}`,
     },
     {
-      title: `Was in your ${previousYear} top 10, now out of your top 30`,
+      title: `Was in your ${previousYear} top ${TOP}, now out of your top ${NB_TOP}`,
       moves: moves.dropped,
       label: (m) => `was #${m.before}`,
     },

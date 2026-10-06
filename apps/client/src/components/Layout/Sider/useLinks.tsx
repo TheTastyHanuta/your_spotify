@@ -1,8 +1,6 @@
 import {
   Home,
   HomeOutlined,
-  BarChart,
-  BarChartOutlined,
   MusicNote,
   MusicNoteOutlined,
   Album,
@@ -42,12 +40,6 @@ export function useLinks() {
           link: "/sessions",
           icon: <SpeedOutlined />,
           iconOn: <Speed />,
-        },
-        {
-          label: "All stats",
-          link: "/all",
-          icon: <BarChartOutlined />,
-          iconOn: <BarChart />,
         },
       ],
     },

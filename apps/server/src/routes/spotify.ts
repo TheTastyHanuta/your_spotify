@@ -6,17 +6,12 @@ import {
   getSongs,
   getSongsPer,
   getMostListenedSongs,
-  getMostListenedArtist,
   getTimePer,
-  albumDateRatio,
-  featRatio,
-  differentArtistsPer,
   getDayRepartition,
   getBestArtistsPer,
   getLongestListeningSession,
   getBest,
   ItemType,
-  getBestOfHour,
   getMostListenedSongOfArtist,
   getArtists,
 } from "../database";
@@ -31,7 +26,10 @@ import {
   getDecadesPerYear,
   getDiscoveries,
   getGenres,
+  getArtistShares,
+  getBestOfPartOfDay,
   getOverview,
+  getReleaseYearsPer,
   getTaste,
   getTimeline,
 } from "../database/queries/insights";
@@ -133,14 +131,6 @@ router.get("/most_listened", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(result);
 });
 
-router.get("/most_listened_artist", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
-
-  const result = await getMostListenedArtist(user, start, end, timeSplit);
-  res.status(200).send(result);
-});
-
 router.get("/songs_per", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
@@ -154,30 +144,6 @@ router.get("/time_per", isLoggedOrGuest, async (req, res) => {
   const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
 
   const result = await getTimePer(user, start, end, timeSplit);
-  res.status(200).send(result);
-});
-
-router.get("/album_date_ratio", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
-
-  const result = await albumDateRatio(user, start, end, timeSplit);
-  res.status(200).send(result);
-});
-
-router.get("/feat_ratio", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
-
-  const result = await featRatio(user, start, end, timeSplit);
-  res.status(200).send(result);
-});
-
-router.get("/different_artists_per", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
-
-  const result = await differentArtistsPer(user, start, end, timeSplit);
   res.status(200).send(result);
 });
 
@@ -320,38 +286,6 @@ router.get(
       mode,
     );
     res.status(200).send(result);
-  },
-);
-
-router.get("/top/hour-repartition/songs", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  const { start, end } = validate(req.query, interval);
-
-  const tracks = await getBestOfHour(ItemType.track, user, start, end);
-  res.status(200).send(tracks);
-});
-
-router.get(
-  "/top/hour-repartition/albums",
-  isLoggedOrGuest,
-  async (req, res) => {
-    const { user } = req as LoggedRequest;
-    const { start, end } = validate(req.query, interval);
-
-    const albums = await getBestOfHour(ItemType.album, user, start, end);
-    res.status(200).send(albums);
-  },
-);
-
-router.get(
-  "/top/hour-repartition/artists",
-  isLoggedOrGuest,
-  async (req, res) => {
-    const { user } = req as LoggedRequest;
-    const { start, end } = validate(req.query, interval);
-
-    const artists = await getBestOfHour(ItemType.artist, user, start, end);
-    res.status(200).send(artists);
   },
 );
 
@@ -520,6 +454,28 @@ router.get("/taste", isLoggedOrGuest, async (req, res) => {
 router.get("/taste/decades", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   res.status(200).send(await getDecadesPerYear(user));
+});
+
+router.get("/taste/artist_shares", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
+  res.status(200).send(await getArtistShares(user, start, end, timeSplit));
+});
+
+router.get("/taste/release_years_per", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, timeSplit } = validate(req.query, intervalPerSchema);
+  res.status(200).send(await getReleaseYearsPer(user, start, end, timeSplit));
+});
+
+const partOfDaySchema = interval.extend({
+  type: z.enum(["artists", "tracks"]),
+});
+
+router.get("/top/part-of-day", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, type } = validate(req.query, partOfDaySchema);
+  res.status(200).send(await getBestOfPartOfDay(user, start, end, type));
 });
 
 const genresSchema = interval.extend({

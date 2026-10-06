@@ -1,29 +1,31 @@
-import { useSelector } from "react-redux";
-import clsx from "clsx";
 import { Skeleton } from "@mui/material";
+import clsx from "clsx";
+import { useSelector } from "react-redux";
+
 import { api } from "../../../services/apis/api";
 import { useAPI } from "../../../services/hooks/hooks";
+import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
+import { getLastPeriod, getPercentMore } from "../../../services/stats";
 import { Timesplit } from "../../../services/types";
+import Text from "../../Text";
 import TitleCard from "../../TitleCard";
 import { ImplementedCardProps } from "../types";
+
 import s from "../index.module.css";
-import { getLastPeriod, getPercentMore } from "../../../services/stats";
-import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
-import Text from "../../Text";
 
 interface ArtistsListenedProps extends ImplementedCardProps {}
 
 export default function ArtistsListened({ className }: ArtistsListenedProps) {
   const { interval, unit } = useSelector(selectRawIntervalDetail);
   const result = useAPI(
-    api.differentArtistsPer,
+    api.songsPer,
     interval.start,
     interval.end,
     Timesplit.all,
   );
   const lastPeriod = getLastPeriod(interval.start, interval.end);
   const resultOld = useAPI(
-    api.differentArtistsPer,
+    api.songsPer,
     lastPeriod.start,
     lastPeriod.end,
     Timesplit.all,
@@ -44,8 +46,8 @@ export default function ArtistsListened({ className }: ArtistsListenedProps) {
     );
   }
 
-  const count = result[0]?.differents ?? 0;
-  const oldCount = resultOld[0]?.differents ?? 0;
+  const count = result[0]?.differentArtists ?? 0;
+  const oldCount = resultOld[0]?.differentArtists ?? 0;
 
   const percentMore = getPercentMore(oldCount, count);
 

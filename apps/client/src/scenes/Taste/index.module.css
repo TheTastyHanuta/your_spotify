@@ -112,3 +112,39 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+.seriesLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  color: var(--text-on-light);
+}
+
+.seriesLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.tooltipNote {
+  color: var(--text-grey);
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltipValue {
+  margin-left: auto;
+  padding-left: 16px;
+  font-variant-numeric: tabular-nums;
+}

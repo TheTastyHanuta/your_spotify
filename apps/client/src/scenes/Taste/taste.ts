@@ -1,11 +1,9 @@
-import { TasteResponse } from "../../services/apis/api";
-
 // People tend to love most the music of their late teens (the
 // "reminiscence bump"), so the median release year hints at when they were 17
 export const REMINISCENCE_AGE = 17;
 
 // Weighted by plays
-export const medianYear = (years: TasteResponse["years"]) => {
+export const medianYear = (years: { year: number; plays: number }[]) => {
   const total = years.reduce((sum, y) => sum + y.plays, 0);
   let cumulated = 0;
   return years.find((y) => {

@@ -42,6 +42,11 @@ export const DateFormatter = {
       weekday: "short",
     }).format(new Date(2024, 0, weekday));
   },
+  fromIsoWeekdayLong(weekday: number) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      weekday: "long",
+    }).format(new Date(2024, 0, weekday));
+  },
   toShortMonthYear(date: Date) {
     return new Intl.DateTimeFormat(currentUsedDateFormat, {
       month: "short",

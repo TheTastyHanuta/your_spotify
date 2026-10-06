@@ -7,12 +7,41 @@ export type Trait = { title: string; text: string };
 // Differences smaller than this, in percentage points, count as usual
 const NOTABLE = 3;
 
-const PARTS_OF_DAY = [
-  { title: "Early bird", name: "in the morning", from: 5, to: 11 },
-  { title: "Afternoon listener", name: "in the afternoon", from: 11, to: 17 },
-  { title: "Evening listener", name: "in the evening", from: 17, to: 22 },
-  { title: "Night owl", name: "at night", from: 22, to: 5 },
-];
+// The server's part of day queries use the same bounds
+export const PARTS_OF_DAY = [
+  {
+    key: "morning",
+    label: "Morning",
+    title: "Early bird",
+    name: "in the morning",
+    from: 5,
+    to: 11,
+  },
+  {
+    key: "afternoon",
+    label: "Afternoon",
+    title: "Afternoon listener",
+    name: "in the afternoon",
+    from: 11,
+    to: 17,
+  },
+  {
+    key: "evening",
+    label: "Evening",
+    title: "Evening listener",
+    name: "in the evening",
+    from: 17,
+    to: 22,
+  },
+  {
+    key: "night",
+    label: "Night",
+    title: "Night owl",
+    name: "at night",
+    from: 22,
+    to: 5,
+  },
+] as const;
 type PartOfDay = (typeof PARTS_OF_DAY)[number];
 
 const inPart = (hour: number, { from, to }: PartOfDay) =>

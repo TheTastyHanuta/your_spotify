@@ -2,7 +2,13 @@ import { useMediaQuery } from "@mui/material";
 import { ThemeProvider } from "@mui/system";
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 import Layout from "./components/Layout";
 import Message from "./components/Message";
@@ -12,7 +18,6 @@ import SpotifyAuthRefreshDialog from "./components/SpotifyAuthRefreshDialog";
 import Wrapper from "./components/Wrapper";
 import Login from "./scenes/Account/Login";
 import AlbumStats from "./scenes/AlbumStats";
-import AllStats from "./scenes/AllStats";
 import ArtistStats from "./scenes/ArtistStats";
 import Benchmarks from "./scenes/Benchmarks";
 import Affinity from "./scenes/Collaborative/Affinity";
@@ -81,14 +86,8 @@ function App() {
                     </PrivateRoute>
                   }
                 />
-                <Route
-                  path="/all"
-                  element={
-                    <PrivateRoute>
-                      <AllStats />
-                    </PrivateRoute>
-                  }
-                />
+                {/* "All stats" was split into Habits and Taste */}
+                <Route path="/all" element={<AllStatsRedirect />} />
                 <Route
                   path="/taste"
                   element={
@@ -229,3 +228,9 @@ function App() {
 }
 
 export default App;
+
+// Keeps the query, shared links carry the period in it
+function AllStatsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/habits${search}`} replace />;
+}

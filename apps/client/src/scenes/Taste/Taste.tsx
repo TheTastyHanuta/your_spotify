@@ -30,6 +30,8 @@ import {
 } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
+import ArtistShares from "./ArtistShares";
+import MusicalAgeOverTime from "./MusicalAgeOverTime";
 import { medianYear, musicalAge } from "./taste";
 
 import s from "./index.module.css";
@@ -63,6 +65,12 @@ export default function Taste() {
   const taste = useAPI(api.getTaste, interval.start, interval.end);
   const genres = useAPI(api.getGenres, interval.start, interval.end, NB_GENRES);
   const decades = useAPI(api.getDecadesPerYear);
+  const shares = useAPI(
+    api.getArtistShares,
+    interval.start,
+    interval.end,
+    interval.timesplit,
+  );
 
   const header = (
     <Header
@@ -90,14 +98,19 @@ export default function Taste() {
     ? Object.values(taste.albumTypes).reduce((sum, n) => sum + n, 0)
     : 0;
 
+  const topPlays = shares?.top.reduce((sum, top) => sum + top.plays, 0) ?? 0;
+  const firstArtist = shares?.top[0];
+
   const numberCards: {
     title: string;
     info?: string;
+    loaded: boolean;
     main?: string | null;
     sub?: string;
   }[] = [
     {
       title: "Musical age",
+      loaded: Boolean(taste),
       info: "A playful estimate. People tend to love the music of their late teens most, so the median release year of what you listen to hints at when you were 17.",
       main:
         median === undefined ? undefined : plural(musicalAge(median), "year"),
@@ -108,13 +121,24 @@ export default function Taste() {
     },
     {
       title: "Nostalgic",
+      loaded: Boolean(taste),
       main: taste && `${percent(taste.ageWhenPlayed.nostalgic, datedPlays)}%`,
       sub: "of your plays were of songs at least 10 years old at the time",
     },
     {
       title: "Fresh",
+      loaded: Boolean(taste),
       main: taste && `${percent(taste.ageWhenPlayed.fresh, datedPlays)}%`,
       sub: "of your plays were of songs released that year or the year before",
+    },
+    {
+      title: "Top artists",
+      loaded: Boolean(shares),
+      main: shares && `${percent(topPlays, shares.plays)}%`,
+      sub:
+        shares && firstArtist
+          ? `of your plays were by your top ${shares.top.length} artists, ${percent(firstArtist.plays, shares.plays)}% by ${firstArtist.artist.name} alone`
+          : undefined,
     },
   ];
 
@@ -124,13 +148,13 @@ export default function Taste() {
       <div className={s.content}>
         <Grid container spacing={2}>
           {numberCards.map((card) => (
-            <Grid key={card.title} size={{ xs: 12, md: 4 }}>
+            <Grid key={card.title} size={{ xs: 12, md: 6, lg: 3 }}>
               <TitleCard title={card.title} info={card.info} className={s.card}>
                 <Text element="div" size="huge">
-                  {taste ? (card.main ?? "-") : <Skeleton width={120} />}
+                  {card.loaded ? (card.main ?? "-") : <Skeleton width={120} />}
                 </Text>
                 <Text element="div" size="normal" greyed>
-                  {taste ? card.sub : <Skeleton width={200} />}
+                  {card.loaded ? card.sub : <Skeleton width={200} />}
                 </Text>
               </TitleCard>
             </Grid>
@@ -146,6 +170,20 @@ export default function Taste() {
             </TitleCard>
           </Grid>
           <Grid size={{ xs: 12 }}>
+            {shares ? (
+              <ArtistShares
+                shares={shares}
+                start={interval.start}
+                end={interval.end}
+              />
+            ) : (
+              <LoadingImplementedChart
+                title="Top artists over time"
+                className={s.chart}
+              />
+            )}
+          </Grid>
+          <Grid size={{ xs: 12 }}>
             {taste ? (
               <ReleaseYears years={taste.years} median={median} />
             ) : (
@@ -154,6 +192,11 @@ export default function Taste() {
                 className={s.chart}
               />
             )}
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <MusicalAgeOverTime
+              overall={median === undefined ? undefined : musicalAge(median)}
+            />
           </Grid>
           <Grid size={{ xs: 12 }}>
             {decades ? (
@@ -431,13 +474,14 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
   ].sort((a, b) => a - b);
   const shown = allDecades.slice(-NB_DECADES);
   const hasEarlier = allDecades.length > shown.length;
-  // Oldest first, so they stack from the bottom. A lighter shade is older.
+  // Oldest first, so they stack from the bottom. The newest decade gets the
+  // strongest step of the scale.
   const series = [
     ...(hasEarlier ? [{ key: "earlier", label: `Before ${shown[0]}` }] : []),
     ...shown.map((decade) => ({ key: `${decade}`, label: `${decade}s` })),
   ].map((serie, index, all) => ({
     ...serie,
-    opacity: (index + 1) / all.length,
+    fill: `var(--scale-${5 - (all.length - 1 - index)})`,
   }));
 
   const data = years.map(({ year, decades }) => {
@@ -488,7 +532,7 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
               dataKey={serie.key}
               name={serie.label}
               stackId="decades"
-              fill={`rgba(var(--primary-tuple), ${serie.opacity})`}
+              fill={serie.fill}
               stroke="var(--background)"
               strokeWidth={1}
               maxBarSize={48}

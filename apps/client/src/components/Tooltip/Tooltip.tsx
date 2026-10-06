@@ -1,16 +1,21 @@
 import { TooltipProps } from "recharts";
 import { Payload } from "recharts/types/component/DefaultTooltipContent";
+
 import s from "./index.module.css";
 
 type TypeFromArray<T> = T extends Array<infer K> ? K : never;
 
-interface MyTooltipProps<D extends Array<unknown>>
-  extends TooltipProps<any, any> {
+interface MyTooltipProps<D extends Array<unknown>> extends TooltipProps<
+  any,
+  any
+> {
   payload?: ReadonlyArray<Payload<any, any>>;
 
   title: TitleFormatter<D>;
   value: ValueFormatter<D>;
   dontShowNullValues?: boolean;
+  // Biggest value first instead of the series order
+  sortByValue?: boolean;
 }
 
 export type TitleFormatter<D extends Array<unknown>> = (
@@ -28,6 +33,7 @@ export default function Tooltip<DataTypeArray extends Array<unknown>>({
   title,
   value,
   dontShowNullValues,
+  sortByValue,
 }: MyTooltipProps<DataTypeArray>) {
   const firstPayload = payload?.[0];
 
@@ -44,8 +50,9 @@ export default function Tooltip<DataTypeArray extends Array<unknown>>({
         )}
       </div>
       <div className={s.content}>
-        {payload
-          ?.filter((p) => p.value || !dontShowNullValues)
+        {[...(payload ?? [])]
+          .filter((p) => p.value || !dontShowNullValues)
+          .sort((a, b) => (sortByValue ? Number(b.value) - Number(a.value) : 0))
           .map((p) => (
             <div key={p.dataKey?.toString()} className={s.contentItem}>
               {value(

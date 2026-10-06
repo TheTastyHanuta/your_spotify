@@ -27,9 +27,9 @@ export const fromDay = (day: string) => {
 const toDay = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-// Opacity of the 4 levels of listening, and of days without
-const LEVELS = [0.25, 0.45, 0.7, 1];
-const EMPTY = 0.07;
+// Colours of the 4 levels of listening, and of days without
+const LEVELS = [2, 3, 4, 5].map((step) => `var(--scale-${step})`);
+const EMPTY = "rgba(var(--primary-tuple), 0.07)";
 const MONTHS = Array.from(Array(12).keys());
 const WEEKDAY_LABELS = [1, 3, 5];
 
@@ -96,7 +96,7 @@ export default function Calendar({
   const quartiles = [0.25, 0.5, 0.75].map(
     (q) => values[Math.floor(q * (values.length - 1))] ?? 0,
   );
-  const opacity = (v: number) =>
+  const color = (v: number) =>
     v === 0 ? EMPTY : LEVELS[quartiles.filter((q) => v > q).length]!;
 
   return (
@@ -170,10 +170,7 @@ export default function Calendar({
                 }>
                 <span
                   className={clsx(s.cell, { [s.clickable]: v > 0 })}
-                  style={{
-                    ...style,
-                    backgroundColor: `rgba(var(--primary-tuple), ${opacity(v)})`,
-                  }}
+                  style={{ ...style, backgroundColor: color(v) }}
                   onClick={v > 0 ? () => onDayClick(date) : undefined}
                 />
               </Tooltip>
@@ -183,12 +180,8 @@ export default function Calendar({
       </div>
       <div className={s.legend}>
         Less
-        {[EMPTY, ...LEVELS].map((o) => (
-          <span
-            key={o}
-            className={s.day}
-            style={{ backgroundColor: `rgba(var(--primary-tuple), ${o})` }}
-          />
+        {[EMPTY, ...LEVELS].map((c) => (
+          <span key={c} className={s.day} style={{ backgroundColor: c }} />
         ))}
         More
       </div>

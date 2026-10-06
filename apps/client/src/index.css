@@ -11,8 +11,8 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
   font-size: unset;
   font-size: 0.9em;
   padding: 2px;
@@ -34,13 +34,13 @@ h6 {
 }
 
 :root {
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  --font:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   --track-options: 34px;
   --radius: 6px;
   --page-padding: 0 16px 16px 16px;
-  --accent: #FB717B;
+  --accent: #fb717b;
   --header-image-size: 60px;
   --secondary-dark: rgba(255, 255, 255, 0.15);
   --secondary-dark-hover: rgba(255, 255, 255, 0.25);
@@ -70,12 +70,29 @@ h6 {
 
   --input-background-color: var(--secondary-dark);
   --input-background-color-hover: var(--secondary-dark-hover);
- 
+
   --shortcut-background: rgb(96, 96, 96);
+
+  /* Chart colours, checked for colour blindness against the card background.
+     Series tell artists apart, the scale shows amounts (1 least, 5 most) in
+     shades of Spotify's green. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --scale-1: #2a5934;
+  --scale-2: #377d47;
+  --scale-3: #3aa456;
+  --scale-4: #60c877;
+  --scale-5: #a3e4ad;
 }
 
 .light-vars {
-  --shadow: 5px 5px 8px -2px rgba(0,0,0,0.05);
+  --shadow: 5px 5px 8px -2px rgba(0, 0, 0, 0.05);
   --hardshadow: 5px 6px 40px -5px rgba(0, 0, 0, 0.2);
 
   --primary-tuple: 0, 0, 0;
@@ -100,6 +117,20 @@ h6 {
   --input-background-color-hover: hsl(0, 0%, 75%);
 
   --shortcut-background: rgb(96, 96, 96);
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --scale-1: #4cc76c;
+  --scale-2: #26aa50;
+  --scale-3: #0b8c3c;
+  --scale-4: #076e2e;
+  --scale-5: #045120;
 }
 
 @media (hover: none) and (pointer: coarse) {
