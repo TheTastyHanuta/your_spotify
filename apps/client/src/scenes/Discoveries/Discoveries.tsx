@@ -21,7 +21,7 @@ import Stick from "./Stick";
 
 import s from "./index.module.css";
 
-const NB_DISCOVERIES = 10;
+const NB_DISCOVERIES = 20;
 
 const percent = (part: number, total: number) =>
   total > 0 ? Math.round((part / total) * 100) : 0;

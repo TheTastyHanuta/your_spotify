@@ -13,7 +13,7 @@ import { getTracks } from "./track";
 
 const FORGOTTEN_MIN_PLAYS = 10;
 const NB_FORGOTTEN_TRACKS = 20;
-const NB_FORGOTTEN_ARTISTS = 10;
+const NB_FORGOTTEN_ARTISTS = 20;
 
 type Forgotten = {
   _id: string;
@@ -385,7 +385,7 @@ export const getOnThisDay = async (user: User) => {
 // Loyalty: the songs and artists played in the most different months, the
 // most played first on ties
 const NB_LOYAL_TRACKS = 20;
-const NB_LOYAL_ARTISTS = 10;
+const NB_LOYAL_ARTISTS = 20;
 
 type Loyal = {
   _id: string;

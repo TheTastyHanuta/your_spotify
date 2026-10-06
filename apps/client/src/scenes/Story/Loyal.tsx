@@ -22,7 +22,7 @@ type Item = LoyalResponse["tracks"][number] | LoyalResponse["artists"][number];
 // "in 83 months since Aug 2018 · 356 plays"
 const since = (item: Item) => {
   const [year, month] = item.first.split("-").map(Number);
-  return `in ${item.months} months since ${DateFormatter.toShortMonthYear(new Date(year!, month! - 1))} · ${plural(item.total, "play")}`;
+  return `in ${plural(item.months, "month")} since ${DateFormatter.toShortMonthYear(new Date(year!, month! - 1))} · ${plural(item.total, "play")}`;
 };
 
 export default function Loyal() {
@@ -72,6 +72,9 @@ export default function Loyal() {
         <RowsSkeleton />
       </TitleCard>
     );
+  }
+  if (loyal.tracks.length === 0 && loyal.artists.length === 0) {
+    return <Text size="normal">No listens yet.</Text>;
   }
 
   return (

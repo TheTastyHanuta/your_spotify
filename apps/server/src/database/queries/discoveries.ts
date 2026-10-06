@@ -14,8 +14,8 @@ import { getTracks } from "./track";
 // Only aggregation features of MongoDB 4.4 are used here, some instances
 // cannot run a newer MongoDB.
 
-const NB_LIST = 10;
-const NB_STUCK = 12;
+const NB_LIST = 20;
+const NB_STUCK = 20;
 // Back after a break: known before (at least this many plays), then not
 // played for this long
 const BREAK_MIN_PLAYS = 10;
@@ -89,12 +89,23 @@ export const getDiscoveryOverview = async (
       {
         $group: {
           _id: "$id",
-          first: { $min: "$played_at" },
-          artist: { $first: "$primaryArtistId" },
+          // The artist of the first listen: after an ISRC merge, listens of
+          // one song can carry different primary artists. Documents compare
+          // field by field, so this is the earliest listen.
+          firstPlay: {
+            $min: { played_at: "$played_at", artist: "$primaryArtistId" },
+          },
           plays: { $sum: { $cond: [inPeriod(start, end), 1, 0] } },
         },
       },
       { $match: { plays: { $gt: 0 } } },
+      {
+        $project: {
+          first: "$firstPlay.played_at",
+          artist: "$firstPlay.artist",
+          plays: 1,
+        },
+      },
     ]),
     InfosModel.aggregate([
       allListens(user),

@@ -490,7 +490,7 @@ Get the numbers of new artists and songs, the new songs by artists played before
 
 #### `GET /spotify/discoveries/on-repeat`
 
-Get the 10 songs with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
+Get the 20 songs with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
 
 **Query Parameters:**
 
@@ -519,7 +519,7 @@ Get the plays of each time step, and the plays of songs heard for the first time
 
 #### `GET /spotify/story/forgotten`
 
-Get the 20 most played songs and 10 most played artists of all time (at least 10 plays) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
+Get the 20 most played songs and 20 most played artists of all time (at least 10 plays) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
 
 **Query Parameters:**
 
@@ -539,7 +539,7 @@ Get the stretches of at least 3 months when one artist or genre (an artist's fir
 
 #### `GET /spotify/story/loyal`
 
-Get the 20 songs and 10 artists played in the most different months (months in the stats timezone), the most played first on ties.
+Get the 20 songs and 20 artists played in the most different months (months in the stats timezone), the most played first on ties.
 
 **Response:**
 

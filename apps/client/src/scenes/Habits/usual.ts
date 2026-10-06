@@ -73,16 +73,20 @@ const BLOCKS = [false, true].flatMap((weekend) =>
 export function weekSummary(period: Cell[], usual: Cell[], clump: number) {
   const total = playsOf(period, () => true);
   const usualTotal = playsOf(usual, () => true);
-  if (total === 0 || usualTotal === 0) return "You listened at your usual times.";
+  if (total === 0 || usualTotal === 0)
+    return "You listened at your usual times.";
   const blocks = BLOCKS.map((block) => {
     const plays = playsOf(period, block.keep);
     const usualShare = playsOf(usual, block.keep) / usualTotal;
+    // The threshold applies to the exact difference, only the text rounds
+    const exact = (plays / total - usualShare) * 100;
     return {
       name: block.name,
-      points: Math.round((plays / total - usualShare) * 100),
+      points: Math.round(exact),
+      notable: Math.abs(exact) >= NOTABLE,
       clear: isClear(plays, usualShare * total, clump),
     };
-  }).filter((block) => block.clear && Math.abs(block.points) >= NOTABLE);
+  }).filter((block) => block.clear && block.notable);
   const more = blocks.reduce<(typeof blocks)[number] | undefined>(
     (best, b) => (b.points > 0 && (!best || b.points > best.points) ? b : best),
     undefined,

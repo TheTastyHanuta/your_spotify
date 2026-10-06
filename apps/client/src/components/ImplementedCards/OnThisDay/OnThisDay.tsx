@@ -1,5 +1,5 @@
 import { Link, Skeleton } from "@mui/material";
-import { differenceInCalendarYears, endOfDay } from "date-fns";
+import { differenceInYears, endOfDay } from "date-fns";
 import { useSelector } from "react-redux";
 
 import { fromDay } from "../../../scenes/Habits/Calendar";
@@ -28,7 +28,7 @@ export default function OnThisDay() {
   const firstListen = new Date(user?.firstListenedAt ?? NaN);
   if (
     Number.isNaN(firstListen.getTime()) ||
-    differenceInCalendarYears(new Date(), firstListen) < 1
+    differenceInYears(new Date(), firstListen) < 1
   ) {
     return null;
   }

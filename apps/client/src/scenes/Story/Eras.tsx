@@ -30,11 +30,12 @@ const monthStart = (month: string) => {
 const shortMonth = (month: string) =>
   DateFormatter.toShortMonthYear(monthStart(month));
 
-const now = new Date();
 // The current month may not have enough plays yet to lead, an era that
 // ended last month is still going on
-const ongoing = (era: Era) =>
-  monthNumber(era.to) >= now.getFullYear() * 12 + now.getMonth() - 1;
+const ongoing = (era: Era) => {
+  const now = new Date();
+  return monthNumber(era.to) >= now.getFullYear() * 12 + now.getMonth() - 1;
+};
 
 const length = (era: Era) => {
   const months = monthNumber(era.to) - monthNumber(era.from) + 1;
@@ -82,7 +83,7 @@ export default function Eras() {
     );
   }
   if (!eras.first || !eras.last) {
-    return null;
+    return <Text size="normal">No listens yet.</Text>;
   }
   if (eras.artists.length === 0 && eras.genres.length === 0) {
     return (
