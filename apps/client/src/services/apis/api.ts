@@ -228,6 +228,17 @@ export type ErasResponse = {
   // artists: the genre's most played artists during the era
   genres: (Era & { genre: string; artists: ShortArtist[] })[];
 };
+// Today ("YYYY-MM-DD", stats timezone) in earlier years, newest first: the
+// day's plays and its most played song (the first played on ties)
+export type OnThisDayResponse = {
+  today: string;
+  years: {
+    date: string;
+    plays: number;
+    track: ShortTrack;
+    trackPlays: number;
+  }[];
+};
 export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
@@ -405,6 +416,7 @@ export const api = {
   getForgotten: (days: number) =>
     get<ForgottenResponse>("/spotify/story/forgotten", { days }),
   getEras: () => get<ErasResponse>("/spotify/story/eras"),
+  getOnThisDay: () => get<OnThisDayResponse>("/spotify/on-this-day"),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,

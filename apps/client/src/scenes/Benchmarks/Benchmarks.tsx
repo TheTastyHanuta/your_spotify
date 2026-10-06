@@ -125,6 +125,10 @@ export default function Benchmarks() {
       request: () => api.getEras(),
     },
     {
+      title: "Get on this day",
+      request: () => api.getOnThisDay(),
+    },
+    {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
     },

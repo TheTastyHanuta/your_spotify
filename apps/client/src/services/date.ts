@@ -77,6 +77,12 @@ export const DateFormatter = {
       year: "numeric",
     }).format(date);
   },
+  toDayLongMonth(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      day: "numeric",
+      month: "long",
+    }).format(date);
+  },
   toDayMonth(date: Date) {
     return new Intl.DateTimeFormat(currentUsedDateFormat, {
       day: "2-digit",

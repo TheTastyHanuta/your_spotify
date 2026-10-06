@@ -5,6 +5,7 @@ import History from "../../components/History";
 import ArtistsListened from "../../components/ImplementedCards/ArtistsListened";
 import BestArtist from "../../components/ImplementedCards/BestArtist";
 import BestSong from "../../components/ImplementedCards/BestSong";
+import OnThisDay from "../../components/ImplementedCards/OnThisDay";
 import SongsListened from "../../components/ImplementedCards/SongsListened";
 import TimeListened from "../../components/ImplementedCards/TimeListened";
 import ListeningRepartition from "../../components/ImplementedCharts/ListeningRepartition";
@@ -28,6 +29,9 @@ export default function Home() {
       />
       <div className={s.content}>
         <Grid container spacing={2} sx={{ alignItems: "stretch" }}>
+          <Grid size={{ xs: 12 }}>
+            <OnThisDay />
+          </Grid>
           <Grid size={{ xs: 12, md: 12, lg: 4 }}>
             <SongsListened />
           </Grid>

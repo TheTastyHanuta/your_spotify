@@ -9,7 +9,7 @@ import { getTracks } from "./track";
 // Only aggregation features of MongoDB 4.4 are used here, some instances
 // cannot run a newer MongoDB.
 
-// Whole history queries for the "Your story" page
+// Whole history queries: the "Your story" page and "On this day" on Home
 
 const FORGOTTEN_MIN_PLAYS = 10;
 const NB_FORGOTTEN_TRACKS = 20;
@@ -306,6 +306,78 @@ export const getEras = async (user: User) => {
         .slice(0, NB_ERA_GENRE_ARTISTS)
         .flatMap(([id]) => shortArtist(id) ?? []);
       return { ...era, genre: key, artists };
+    }),
+  };
+};
+
+// Today's month and day in earlier years: each year's plays and its most
+// played song that day. Today is in the stats timezone.
+export const getOnThisDay = async (user: User) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(
+    new Date(),
+  );
+  const [year, month, day] = today.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const rows: {
+    _id: number;
+    plays: number;
+    track: string;
+    trackPlays: number;
+  }[] = await InfosModel.aggregate([
+    allListens(user),
+    {
+      $project: {
+        id: 1,
+        played_at: 1,
+        date: { $dateToParts: { date: "$played_at", timezone } },
+      },
+    },
+    {
+      $match: {
+        "date.month": month,
+        "date.day": day,
+        "date.year": { $lt: year },
+      },
+    },
+    {
+      $group: {
+        _id: { year: "$date.year", track: "$id" },
+        plays: { $sum: 1 },
+        first: { $min: "$played_at" },
+      },
+    },
+    // Most played song first, the one played first that day on ties
+    { $sort: { plays: -1, first: 1 } },
+    {
+      $group: {
+        _id: "$_id.year",
+        plays: { $sum: "$plays" },
+        track: { $first: "$_id.track" },
+        trackPlays: { $first: "$plays" },
+      },
+    },
+    { $sort: { _id: -1 } },
+  ]);
+  const tracks = await findTracks(rows.map((row) => row.track));
+  const trackById = new Map(tracks.map((track) => [track.id, track]));
+  return {
+    today,
+    years: rows.flatMap((row) => {
+      const track = trackById.get(row.track);
+      return track
+        ? [
+            {
+              date: `${row._id}-${today.slice(5)}`,
+              plays: row.plays,
+              track,
+              trackPlays: row.trackPlays,
+            },
+          ]
+        : [];
     }),
   };
 };
