@@ -177,7 +177,7 @@ export const lightArtistLookupPipeline = (
   let: { id: isFieldArray ? { $first: `$${idField}` } : `$${idField}` },
   pipeline: [
     { $match: { $expr: { $eq: ["$id", "$$id"] } } },
-    { $project: { _id: 1, id: 1, name: 1, images: 1, genres: 1 } },
+    { $project: { _id: 1, id: 1, name: 1, images: 1, genres: 1, mbGenres: 1 } },
   ],
   from: "artists",
   as: "artist",

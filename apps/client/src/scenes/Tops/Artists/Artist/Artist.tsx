@@ -28,7 +28,10 @@ export default function Artist({
   const [isMobile, isTablet, isDesktop] = useMobile();
   const artistGrid = useArtistGrid();
 
-  const genres = artist.genres.join(", ");
+  // MusicBrainz's genres when it has some, like the artist page
+  const genres = (
+    artist.mbGenres?.length ? artist.mbGenres : artist.genres
+  ).join(", ");
 
   const columns: ColumnDescription[] = [
     {
