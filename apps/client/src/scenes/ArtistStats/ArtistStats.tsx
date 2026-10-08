@@ -1,22 +1,28 @@
-import { CircularProgress, Grid } from "@mui/material";
+import { CircularProgress } from "@mui/material";
+import clsx from "clsx";
 import { useSelector } from "react-redux";
-import Header from "../../components/Header";
-import TitleCard from "../../components/TitleCard";
-import { ArtistStatsResponse } from "../../services/apis/api";
-import { buildFromDateId } from "../../services/stats";
-import Text from "../../components/Text";
-import InlineTrack from "../../components/InlineTrack";
-import { selectBlacklistedArtist } from "../../services/redux/modules/user/selector";
-import IdealImage from "../../components/IdealImage";
-import ItemTimeline from "../../components/ItemTimeline";
-import ImageTwoLines from "../../components/ImageTwoLines";
+import { Link } from "react-router-dom";
+
 import InlineAlbum from "../../components/InlineAlbum";
+import InlineTrack from "../../components/InlineTrack";
+import ItemRow from "../../components/ItemRow";
+import ItemTimeline, {
+  useTimelineSummary,
+} from "../../components/ItemTimeline";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
+import StatStrip from "../../components/StatStrip";
+import Text from "../../components/Text";
+import { api, ArtistStatsResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
+import { useAPI } from "../../services/hooks/hooks";
+import { selectBlacklistedArtist } from "../../services/redux/modules/user/selector";
+import { buildFromDateId, formatHours } from "../../services/stats";
 import ArtistContextMenu from "./ArtistContextMenu";
-import FirstAndLast from "./FirstAndLast";
 import ArtistRank from "./ArtistRank/ArtistRank";
-import s from "./index.module.css";
 import { MostListenedTracksContextMenuButton } from "./mostListenedTracksContextMenuButton/mostListenedTracksContextMenuButton";
+
+import s from "../../styles/detail.module.css";
 
 interface ArtistStatsProps {
   artistId: string;
@@ -25,192 +31,117 @@ interface ArtistStatsProps {
 
 export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
   const blacklisted = useSelector(selectBlacklistedArtist(artistId));
+  const rank = useAPI(api.getArtistRank, artistId);
+  // Fetched here once: the strip sums its months, the chart draws them
+  const timeline = useAPI(api.getTimeline, "artist", artistId);
+  const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
 
   if (!stats) {
     return <CircularProgress />;
   }
 
-  const [bestPeriod, secondBestPeriod] = stats.bestPeriod;
   // MusicBrainz's genres when it has some, like the genre stats
   const genres = stats.artist.mbGenres?.length
     ? stats.artist.mbGenres
     : stats.artist.genres;
+  const first = stats.firstLast.first;
+  const last = stats.firstLast.last;
+  // The rank counts listens where the artist is credited first
+  const rankText =
+    rank && rank.index >= 0 ? `#${rank.index + 1} of all time` : undefined;
 
   return (
     <div>
-      <Header
-        left={
-          <IdealImage
-            className={s.headerimage}
-            images={stats.artist.images}
-            size={60}
-            alt="Artist"
-          />
-        }
-        right={
+      <PageHero
+        title=""
+        hideInterval
+        crumb={<Link to="/top/artists">Artists</Link>}
+        images={stats.artist.images}
+        round
+        name={stats.artist.name}
+        nameText={stats.artist.name}
+        meta={[rankText, genres.slice(0, 4).join(", ")]
+          .filter(Boolean)
+          .join(" · ")}
+        actions={
           <ArtistContextMenu
             artistId={stats.artist.id}
             artistName={stats.artist.name}
             blacklisted={blacklisted}
           />
         }
-        title={stats.artist.name}
-        subtitle={genres.join(", ")}
-        hideInterval
       />
-      <div className={s.content}>
-        <div className={s.header}>
-          <ArtistRank artistId={artistId} />
-        </div>
-        <Grid
-          container
-          sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
-          spacing={2}
-          style={{ marginTop: 0 }}>
-          <Grid
-            container
-            size={{ xs: 12, lg: 6 }}
-            spacing={2}
-            sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard
-                title="Songs listened"
-                info="Only listens where this artist is credited first count towards your top artists and the rank above.">
-                <div className={s.totals}>
-                  <div className={s.total}>
-                    <Text element="strong" size="big">
-                      {stats.total.count}
-                    </Text>
-                    <Text size="normal">total</Text>
-                  </div>
-                  <div className={s.total}>
-                    <Text element="strong" size="big">
-                      {stats.total.primaryCount}
-                    </Text>
-                    <Text size="normal">as main artist</Text>
-                  </div>
-                  <div className={s.total}>
-                    <Text element="strong" size="big">
-                      {stats.total.featuredCount}
-                    </Text>
-                    <Text size="normal">featured</Text>
-                  </div>
-                </div>
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FirstAndLast
-                firstImages={stats.firstLast.first.track.album.images}
-                lastImages={stats.firstLast.last.track.album.images}
-                firstDate={new Date(stats.firstLast.first.played_at)}
-                lastDate={new Date(stats.firstLast.last.played_at)}
-                firstElement={
-                  <InlineTrack
-                    track={stats.firstLast.first.track}
-                    size="normal"
-                  />
-                }
-                lastElement={
-                  <InlineTrack
-                    track={stats.firstLast.last.track}
-                    size="normal"
-                  />
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard
-                title={`Top two months you listened to ${stats.artist.name}`}>
-                {bestPeriod && (
-                  <div className={s.bestperiod}>
-                    <Text element="strong" size="normal">
-                      {DateFormatter.toMonthStringYear(
-                        buildFromDateId(bestPeriod._id),
-                      )}
-                    </Text>
-                    <Text size="normal">
-                      {bestPeriod.count} times (
-                      {Math.floor((bestPeriod.count / bestPeriod.total) * 100)}%
-                      of total time)
-                    </Text>
-                  </div>
-                )}
-                {secondBestPeriod && (
-                  <div className={s.bestperiod}>
-                    <Text element="strong" size="normal">
-                      {DateFormatter.toMonthStringYear(
-                        buildFromDateId(secondBestPeriod._id),
-                      )}
-                    </Text>
-                    <Text size="normal">
-                      {secondBestPeriod.count} times (
-                      {Math.floor(
-                        (secondBestPeriod.count / secondBestPeriod.total) * 100,
-                      )}
-                      % of total time)
-                    </Text>
-                  </div>
-                )}
-              </TitleCard>
-            </Grid>
-          </Grid>
-          <Grid container size={{ xs: 12, lg: 6 }} spacing={2}>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard
-                title="Most listened tracks"
-                right={
-                  <MostListenedTracksContextMenuButton artistId={artistId} />
-                }>
-                {stats.mostListened.map((ml, k) => (
-                  <div key={ml.track.id} className={s.ml}>
-                    <Text element="strong" className={s.mlrank} size="big">
-                      #{k + 1}
-                    </Text>
-                    <ImageTwoLines
-                      image={
-                        <IdealImage
-                          className={s.cardimg}
-                          images={ml.track.album.images}
-                          size={48}
-                          alt="album cover"
-                        />
-                      }
-                      first={<InlineTrack track={ml.track} size="normal" />}
-                      second={`${ml.count} times`}
-                    />
-                  </div>
-                ))}
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard title="Most listened albums">
-                {stats.albumMostListened.map((ml, k) => (
-                  <div key={ml.album.id} className={s.ml}>
-                    <Text element="strong" className={s.mlrank} size="big">
-                      #{k + 1}
-                    </Text>
-                    <ImageTwoLines
-                      image={
-                        <IdealImage
-                          className={s.cardimg}
-                          images={ml.album.images}
-                          size={48}
-                          alt="album cover"
-                        />
-                      }
-                      first={<InlineAlbum album={ml.album} size="normal" />}
-                      second={`${ml.count} times`}
-                    />
-                  </div>
-                ))}
-              </TitleCard>
-            </Grid>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <ItemTimeline type="artist" id={artistId} />
-          </Grid>
-        </Grid>
+      <StatStrip
+        stats={[
+          {
+            label: "Plays",
+            value: stats.total.count.toLocaleString(),
+            note: `${stats.total.primaryCount.toLocaleString()} as main artist · ${stats.total.featuredCount.toLocaleString()} featured`,
+          },
+          {
+            label: "Time listened",
+            value: totalMs === undefined ? "—" : formatHours(totalMs),
+          },
+          {
+            label: "First play",
+            // Like Best month: month and year, then the day and the song
+            value: DateFormatter.toShortMonthYear(new Date(first.played_at)),
+            note: `${DateFormatter.toDayLongMonth(new Date(first.played_at))} · ${first.track.name}`,
+          },
+          {
+            label: "Last play",
+            value: DateFormatter.toShortMonthYear(new Date(last.played_at)),
+            note: `${DateFormatter.toDayLongMonth(new Date(last.played_at))} · ${last.track.name}`,
+          },
+          {
+            label: "Best month",
+            value: bestMonth
+              ? DateFormatter.toShortMonthYear(buildFromDateId(bestMonth._id))
+              : "—",
+            note: bestNote,
+          },
+        ]}
+      />
+      <ItemTimeline type="artist" id={artistId} data={timeline} />
+      <div className={clsx("ruled-columns", s.columns)}>
+        <Section
+          title="Most played songs"
+          right={<MostListenedTracksContextMenuButton artistId={artistId} />}>
+          {stats.mostListened.map((ml, index) => (
+            <ItemRow
+              key={ml.track.id}
+              rank={index + 1}
+              image={ml.track.album.images}
+              title={<InlineTrack track={ml.track} size="normal" />}
+              subtitle={<InlineAlbum album={ml.track.album} size="normal" />}
+              right={
+                <Text size="normal" greyed className="num">
+                  {ml.count}
+                </Text>
+              }
+            />
+          ))}
+        </Section>
+        <Section title="Albums">
+          {stats.albumMostListened.map((ml, index) => (
+            <ItemRow
+              key={ml.album.id}
+              rank={index + 1}
+              image={ml.album.images}
+              title={<InlineAlbum album={ml.album} size="normal" />}
+              subtitle={ml.album.release_date?.slice(0, 4)}
+              right={
+                <Text size="normal" greyed className="num">
+                  {ml.count}
+                </Text>
+              }
+            />
+          ))}
+        </Section>
       </div>
+      <Section title="Around it in your top artists" className={s.rank}>
+        <ArtistRank artistId={artistId} rank={rank} />
+      </Section>
     </div>
   );
 }

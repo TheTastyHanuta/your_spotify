@@ -1,7 +1,8 @@
-.content {
-  padding: var(--page-padding);
+/* Chart left, top list right (the grid is .ruled-columns) */
+.work {
+  --columns: minmax(0, 1.55fr) minmax(0, 1fr);
 }
 
-.timelisten {
-  height: 300px;
+.work > * {
+  border-bottom: 1px solid var(--line);
 }

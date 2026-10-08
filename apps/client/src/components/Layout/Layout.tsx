@@ -1,53 +1,45 @@
-import React, { useState } from "react";
-import { Drawer } from "@mui/material";
 import clsx from "clsx";
+import React from "react";
 import { useSelector } from "react-redux";
+
 import { selectPublicToken } from "../../services/redux/modules/user/selector";
 import Text from "../Text";
-import s from "./index.module.css";
+import BottomBar from "./BottomBar";
 import Sider from "./Sider";
-import { LayoutContext } from "./LayoutContext";
 import { useSider } from "./useSider";
+
+import s from "./index.module.css";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [open, setOpen] = useState(false);
-  const { siderAllowed, siderIsDrawer } = useSider();
+  const { siderAllowed, siderIsDrawer, siderIsRail } = useSider();
 
   const publicToken = useSelector(selectPublicToken);
 
-  const layoutContextValue = {
-    openDrawer: () => setOpen(true),
-    closeDrawer: () => setOpen(false),
-  };
-
   return (
-    <LayoutContext.Provider value={layoutContextValue}>
-      <div className={s.root}>
-        {siderAllowed && siderIsDrawer && (
-          <Drawer open={open} anchor="left" onClose={() => setOpen(false)}>
-            <Sider isDrawer />
-          </Drawer>
-        )}
+    <div className={s.root}>
+      {siderAllowed && !siderIsDrawer && (
         <section className={s.sider}>
-          {siderAllowed && !siderIsDrawer && <Sider />}
+          <Sider rail={siderIsRail} />
         </section>
-        <section
-          className={clsx({
-            [s.content]: true,
-            [s.contentdrawer]: siderAllowed && !siderIsDrawer,
-          })}>
-          {publicToken && (
-            <div className={s.publictoken}>
-              <Text size="normal">You are viewing as guest</Text>
-            </div>
-          )}
-          {children}
-        </section>
-      </div>
-    </LayoutContext.Provider>
+      )}
+      <section
+        className={clsx(s.content, {
+          [s.withsider]: siderAllowed && !siderIsDrawer && !siderIsRail,
+          [s.withrail]: siderAllowed && siderIsRail,
+          [s.withbar]: siderAllowed && siderIsDrawer,
+        })}>
+        {publicToken && (
+          <div className={s.publictoken}>
+            <Text size="normal">You are viewing as guest</Text>
+          </div>
+        )}
+        {children}
+      </section>
+      {siderAllowed && siderIsDrawer && <BottomBar />}
+    </div>
   );
 }

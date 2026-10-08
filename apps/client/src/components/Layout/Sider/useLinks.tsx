@@ -1,28 +1,15 @@
 import {
-  AutoStories,
-  AutoStoriesOutlined,
-  Home,
-  HomeOutlined,
-  MusicNote,
-  MusicNoteOutlined,
-  Album,
   AlbumOutlined,
-  Person,
-  PersonOutlined,
-  Settings,
-  SettingsOutlined,
-  ExitToApp,
-  Share,
-  ShareOutlined,
-  Speed,
-  SpeedOutlined,
-  Palette,
-  PaletteOutlined,
-  CalendarMonth,
-  CalendarMonthOutlined,
-  Explore,
+  AutoStoriesOutlined,
+  EqualizerOutlined,
+  EventRepeatOutlined,
   ExploreOutlined,
-  Summarize,
+  HistoryOutlined,
+  HomeOutlined,
+  MusicNoteOutlined,
+  PeopleOutlined,
+  PersonOutlined,
+  ScheduleOutlined,
   SummarizeOutlined,
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
@@ -36,112 +23,53 @@ export function useLinks() {
 
   const result: Array<SiderCategory> = compact([
     {
-      label: "General",
+      label: "",
       items: [
-        { label: "Home", link: "/", icon: <HomeOutlined />, iconOn: <Home /> },
+        { label: "Overview", link: "/", icon: <HomeOutlined /> },
+        { label: "History", link: "/history", icon: <HistoryOutlined /> },
         {
-          label: "Longest sessions",
-          link: "/sessions",
-          icon: <SpeedOutlined />,
-          iconOn: <Speed />,
+          label: "On this day",
+          link: "/on-this-day",
+          icon: <EventRepeatOutlined />,
         },
+      ],
+    },
+    {
+      label: "Charts",
+      items: [
+        { label: "Songs", link: "/top/songs", icon: <MusicNoteOutlined /> },
+        { label: "Artists", link: "/top/artists", icon: <PersonOutlined /> },
+        { label: "Albums", link: "/top/albums", icon: <AlbumOutlined /> },
       ],
     },
     {
       label: "Insights",
       items: [
-        {
-          label: "Taste",
-          link: "/taste",
-          icon: <PaletteOutlined />,
-          iconOn: <Palette />,
-        },
-        {
-          label: "Habits",
-          link: "/habits",
-          icon: <CalendarMonthOutlined />,
-          iconOn: <CalendarMonth />,
-        },
+        { label: "Habits", link: "/habits", icon: <ScheduleOutlined /> },
+        { label: "Taste", link: "/taste", icon: <EqualizerOutlined /> },
         {
           label: "Discoveries",
           link: "/discoveries",
           icon: <ExploreOutlined />,
-          iconOn: <Explore />,
         },
-        {
-          label: "Your story",
-          link: "/story",
-          icon: <AutoStoriesOutlined />,
-          iconOn: <AutoStories />,
-        },
-        {
-          label: "Recap",
-          link: "/recap",
-          icon: <SummarizeOutlined />,
-          iconOn: <Summarize />,
-        },
-      ],
-    },
-    {
-      label: "Tops",
-      items: [
-        {
-          label: "Top songs",
-          link: "/top/songs",
-          icon: <MusicNoteOutlined />,
-          iconOn: <MusicNote />,
-        },
-        {
-          label: "Top artists",
-          link: "/top/artists",
-          icon: <PersonOutlined />,
-          iconOn: <Person />,
-        },
-        {
-          label: "Top albums",
-          link: "/top/albums",
-          icon: <AlbumOutlined />,
-          iconOn: <Album />,
-        },
+        { label: "Your story", link: "/story", icon: <AutoStoriesOutlined /> },
+        { label: "Recap", link: "/recap", icon: <SummarizeOutlined /> },
       ],
     },
     affinityEnabled
       ? {
-          label: "With people",
+          label: "Together",
           items: [
             {
               label: "Affinity",
               link: "/collaborative/affinity",
-              icon: <MusicNoteOutlined />,
-              iconOn: <MusicNote />,
+              icon: <PeopleOutlined />,
               restrict: "guest",
             },
           ],
         }
       : undefined,
-    {
-      label: "Settings",
-      items: [
-        {
-          label: "Share this page",
-          link: "/share",
-          icon: <ShareOutlined />,
-          iconOn: <Share />,
-        },
-        {
-          label: "Settings",
-          link: "/settings/account",
-          icon: <SettingsOutlined />,
-          iconOn: <Settings />,
-        },
-        {
-          label: "Logout",
-          link: "/logout",
-          icon: <ExitToApp />,
-          iconOn: <ExitToApp />,
-        },
-      ],
-    },
   ]);
+
   return result;
 }

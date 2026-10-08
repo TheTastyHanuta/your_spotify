@@ -1,6 +1,7 @@
+import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "date-fns";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
-import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "date-fns";
+
 import { getAppropriateTimesplitFromRange } from "./date";
 import { selectAccounts } from "./redux/modules/admin/selector";
 import { selectUser } from "./redux/modules/user/selector";
@@ -217,15 +218,6 @@ export function queryToIntervalDetail(
     // Do nothing
   }
   return toReturn ?? presetIntervals[0];
-}
-
-export function useQueryToRawIntervalDetail(prefix: string) {
-  const [query] = useSearchParams();
-  const user = useSelector(selectUser);
-  return getRawIntervalDetail(
-    queryToIntervalDetail(query, prefix),
-    user ?? undefined,
-  );
 }
 
 export function useOldestListenedAtFromUsers(

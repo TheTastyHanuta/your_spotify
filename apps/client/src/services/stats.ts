@@ -1,6 +1,6 @@
 import { subDays, subMonths, subWeeks, subYears } from "date-fns";
 
-import { TitleFormatter, ValueFormatter } from "../components/Tooltip/Tooltip";
+import { TitleFormatter } from "../components/Tooltip/Tooltip";
 import { DateFormatter } from "./date";
 import { DateId, Precision } from "./types";
 
@@ -59,8 +59,6 @@ export const getDateFromIndex = (
   // const date = new Date(start.getTime() + ratio * (end.getTime() - start.getTime()));
   // return date;
 };
-
-export const pad = (value: number) => value.toString().padStart(2, "0");
 
 export const getPrecisionFromDateId = (dateId: DateId) => {
   if ("hour" in dateId) {
@@ -264,31 +262,17 @@ export const useFormatXAxis = (data: DefaultGraphItem[]) => (value: number) => {
   return formatDateWithPrecisionToSimpleString(dataValue.dateWithPrecision);
 };
 
-export function simpleTooltipValue(
-  prefix = "",
-  suffix = "",
-): ValueFormatter<any> {
-  return (_, value) =>
-    `${prefix.length > 0 ? `${prefix} ` : ""}${value} ${suffix}`;
-}
-
-export const formatYAxisDate = (value: number) => {
-  const year = Math.floor(value);
-  const month = Math.floor((value - year) * 12);
-  const d = new Date();
-  d.setMonth(month);
-  d.setFullYear(year);
-  return DateFormatter.toMonthStringYear(d);
-};
-
-export const formatYAxisDateTooltip: ValueFormatter<unknown[]> = (_, value) =>
-  formatYAxisDate(value);
-
 export const formatXAxisDateTooltip: TitleFormatter<
   { dateWithPrecision: DateWithPrecision }[]
 > = (_, payload) => formatDateWithPrecisionToString(payload.dateWithPrecision);
 
 export const msToMinutes = (ms: number) => Math.floor(ms / 1000 / 60);
+
+// "12h 5m"
+export function formatHours(ms: number) {
+  const minutes = Math.round(ms / 60000);
+  return `${Math.floor(minutes / 60).toLocaleString()}h ${minutes % 60}m`;
+}
 
 export const msToDuration = (ms: number) => {
   if (ms === 0) {

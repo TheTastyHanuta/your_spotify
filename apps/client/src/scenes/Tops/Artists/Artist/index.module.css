@@ -1,9 +1,9 @@
 .row {
-  height: 48px;  
+  min-height: 52px;
 }
 
 .header {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .cover {

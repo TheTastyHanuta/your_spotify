@@ -1,135 +1,144 @@
-import { CircularProgress, Grid } from "@mui/material";
-import { TimelapseOutlined } from "@mui/icons-material";
+import clsx from "clsx";
 import { Fragment } from "react";
-import Header from "../../components/Header";
-import { AlbumStatsResponse } from "../../services/apis/api";
+import { Link } from "react-router-dom";
+
 import InlineArtist from "../../components/InlineArtist";
-import IdealImage from "../../components/IdealImage";
-import ItemTimeline from "../../components/ItemTimeline";
-import FirstAndLast from "../ArtistStats/FirstAndLast";
 import InlineTrack from "../../components/InlineTrack";
-import TitleCard from "../../components/TitleCard";
+import ItemRow from "../../components/ItemRow";
+import ItemTimeline, {
+  useTimelineSummary,
+} from "../../components/ItemTimeline";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
+import StatStrip from "../../components/StatStrip";
 import Text from "../../components/Text";
-import ImageTwoLines from "../../components/ImageTwoLines";
-import { msToDuration } from "../../services/stats";
-import s from "./index.module.css";
+import { AlbumStatsResponse, api } from "../../services/apis/api";
+import { DateFormatter } from "../../services/date";
+import { useAPI } from "../../services/hooks/hooks";
+import {
+  buildFromDateId,
+  formatHours,
+  msToDuration,
+} from "../../services/stats";
 import AlbumRank from "./AlbumRank";
+
+// Same layout as the artist page
+import s from "../../styles/detail.module.css";
 
 interface AlbumStatsProps {
   stats: AlbumStatsResponse;
 }
 
 export default function AlbumStats({ stats }: AlbumStatsProps) {
-  if (!stats) {
-    return <CircularProgress />;
-  }
+  const albumId = stats.album.id;
+  const rank = useAPI(api.getAlbumRank, albumId);
+  // Fetched here once: the strip sums its months, the chart draws them
+  const timeline = useAPI(api.getTimeline, "album", albumId);
+
+  const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
+  const plays = stats.tracks.reduce((sum, { count }) => sum + count, 0);
+  const first = stats.firstLast.first;
+  const last = stats.firstLast.last;
+  const rankText =
+    rank && rank.index >= 0 ? `#${rank.index + 1} of all time` : undefined;
 
   return (
     <div>
-      <Header
-        left={
-          <IdealImage
-            className={s.headerimage}
-            images={stats.album.images}
-            size={60}
-            alt="Album"
-          />
-        }
-        title={stats.album.name}
-        subtitle={stats.artists.map((artist, k) => (
-          <Fragment key={artist.id}>
-            <InlineArtist size="normal" artist={artist} />
-            {k < stats.artists.length - 1 && ", "}
-          </Fragment>
-        ))}
+      <PageHero
+        title=""
         hideInterval
+        crumb={<Link to="/top/albums">Albums</Link>}
+        images={stats.album.images}
+        name={stats.album.name}
+        nameText={stats.album.name}
+        meta={
+          <>
+            {rankText && `${rankText} · `}
+            {stats.artists.map((artist, index) => (
+              <Fragment key={artist.id}>
+                {index > 0 && ", "}
+                <Link to={`/artist/${artist.id}`}>{artist.name}</Link>
+              </Fragment>
+            ))}
+            {stats.album.release_date && (
+              <>
+                {" · "}
+                <span className="num">
+                  {stats.album.release_date.slice(0, 4)}
+                </span>
+              </>
+            )}
+          </>
+        }
       />
-      <div className={s.content}>
-        <div className={s.header}>
-          <AlbumRank albumId={stats.album.id} />
-        </div>
-        <Grid
-          container
-          sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
-          spacing={2}
-          style={{ marginTop: 0 }}>
-          <Grid
-            container
-            size={{ xs: 12, lg: 6 }}
-            sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
-            spacing={2}>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard title="Context" contentClassName={s.context}>
-                <div className={s.artists}>
-                  {stats.artists.map((artist) => (
-                    <ImageTwoLines
-                      key={artist.id}
-                      image={<IdealImage images={artist.images} size={48} />}
-                      first={<InlineArtist size="normal" artist={artist} />}
-                      second="Artist"
-                    />
-                  ))}
-                </div>
-                <ImageTwoLines
-                  image={<TimelapseOutlined color="primary" fontSize="large" />}
-                  first={`${msToDuration(
-                    stats.tracks.reduce(
-                      (acc, { track }) => track.duration_ms + acc,
-                      0,
-                    ),
-                  )} (${stats.tracks.length} tracks)`}
-                  second="Total duration"
-                />
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FirstAndLast
-                firstImages={stats.album.images}
-                lastImages={stats.album.images}
-                firstDate={new Date(stats.firstLast.first.played_at)}
-                lastDate={new Date(stats.firstLast.last.played_at)}
-                firstElement={
-                  <InlineTrack
-                    size="normal"
-                    track={stats.firstLast.first.track}
-                  />
-                }
-                lastElement={
-                  <InlineTrack
-                    size="normal"
-                    track={stats.firstLast.last.track}
-                  />
-                }
+      <StatStrip
+        stats={[
+          {
+            label: "Plays",
+            value: plays.toLocaleString(),
+            note: `${stats.tracks.length.toLocaleString()} ${stats.tracks.length === 1 ? "song" : "songs"} heard`,
+          },
+          {
+            label: "Time listened",
+            value: totalMs === undefined ? "—" : formatHours(totalMs),
+          },
+          {
+            label: "First play",
+            // Like Best month: month and year, then the day and the song
+            value: DateFormatter.toShortMonthYear(new Date(first.played_at)),
+            note: `${DateFormatter.toDayLongMonth(new Date(first.played_at))} · ${first.track.name}`,
+          },
+          {
+            label: "Last play",
+            value: DateFormatter.toShortMonthYear(new Date(last.played_at)),
+            note: `${DateFormatter.toDayLongMonth(new Date(last.played_at))} · ${last.track.name}`,
+          },
+          {
+            label: "Best month",
+            value: bestMonth
+              ? DateFormatter.toShortMonthYear(buildFromDateId(bestMonth._id))
+              : "—",
+            note: bestNote,
+          },
+        ]}
+      />
+      <ItemTimeline type="album" id={albumId} data={timeline} />
+      <div className={clsx("ruled-columns", s.columns)}>
+        <Section title="Most played songs">
+          {stats.tracks.map(({ track, count }, index) => (
+            <ItemRow
+              key={track.id}
+              rank={index + 1}
+              image={stats.album.images}
+              title={<InlineTrack track={track} size="normal" />}
+              subtitle={
+                <Text size="normal" greyed className="num">
+                  {msToDuration(track.duration_ms)}
+                </Text>
+              }
+              right={
+                <Text size="normal" greyed className="num">
+                  {count.toLocaleString()}
+                </Text>
+              }
+            />
+          ))}
+        </Section>
+        <div>
+          <Section title={stats.artists.length === 1 ? "Artist" : "Artists"}>
+            {stats.artists.map((artist) => (
+              <ItemRow
+                key={artist.id}
+                image={artist.images}
+                round
+                title={<InlineArtist artist={artist} size="normal" />}
               />
-            </Grid>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <TitleCard title="Most listened tracks">
-              {stats.tracks.map(({ track, count }, k) => (
-                <div key={track.id} className={s.ml}>
-                  <Text element="strong" size="big" className={s.mlrank}>
-                    #{k + 1}
-                  </Text>
-                  <ImageTwoLines
-                    image={
-                      <IdealImage
-                        className={s.cardimg}
-                        images={stats.album.images}
-                        size={48}
-                        alt="album cover"
-                      />
-                    }
-                    first={<InlineTrack size="normal" track={track} />}
-                    second={`${count} times`}
-                  />
-                </div>
-              ))}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <ItemTimeline type="album" id={stats.album.id} />
-          </Grid>
-        </Grid>
+            ))}
+          </Section>
+          <Section title="Around it in your top albums" className={s.stacked}>
+            <AlbumRank albumId={albumId} rank={rank} />
+          </Section>
+        </div>
       </div>
     </div>
   );

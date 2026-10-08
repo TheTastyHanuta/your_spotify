@@ -1,21 +1,29 @@
-import { CircularProgress, Grid } from "@mui/material";
+import clsx from "clsx";
 import { Fragment } from "react";
+import { Link } from "react-router-dom";
 
-import Header from "../../components/Header";
-import IdealImage from "../../components/IdealImage";
-import ImageTwoLines from "../../components/ImageTwoLines";
 import InlineAlbum from "../../components/InlineAlbum";
 import InlineArtist from "../../components/InlineArtist";
-import ItemTimeline from "../../components/ItemTimeline";
+import ItemRow from "../../components/ItemRow";
+import ItemTimeline, {
+  useTimelineSummary,
+} from "../../components/ItemTimeline";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
+import StatStrip from "../../components/StatStrip";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
-import { TrackStatsResponse } from "../../services/apis/api";
+import { api, TrackStatsResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { buildFromDateId } from "../../services/stats";
-import FirstAndLast from "./FirstAndLast";
-import TrackRank from "./TrackRank/TrackRank";
+import { useAPI } from "../../services/hooks/hooks";
+import {
+  buildFromDateId,
+  formatHours,
+  msToDuration,
+} from "../../services/stats";
+import TrackRank from "./TrackRank";
 
-import s from "./index.module.css";
+// Same layout as the artist page
+import s from "../../styles/detail.module.css";
 
 interface TrackStatsProps {
   trackId: string;
@@ -23,146 +31,129 @@ interface TrackStatsProps {
 }
 
 export default function TrackStats({ trackId, stats }: TrackStatsProps) {
-  if (!stats) {
-    return <CircularProgress />;
-  }
+  const rank = useAPI(api.getTrackRank, trackId);
+  // Fetched here once: the strip sums its months, the chart draws them
+  const timeline = useAPI(api.getTimeline, "track", trackId);
 
-  const [bestPeriod, secondBestPeriod] = stats.bestPeriod;
   const albumById = Object.fromEntries(
     stats.listenedOn.map((item) => [item.album.id, item.album]),
   );
+  const first = new Date(stats.firstLast.first.played_at);
+  const last = new Date(stats.firstLast.last.played_at);
+  const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
+  const rankText =
+    rank && rank.index >= 0 ? `#${rank.index + 1} of all time` : undefined;
 
   return (
     <div>
-      <Header
-        left={
-          <IdealImage
-            className={s.headerimage}
-            images={stats.album.images}
-            size={60}
-            alt="Album"
-          />
-        }
-        title={stats.track.name}
-        subtitle={stats.artists.map((artist, index) => (
-          <Fragment key={artist.id}>
-            <InlineArtist artist={artist} size="normal" />
-            {index < stats.artists.length - 1 && ", "}
-          </Fragment>
-        ))}
+      <PageHero
+        title=""
         hideInterval
+        crumb={<Link to="/top/songs">Songs</Link>}
+        images={stats.album.images}
+        name={stats.track.name}
+        nameText={stats.track.name}
+        meta={
+          <>
+            {rankText && `${rankText} · `}
+            {stats.artists.map((artist, index) => (
+              <Fragment key={artist.id}>
+                {index > 0 && ", "}
+                <Link to={`/artist/${artist.id}`}>{artist.name}</Link>
+              </Fragment>
+            ))}
+            {" · "}
+            <Link to={`/album/${stats.album.id}`}>{stats.album.name}</Link>
+            {" · "}
+            <span className="num">{msToDuration(stats.track.duration_ms)}</span>
+          </>
+        }
       />
-      <div className={s.content}>
-        <div className={s.header}>
-          <TrackRank trackId={trackId} />
-        </div>
-        <Grid
-          container
-          spacing={2}
-          sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
-          style={{ marginTop: 0 }}>
-          <Grid
-            container
-            size={{ xs: 12, lg: 6 }}
-            sx={{ justifyContent: "flex-start", alignItems: "flex-start" }}
-            spacing={2}>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard title="Artists">
-                {stats.artists.map((artist, index) => (
-                  <ImageTwoLines
-                    key={artist.id}
-                    className={s.recentitem}
-                    image={<IdealImage images={artist.images} size={48} />}
-                    first={<InlineArtist artist={artist} size="normal" />}
-                    second={index === 0 ? "Main artist" : "Featured artist"}
-                  />
-                ))}
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard title="Listened on">
-                {stats.listenedOn.map(({ album, count }) => (
-                  <ImageTwoLines
-                    key={album.id}
-                    className={s.recentitem}
-                    image={<IdealImage images={album.images} size={48} />}
-                    first={<InlineAlbum album={album} size="normal" />}
-                    second={`${count} ${count === 1 ? "time" : "times"}`}
-                  />
-                ))}
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard title="Times listened">
-                <Text element="strong" size="big">
-                  {stats.total.count}
-                </Text>
-              </TitleCard>
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <FirstAndLast
-                firstDate={new Date(stats.firstLast.first.played_at)}
-                lastDate={new Date(stats.firstLast.last.played_at)}
+      <StatStrip
+        stats={[
+          { label: "Plays", value: stats.total.count.toLocaleString() },
+          {
+            label: "Time listened",
+            value: totalMs === undefined ? "—" : formatHours(totalMs),
+          },
+          {
+            label: "First play",
+            // Like Best month: month and year, then the day
+            value: DateFormatter.toShortMonthYear(first),
+            note: DateFormatter.toWeekdayDayMonthYear(first),
+          },
+          {
+            label: "Last play",
+            value: DateFormatter.toShortMonthYear(last),
+            note: DateFormatter.toWeekdayDayMonthYear(last),
+          },
+          {
+            label: "Best month",
+            value: bestMonth
+              ? DateFormatter.toShortMonthYear(buildFromDateId(bestMonth._id))
+              : "—",
+            note: bestNote,
+          },
+        ]}
+      />
+      <ItemTimeline type="track" id={trackId} data={timeline} />
+      <div className={clsx("ruled-columns", s.columns)}>
+        <Section title="Recent plays">
+          {stats.recentHistory.map((info) => {
+            const album = albumById[info.albumId] ?? stats.album;
+            return (
+              <ItemRow
+                key={info._id}
+                image={album.images}
+                title={
+                  <Text size="normal">
+                    {DateFormatter.toDateTime(new Date(info.played_at))}
+                  </Text>
+                }
+                subtitle={<InlineAlbum album={album} size="normal" />}
               />
-            </Grid>
-            <Grid size={{ xs: 12 }}>
-              <TitleCard
-                title={`Top two months you listened to ${stats.track.name}`}>
-                {bestPeriod && (
-                  <div className={s.bestperiod}>
-                    <Text element="strong" size="normal">
-                      {DateFormatter.toMonthStringYear(
-                        buildFromDateId(bestPeriod._id),
-                      )}
+            );
+          })}
+        </Section>
+        <div>
+          <Section title={stats.artists.length === 1 ? "Artist" : "Artists"}>
+            {stats.artists.map((artist, index) => (
+              <ItemRow
+                key={artist.id}
+                image={artist.images}
+                round
+                title={<InlineArtist artist={artist} size="normal" />}
+                subtitle={
+                  stats.artists.length > 1
+                    ? index === 0
+                      ? "Main artist"
+                      : "Featured"
+                    : undefined
+                }
+              />
+            ))}
+          </Section>
+          {stats.listenedOn.length > 1 && (
+            <Section title="Played from" className={s.stacked}>
+              {stats.listenedOn.map(({ album, count }) => (
+                <ItemRow
+                  key={album.id}
+                  image={album.images}
+                  title={<InlineAlbum album={album} size="normal" />}
+                  subtitle={album.release_date?.slice(0, 4)}
+                  right={
+                    <Text size="normal" greyed className="num">
+                      {count.toLocaleString()}
                     </Text>
-                    <Text size="normal">
-                      {bestPeriod.count} times (
-                      {Math.floor((bestPeriod.count / bestPeriod.total) * 100)}%
-                      of total time)
-                    </Text>
-                  </div>
-                )}
-                {secondBestPeriod && (
-                  <div className={s.bestperiod}>
-                    <Text element="strong" size="normal">
-                      {DateFormatter.toMonthStringYear(
-                        buildFromDateId(secondBestPeriod._id),
-                      )}
-                    </Text>
-                    <Text size="normal">
-                      {secondBestPeriod.count} times (
-                      {Math.floor(
-                        (secondBestPeriod.count / secondBestPeriod.total) * 100,
-                      )}
-                      % of total time)
-                    </Text>
-                  </div>
-                )}
-              </TitleCard>
-            </Grid>
-          </Grid>
-          <Grid size={{ lg: 6, xs: 12 }}>
-            <TitleCard title="Recently played on">
-              {stats.recentHistory.map((info) => {
-                const album = albumById[info.albumId] ?? stats.album;
-                return (
-                  <ImageTwoLines
-                    className={s.recentitem}
-                    key={info._id}
-                    image={<IdealImage images={album.images} size={48} />}
-                    first={<InlineAlbum album={album} size="normal" />}
-                    second={DateFormatter.toMinuteHourDayMonthYear(
-                      new Date(info.played_at),
-                    )}
-                  />
-                );
-              })}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <ItemTimeline type="track" id={trackId} />
-          </Grid>
-        </Grid>
+                  }
+                />
+              ))}
+            </Section>
+          )}
+          <Section title="Around it in your top songs" className={s.stacked}>
+            <TrackRank trackId={trackId} rank={rank} />
+          </Section>
+        </div>
       </div>
     </div>
   );

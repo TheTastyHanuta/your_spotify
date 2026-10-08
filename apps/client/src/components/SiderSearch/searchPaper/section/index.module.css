@@ -7,51 +7,57 @@
 .results {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.sticky {
+.heading {
   display: block;
-  padding-bottom: 8px;
-  background-color: white;
+  padding: 12px 8px 6px;
 }
 
 .result {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 8px;
-  font-size: 18px;
-  border-radius: 6px;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
   cursor: pointer;
   overflow: hidden;
   outline: none;
 }
 
 .result:hover {
-  background-color: var(--hover);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .result:focus {
-  background-color: var(--selected);
+  background-color: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .cover {
-  border-radius: 6px;
+  flex: none;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+}
+
+.round {
+  border-radius: 50%;
 }
 
 .texts {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-.name {
+.name,
+.subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .subtitle {
-  color: var(--text-grey)
+  color: var(--muted);
 }

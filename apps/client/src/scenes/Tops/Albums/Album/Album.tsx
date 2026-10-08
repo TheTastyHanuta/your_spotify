@@ -1,22 +1,26 @@
 import { Fragment } from "react";
-import s from "./index.module.css";
-import { msToDuration } from "../../../../services/stats";
-import { Artist, Album as AlbumType } from "../../../../services/types";
+
+import { ColumnDescription, GridRowWrapper } from "../../../../components/Grid";
+import IdealImage from "../../../../components/IdealImage";
+import InlineAlbum from "../../../../components/InlineAlbum";
 import InlineArtist from "../../../../components/InlineArtist";
 import Text from "../../../../components/Text";
 import { useMobile } from "../../../../services/hooks/hooks";
-import { ColumnDescription, GridRowWrapper } from "../../../../components/Grid";
-import IdealImage from "../../../../components/IdealImage";
+import { msToDuration } from "../../../../services/stats";
+import { Artist, Album as AlbumType } from "../../../../services/types";
+import ShareCount from "../../ShareCount";
 import { useAlbumGrid } from "./AlbumGrid";
-import InlineAlbum from "../../../../components/InlineAlbum";
+
+import s from "./index.module.css";
 
 interface AlbumProps {
   artists: Artist[];
   album: AlbumType;
   count: number;
   totalCount: number;
+  // The number one\'s count, for the share bar
+  maxCount: number;
   duration: number;
-  totalDuration: number;
   rank: number;
 }
 
@@ -24,20 +28,20 @@ export default function Album({
   album,
   artists,
   duration,
-  totalDuration,
   count,
   totalCount,
+  maxCount,
   rank,
 }: AlbumProps) {
-  const [isMobile, _, isDesktop] = useMobile();
+  const [isMobile] = useMobile();
   const albumGrid = useAlbumGrid();
 
   const columns: ColumnDescription[] = [
     {
       ...albumGrid.rank,
       node: (
-        <Text size="normal" element="strong" className={s.mlrank}>
-          #{rank}
+        <Text size="normal" greyed className="num">
+          {rank}
         </Text>
       ),
     },
@@ -48,9 +52,9 @@ export default function Album({
           className={s.cover}
           images={album.images}
           alt="Album cover"
-          size={48}
-          width={48}
-          height={48}
+          size={40}
+          width={40}
+          height={40}
         />
       ),
     },
@@ -74,33 +78,13 @@ export default function Album({
     },
     {
       ...albumGrid.count,
-      node: (
-        <Text size="normal" className={isMobile ? "right" : undefined}>
-          {count}
-          {!isMobile && (
-            <>
-              {" "}
-              <Text size="normal">
-                ({Math.floor((count / totalCount) * 10000) / 100}%)
-              </Text>
-            </>
-          )}
-        </Text>
-      ),
+      node: <ShareCount count={count} total={totalCount} max={maxCount} />,
     },
     {
       ...albumGrid.total,
       node: !isMobile && (
-        <Text size="normal" className="center">
+        <Text element="div" size="normal" className="num">
           {msToDuration(duration)}
-          {isDesktop && (
-            <>
-              {" "}
-              <Text size="normal">
-                ({Math.floor((duration / totalDuration) * 10000) / 100}%)
-              </Text>
-            </>
-          )}
         </Text>
       ),
     },

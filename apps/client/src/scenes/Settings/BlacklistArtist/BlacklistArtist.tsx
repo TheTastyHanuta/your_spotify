@@ -1,17 +1,19 @@
+import UnblacklistIcon from "@mui/icons-material/CloseRounded";
 import { CircularProgress, IconButton } from "@mui/material";
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import UnblacklistIcon from "@mui/icons-material/CloseRounded";
+
+import BlacklistArtistDialog from "../../../components/BlacklistArtistDialog";
+import IdealImage from "../../../components/IdealImage";
+import InlineArtist from "../../../components/InlineArtist";
+import Section from "../../../components/Section";
 import ResourceSearch from "../../../components/SiderSearch";
 import Text from "../../../components/Text";
 import { useLoadArtists } from "../../../services/hooks/artist";
 import { selectBlacklistedArtists } from "../../../services/redux/modules/user/selector";
 import { compact } from "../../../services/tools";
 import { Artist } from "../../../services/types";
-import BlacklistArtistDialog from "../../../components/BlacklistArtistDialog";
-import InlineArtist from "../../../components/InlineArtist";
-import TitleCard from "../../../components/TitleCard";
-import IdealImage from "../../../components/IdealImage";
+
 import s from "./index.module.css";
 
 export default function BlacklistArtist() {
@@ -37,7 +39,7 @@ export default function BlacklistArtist() {
   const askedArtist = askedBlacklist ?? askedUnblacklist;
 
   return (
-    <TitleCard title="Blacklisted artists">
+    <Section title="Blacklisted artists">
       <Text element="span" className={s.marginbottom} size="normal">
         Blacklist artists so they never appear in the statistics. Blacklisting
         an artist will remove already existing records and never record them
@@ -82,6 +84,6 @@ export default function BlacklistArtist() {
           }}
         />
       </div>
-    </TitleCard>
+    </Section>
   );
 }

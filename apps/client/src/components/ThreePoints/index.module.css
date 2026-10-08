@@ -2,13 +2,12 @@
   padding: 8px;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--hardshadow);
+  border: 1px solid var(--line);
   border-radius: 6px;
   z-index: 1;
-  background-color: var(--background);
 }
 
 .destructive {
-  color: rgb(242, 93, 93) !important;
+  color: var(--down) !important;
   font-weight: normal;
 }

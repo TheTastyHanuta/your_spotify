@@ -3,7 +3,7 @@ body {
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--content-background);
+  background-color: var(--bg);
 }
 
 .recharts-responsive-container * {
@@ -11,13 +11,11 @@ body {
 }
 
 code {
-  font-family:
-    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
-  font-size: unset;
+  font-family: var(--font-num);
   font-size: 0.9em;
-  padding: 2px;
-  background-color: var(--code-background);
-  border-radius: 4px;
+  padding: 1px 4px;
+  background-color: color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: var(--radius-s);
 }
 
 h1,
@@ -34,48 +32,26 @@ h6 {
 }
 
 :root {
-  --font:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  --track-options: 34px;
+  --font: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --font-num: "Geist Mono", ui-monospace, monospace;
+  --radius-s: 4px;
   --radius: 6px;
-  --page-padding: 0 16px 16px 16px;
-  --accent: #fb717b;
-  --header-image-size: 60px;
-  --secondary-dark: rgba(255, 255, 255, 0.15);
-  --secondary-dark-hover: rgba(255, 255, 255, 0.25);
 }
 
 .dark-vars {
-  --content-border: 1px solid rgb(51, 51, 52);
-  --hardshadow: 3px 3px 40px -5px rgba(170, 170, 170, 0.437);
+  --bg: #0b0b0d;
+  --rail: #070708;
+  --surface: #141317;
+  --line: #24232a;
+  --text: #f3f1f5;
+  --muted: #a8a3b0;
+  --up: #5fd38d;
+  --down: #f08080;
+  --notice-bg: #2a2412;
+  --notice-text: #f1dc9c;
 
-  --primary-tuple: 255, 255, 255;
-  --primary: rgb(var(--primary-tuple));
-
-  --text-grey: rgb(160, 160, 160);
-  --border-color: rgb(90, 90, 90);
-
-  --hover: rgb(43, 43, 43);
-  --selected: rgb(60, 60, 60);
-
-  --background: rgb(0, 0, 0);
-  --content-background: rgb(0, 0, 0);
-
-  --text-on-light: rgb(255, 255, 255);
-  --text-on-dark: rgb(255, 255, 255);
-  --code-background: rgb(133, 133, 133);
-
-  --divider: rgb(65, 65, 65);
-
-  --input-background-color: var(--secondary-dark);
-  --input-background-color-hover: var(--secondary-dark-hover);
-
-  --shortcut-background: rgb(96, 96, 96);
-
-  /* Chart colours, checked for colour blindness against the card background.
-     Series tell artists apart, the scale shows amounts (1 least, 5 most) in
-     shades of Spotify's green. */
+  /* Multi-series chart colours, checked for colour blindness against the
+     page background. Amounts use the page's tint instead. */
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -84,40 +60,20 @@ h6 {
   --series-6: #008300;
   --series-7: #9085e9;
   --series-8: #e66767;
-  --scale-1: #2a5934;
-  --scale-2: #377d47;
-  --scale-3: #3aa456;
-  --scale-4: #60c877;
-  --scale-5: #a3e4ad;
   --diverge-mid: #383835;
 }
 
 .light-vars {
-  --shadow: 5px 5px 8px -2px rgba(0, 0, 0, 0.05);
-  --hardshadow: 5px 6px 40px -5px rgba(0, 0, 0, 0.2);
-
-  --primary-tuple: 0, 0, 0;
-  --primary: rgb(var(--primary-tuple));
-
-  --text-grey: rgb(90, 90, 90);
-  --border-color: rgb(227, 229, 233);
-
-  --hover: #eaeaea;
-  --selected: #d6d6d6;
-
-  --background: white;
-  --content-background: #f2f3f6;
-
-  --text-on-light: rgb(0, 0, 0);
-  --text-on-dark: rgb(255, 255, 255);
-  --code-background: rgb(228, 228, 228);
-
-  --divider: rgb(232, 232, 232);
-
-  --input-background-color: hsl(0, 0%, 85%);
-  --input-background-color-hover: hsl(0, 0%, 75%);
-
-  --shortcut-background: rgb(96, 96, 96);
+  --bg: #faf9f7;
+  --rail: #f3f1ee;
+  --surface: #ffffff;
+  --line: #e7e3de;
+  --text: #1b1a1e;
+  --muted: #5f5a66;
+  --up: #18733f;
+  --down: #c23b3b;
+  --notice-bg: #fbf3dc;
+  --notice-text: #5a4510;
 
   --series-1: #2a78d6;
   --series-2: #eb6834;
@@ -127,11 +83,6 @@ h6 {
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
-  --scale-1: #4cc76c;
-  --scale-2: #26aa50;
-  --scale-3: #0b8c3c;
-  --scale-4: #076e2e;
-  --scale-5: #045120;
   --diverge-mid: #f0efec;
 }
 
@@ -139,28 +90,6 @@ h6 {
   * {
     user-select: none;
   }
-}
-
-@media screen and (max-width: 960px) {
-  :root {
-    --page-padding: 0px 8px 8px 8px;
-    --header-image-size: 40px;
-  }
-}
-
-@keyframes fadein {
-  0% {
-    opacity: 0%;
-  }
-  100% {
-    opacity: 100%;
-  }
-}
-
-.fade {
-  animation-name: fadein;
-  animation-duration: 1000ms;
-  animation-iteration-count: 1;
 }
 
 .no-button {
@@ -179,4 +108,113 @@ h6 {
 
 .center {
   text-align: center;
+}
+
+/* Redesign: cover tint, set per page by useApplyTint */
+@property --tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.72 0 0);
+}
+@property --tint-deep {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.32 0 0);
+}
+@property --tint-mid {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.2 0 0);
+}
+@property --tint-bar {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: oklch(0.3 0 0);
+}
+
+:root {
+  transition:
+    --tint 700ms ease,
+    --tint-deep 700ms ease,
+    --tint-mid 700ms ease,
+    --tint-bar 700ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    transition: none;
+  }
+}
+
+body {
+  color: var(--text);
+  font-size: 14px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--tint) 45%, transparent);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--line) transparent;
+}
+
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two columns sharing a 1px rule, one column under 1100px. A page sets
+   --columns for other ratios and adds its own outer rules. */
+.ruled-columns {
+  display: grid;
+  grid-template-columns: var(--columns, minmax(0, 1fr) minmax(0, 1fr));
+}
+
+.ruled-columns > :nth-child(even) {
+  border-left: 1px solid var(--line);
+}
+
+@media screen and (max-width: 1100px) {
+  .ruled-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ruled-columns > :nth-child(even) {
+    border-left: none;
+  }
+}
+
+.label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+/* Charts */
+.recharts-cartesian-axis-tick-value {
+  fill: var(--muted);
+  font-family: var(--font-num);
+  font-size: 12px;
+}
+
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line {
+  stroke: var(--line);
+}
+
+/* Native scrollbars and form controls follow the theme */
+:root:has(body.dark-vars) {
+  color-scheme: dark;
+}
+
+:root:has(body.light-vars) {
+  color-scheme: light;
 }

@@ -1,3 +1,17 @@
+.button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  cursor: help;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
 .icon {
-  color: var(--text-grey);
+  color: var(--muted);
 }

@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import { Artist, SpotifyImage } from "../../services/types";
 import IdealImage from "../IdealImage";
 import InlineArtist from "../InlineArtist";
+import PlayButton from "../PlayButton";
 import Text from "../Text";
 
 import s from "./index.module.css";
@@ -48,6 +49,8 @@ export interface ItemRowProps {
   title: ReactNode;
   subtitle?: ReactNode;
   right?: ReactNode;
+  // A song's id: the cover plays it on Spotify
+  playId?: string;
 }
 
 export default function ItemRow({
@@ -58,20 +61,30 @@ export default function ItemRow({
   title,
   subtitle,
   right,
+  playId,
 }: ItemRowProps) {
   const size = big ? 64 : 40;
   return (
-    <div className={clsx(s.row, { [s.noRank]: rank === undefined })}>
+    <div
+      className={clsx(s.row, {
+        [s.noRank]: rank === undefined,
+        // Shows the play button on hover, like the chart pages
+        "play-button-holder": playId && !big,
+      })}>
       {rank !== undefined && (
         <Text size="normal" greyed className={s.rank}>
           {rank}
         </Text>
       )}
-      <IdealImage
-        images={image}
-        size={size}
-        className={clsx(s.image, { [s.round]: round })}
-      />
+      {playId && !big ? (
+        <PlayButton id={playId} covers={image} />
+      ) : (
+        <IdealImage
+          images={image}
+          size={size}
+          className={clsx(s.image, { [s.round]: round })}
+        />
+      )}
       <div className={s.rowText}>
         {title}
         {typeof subtitle === "string" ? (

@@ -1,23 +1,8 @@
-.alert {
-  color: orange;
-  font-weight: bold;
-  margin: 16px 0px;
-  display: block;
-}
-
-.noalert {
-  color: green;
-  font-weight: bold;
-  margin: 16px 0px;
-  display: block;
-}
-
 .progress {
   display: block;
   margin-bottom: 8px;
 }
 
 .selectimport {
-  width: 200px;
-  margin-bottom: 16px !important;
+  margin-bottom: 16px;
 }

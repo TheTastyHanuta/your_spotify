@@ -1,4 +1,5 @@
 import { createReducer } from "@reduxjs/toolkit";
+
 import { GlobalPreferences } from "../../../types";
 import {
   changeRegistrations,

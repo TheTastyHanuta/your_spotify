@@ -1,11 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import userReducer from "./modules/user/reducer";
-import settingsReducer from "./modules/settings/reducer";
-import messageReducer from "./modules/message/reducer";
 import adminReducer from "./modules/admin/reducer";
 import importReducer from "./modules/import/reducer";
+import messageReducer from "./modules/message/reducer";
 import playlistReducer from "./modules/playlist/reducer";
+import settingsReducer from "./modules/settings/reducer";
+import userReducer from "./modules/user/reducer";
 
 const store = configureStore({
   reducer: {

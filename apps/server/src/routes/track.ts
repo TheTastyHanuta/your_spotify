@@ -7,7 +7,6 @@ import {
   getTrackListenedCount,
   getTrackFirstAndLastListened,
   getTrackListenedAlbums,
-  bestPeriodOfTrack,
   getTrackRecentHistory,
   getRankOf,
   ItemType,
@@ -47,18 +46,10 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     getArtists(track.artists),
     getTrackFirstAndLastListened(user, track.id),
     getTrackListenedAlbums(user, track.id),
-    bestPeriodOfTrack(user, track.id),
     getTrackRecentHistory(user, track.id),
   ];
-  const [
-    [album],
-    count,
-    artists,
-    firstLast,
-    listenedOn,
-    bestPeriod,
-    recentHistory,
-  ] = await Promise.all(promises);
+  const [[album], count, artists, firstLast, listenedOn, recentHistory] =
+    await Promise.all(promises);
   const orderedArtists = track.artists
     .map((artistId) => artists.find((artist: Artist) => artist.id === artistId))
     .filter((artist): artist is Artist => Boolean(artist));
@@ -73,7 +64,6 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
       artists: orderedArtists,
       album,
       listenedOn,
-      bestPeriod,
       firstLast,
       recentHistory,
       total: { count },

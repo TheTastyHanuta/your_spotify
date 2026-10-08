@@ -10,6 +10,7 @@ import {
 import { Box } from "@mui/system";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+
 import {
   clearPlaylistContext,
   setPlaylistContext,
@@ -29,6 +30,7 @@ import LoadingButton from "../LoadingButton";
 import TabPanel from "../TabPanel";
 import Text from "../Text";
 import CountChooser from "./CountChooser";
+
 import s from "./index.module.css";
 
 export const DEFAULT_PLAYLIST_NB = 50;
@@ -136,8 +138,8 @@ export default function PlaylistDialog() {
       {(context?.type === "top" ||
         context?.type === "affinity" ||
         context?.type === "top-artist") && (
-          <CountChooser value={context.nb} setValue={changeNumber} />
-        )}
+        <CountChooser value={context.nb} setValue={changeNumber} />
+      )}
       <div className={s.button}>
         <LoadingButton
           loading={loading}

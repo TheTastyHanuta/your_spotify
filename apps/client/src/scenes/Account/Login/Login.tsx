@@ -1,14 +1,15 @@
+import { Button, Checkbox, FormControlLabel } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { Checkbox } from "@mui/material";
-import clsx from "clsx";
+
 import Text from "../../../components/Text";
-import { selectUser } from "../../../services/redux/modules/user/selector";
-import { getSpotifyLogUrl } from "../../../services/tools";
-import s from "../index.module.css";
-import { LocalStorage, REMEMBER_ME_KEY } from "../../../services/storage";
-import { useNavigate } from "../../../services/hooks/useNavigate";
 import { DateFormatter } from "../../../services/date";
+import { useNavigate } from "../../../services/hooks/useNavigate";
+import { selectUser } from "../../../services/redux/modules/user/selector";
+import { LocalStorage, REMEMBER_ME_KEY } from "../../../services/storage";
+import { getSpotifyLogUrl } from "../../../services/tools";
+
+import s from "../../../styles/centered.module.css";
 
 // Set by the server when the Spotify login failed
 function getLoginError() {
@@ -55,38 +56,35 @@ export default function Login() {
   };
 
   return (
-    <div className={s.root}>
-      <Text size="pagetitle" element="h1" className={s.title}>
-        Login
-      </Text>
-      <Text size="big" className={s.welcome}>
-        To access your personal dashboard, please login with your account
+    <main className={s.root}>
+      <h1 className={s.wordmark}>Your Spotify</h1>
+      <Text element="p" size="normal" className={s.welcome}>
+        Your complete listening history, on your own server. Log in with the
+        Spotify account it records.
       </Text>
       {loginError && (
-        <Text size="normal" className={s.error}>
+        <Text element="p" size="normal" className={s.error} role="alert">
           {loginError}
         </Text>
       )}
-      <div>
-        <a className={s.link} href={getSpotifyLogUrl()}>
-          Login
-        </a>
-      </div>
-      <div>
-        <button
-          type="button"
-          className={clsx("no-button", s.rememberMe)}
-          onClick={handleRememberMeClick}>
+      <Button
+        href={getSpotifyLogUrl()}
+        variant="contained"
+        disableElevation
+        className={s.login}>
+        Log in with Spotify
+      </Button>
+      <FormControlLabel
+        className={s.rememberMe}
+        control={
           <Checkbox
             checked={rememberMe}
-            disableRipple
-            disableTouchRipple
-            disableFocusRipple
-            classes={{ root: s.check }}
+            onChange={handleRememberMeClick}
+            size="small"
           />
-          <Text size="normal">Remember me</Text>
-        </button>
-      </div>
-    </div>
+        }
+        label="Remember me"
+      />
+    </main>
   );
 }

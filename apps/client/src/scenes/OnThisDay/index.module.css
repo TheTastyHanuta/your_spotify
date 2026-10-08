@@ -1,0 +1,96 @@
+.years {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 980px;
+}
+
+.year {
+  display: grid;
+  grid-template-columns: 180px 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 0;
+}
+
+.year + .year {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ago {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.date {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.date:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cover {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+
+.image {
+  display: block;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+}
+
+.track {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.counts {
+  text-align: right;
+}
+
+@media screen and (max-width: 900px) {
+  .year {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 4px 14px;
+  }
+
+  .when {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .image {
+    width: 56px;
+    height: 56px;
+  }
+
+  .counts {
+    grid-column: 2;
+    text-align: left;
+  }
+}

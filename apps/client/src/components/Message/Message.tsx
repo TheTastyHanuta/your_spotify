@@ -1,11 +1,18 @@
-import { IconButton, Snackbar, SnackbarCloseReason } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import {
+  IconButton,
+  Paper,
+  Snackbar,
+  SnackbarCloseReason,
+} from "@mui/material";
 import clsx from "clsx";
 import React, { Ref, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+
 import { AlertMessage } from "../../services/redux/modules/message/reducer";
 import { selectMessage } from "../../services/redux/modules/message/selector";
 import Text from "../Text";
+
 import s from "./index.module.css";
 
 interface AlertProps {
@@ -17,14 +24,17 @@ interface AlertProps {
 
 function Alert({ message, level, onClose, ref }: AlertProps) {
   return (
-    <div ref={ref} className={clsx({ [s.alert]: true, [s[level]]: true })}>
-      <Text onDark size="normal">
-        {message}
-      </Text>
-      <IconButton size="small" onClick={onClose}>
+    // An overlay like the menus; errors in the notice amber
+    <Paper
+      ref={ref}
+      elevation={6}
+      role={level === "error" ? "alert" : "status"}
+      className={clsx(s.alert, { [s.error]: level === "error" })}>
+      <Text size="normal">{message}</Text>
+      <IconButton size="small" onClick={onClose} aria-label="Close">
         <Close className={s.icon} fontSize="small" />
       </IconButton>
-    </div>
+    </Paper>
   );
 }
 

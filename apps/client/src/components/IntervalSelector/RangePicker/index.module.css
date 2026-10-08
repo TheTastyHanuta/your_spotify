@@ -10,7 +10,7 @@
   overflow: auto;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--divider);
+  border-right: 1px solid var(--line);
   margin-right: 8px;
   margin-bottom: 8px;
 }
@@ -36,7 +36,7 @@
 }
 
 .outside {
-  color: grey;
+  color: var(--muted);
 }
 
 .day {
@@ -49,27 +49,27 @@
 }
 
 .lonelyHovered {
-  color: var(--background) !important;
-  background-color: var(--primary) !important;
-  border-radius: 40px !important;
+  color: var(--bg) !important;
+  background-color: var(--text) !important;
+  border-radius: var(--radius) !important;
 }
 
 .hovering {
-  color: var(--background) !important;
-  background-color: rgba(var(--primary-tuple), 0.4) !important;
+  color: var(--bg) !important;
+  background-color: color-mix(in srgb, var(--text) 40%, transparent) !important;
 }
 
 .between {
-  color: var(--background) !important;
-  background-color: var(--primary) !important;
+  color: var(--bg) !important;
+  background-color: var(--text) !important;
 }
 
 .start {
-  border-top-left-radius: 40px !important;
-  border-bottom-left-radius: 40px !important;
+  border-top-left-radius: var(--radius) !important;
+  border-bottom-left-radius: var(--radius) !important;
 }
 
 .end {
-  border-top-right-radius: 40px !important;
-  border-bottom-right-radius: 40px !important;
+  border-top-right-radius: var(--radius) !important;
+  border-bottom-right-radius: var(--radius) !important;
 }

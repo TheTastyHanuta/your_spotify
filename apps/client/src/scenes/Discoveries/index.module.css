@@ -1,13 +1,20 @@
-.content {
-  padding: var(--page-padding);
+/* Lists two by two in .ruled-columns, a rule under each */
+.work > * {
+  border-bottom: 1px solid var(--line);
 }
 
-.card {
-  height: 100%;
+/* Full-width sections, the rules between them come from here */
+.sections > * {
+  border-bottom: 1px solid var(--line);
 }
 
 .chart {
   height: 300px;
+}
+
+.summary {
+  margin-bottom: 12px;
+  max-width: 75ch;
 }
 
 .ellipsis {
@@ -41,16 +48,15 @@
 }
 
 .stuck {
-  background-color: var(--series-1);
+  background-color: var(--tint);
 }
 
 .faded {
-  background-color: var(--text-grey);
-  opacity: 0.5;
+  background-color: color-mix(in srgb, var(--text) 20%, transparent);
 }
 
 .early {
-  background-color: color-mix(in srgb, var(--series-1) 30%, transparent);
+  background-color: color-mix(in oklab, var(--tint) 35%, var(--bg));
 }
 
 .stickLegend {

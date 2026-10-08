@@ -1,0 +1,66 @@
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabs :global(.MuiTab-root) {
+  color: var(--muted);
+}
+
+.tabs :global(.MuiTab-root.Mui-selected) {
+  color: var(--text);
+}
+
+.right {
+  margin-left: auto;
+}
+
+.list {
+  padding: 4px 28px 28px;
+}
+
+.share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.track {
+  display: block;
+  flex: none;
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--tint);
+}
+
+@media screen and (max-width: 900px) {
+  .tabs {
+    padding: 0 16px;
+  }
+
+  .list {
+    padding: 4px 16px 16px;
+  }
+}
+
+/* The count column is 50px wide there (useMobile): the number only */
+@media screen and (max-width: 900px) {
+  .track {
+    display: none;
+  }
+
+  .share {
+    justify-content: flex-end;
+  }
+}

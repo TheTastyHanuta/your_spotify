@@ -1,0 +1,27 @@
+.root {
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  border-bottom: 1px solid var(--line);
+}
+
+.message {
+  margin: 0;
+  padding: 9px 28px;
+  font-size: 13px;
+}
+
+.message + .message {
+  border-top: 1px solid color-mix(in srgb, var(--notice-text) 15%, transparent);
+}
+
+.message a {
+  color: inherit;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+@media screen and (max-width: 900px) {
+  .message {
+    padding: 9px 16px;
+  }
+}

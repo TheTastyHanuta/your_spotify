@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
+
 import {
+  detailIntervalToQuery,
   getPresetDates,
   queryToIntervalDetail,
 } from "../../services/intervals";
@@ -21,6 +23,9 @@ import { intervalDetailToRedux } from "../../services/redux/modules/user/utils";
 import { useAppDispatch } from "../../services/redux/tools";
 
 const GLOBAL_PREFIX = "g";
+const INTERVAL_FIELDS = ["type", "start", "end", "name"].map(
+  (field) => `${GLOBAL_PREFIX}${field}`,
+);
 
 export default function Wrapper() {
   const dispatch = useAppDispatch();
@@ -28,6 +33,7 @@ export default function Wrapper() {
   const publicToken = useSelector(selectPublicToken);
   const intervalDetail = useSelector(selectIntervalDetail);
   const [query, setQuery] = useSearchParams();
+  const { pathname } = useLocation();
 
   const urlToken = query.get("token");
 
@@ -37,18 +43,27 @@ export default function Wrapper() {
         intervalDetailToRedux(queryToIntervalDetail(query, GLOBAL_PREFIX)),
       ),
     );
-    const fieldsToDelete = [
-      "token",
-      `${GLOBAL_PREFIX}type`,
-      `${GLOBAL_PREFIX}start`,
-      `${GLOBAL_PREFIX}end`,
-      `${GLOBAL_PREFIX}name`,
-    ];
-    fieldsToDelete.forEach((field) => query.delete(field));
-    setQuery(query);
     // Only set the interval on the first render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
+
+  // The period stays in the URL, so the address bar always shares the view.
+  // Links and navigate() drop the query string, so this also runs on every
+  // path change.
+  useEffect(() => {
+    setQuery(
+      (prev) => {
+        // Read once by the effects above on the first render
+        prev.delete("token");
+        INTERVAL_FIELDS.forEach((field) => prev.delete(field));
+        Object.entries(
+          detailIntervalToQuery(intervalDetail, GLOBAL_PREFIX),
+        ).forEach(([key, value]) => prev.set(key, value));
+        return prev;
+      },
+      { replace: true },
+    );
+  }, [intervalDetail, pathname, setQuery]);
 
   useEffect(() => {
     // A custom range does not move with the current time

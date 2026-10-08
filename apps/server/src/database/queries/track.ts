@@ -1,8 +1,6 @@
 import { escapeRegExp } from "../../tools/misc";
-import { Timesplit } from "../../tools/types";
 import { InfosModel, TrackModel } from "../Models";
 import { User } from "../schemas/user";
-import { getGroupByDateProjection, getGroupingByTimeSplit } from "./statsTools";
 
 export const getTracks = (tracksId: string[]) =>
   TrackModel.find({ id: { $in: tracksId } });
@@ -34,29 +32,6 @@ export const getTrackFirstAndLastListened = async (
     },
   ]);
   return res[0];
-};
-
-export const bestPeriodOfTrack = async (user: User, trackId: string) => {
-  const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, id: trackId } },
-    {
-      $project: { ...getGroupByDateProjection(user.settings.timezone), id: 1 },
-    },
-    {
-      $group: { _id: null, items: { $push: "$$CURRENT" }, total: { $sum: 1 } },
-    },
-    { $unwind: "$items" },
-    {
-      $group: {
-        _id: getGroupingByTimeSplit(Timesplit.month, "items"),
-        count: { $sum: 1 },
-        total: { $last: "$total" },
-      },
-    },
-    { $sort: { count: -1 } },
-    { $limit: 2 },
-  ]);
-  return res;
 };
 
 export const getTrackRecentHistory = async (user: User, trackId: string) =>

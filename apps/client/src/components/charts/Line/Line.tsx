@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from "recharts";
 import { ContentType } from "recharts/types/component/Tooltip";
+
 import { DateWithPrecision } from "../../../services/stats";
 
 interface LineProps<
@@ -28,27 +29,32 @@ export default function Line<
           connectNulls
           type="monotone"
           dataKey="y"
-          fill="var(--primary)"
-          stroke="var(--primary)"
+          fill="var(--tint)"
+          stroke="var(--tint)"
           strokeWidth={2}
           dot={false}
         />
         <XAxis
+          tickMargin={8}
+          // Labels are set in the wider mono font after recharts measures them
+          minTickGap={16}
+          // Room for the last label at the right edge
+          padding={{ left: 4, right: 24 }}
           name="X"
           domain={["dataMin", "dataMax"]}
           dataKey="x"
           tickFormatter={xFormat}
-          style={{ fontWeight: "bold" }}
         />
         <YAxis
+          tickMargin={6}
           domain={["dataMin", "dataMax"]}
           tickFormatter={yFormat}
           width="auto"
         />
         <Tooltip
           wrapperStyle={{ zIndex: 10 }}
-          contentStyle={{ backgroundColor: "var(--background)" }}
-          labelStyle={{ color: "var(--text-on-light)" }}
+          contentStyle={{ backgroundColor: "var(--surface)" }}
+          labelStyle={{ color: "var(--text)" }}
           content={customTooltip}
         />
       </LineChart>

@@ -1,18 +1,19 @@
-import { Grid, Link, Skeleton } from "@mui/material";
+import { Link as MuiLink } from "@mui/material";
 import {
   differenceInCalendarDays,
   endOfDay,
+  getISODay,
   isAfter,
   startOfToday,
 } from "date-fns";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
-import Header from "../../components/Header";
-import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
+import PageHero from "../../components/PageHero";
+import StatStrip from "../../components/StatStrip";
 import { api } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
+import { DateFormatter, dayRange, fromDay } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import {
@@ -21,9 +22,11 @@ import {
   selectUser,
 } from "../../services/redux/modules/user/selector";
 import { msToMinutes } from "../../services/stats";
-import Calendar, { fromDay } from "./Calendar";
+import { plural } from "../../services/tools";
+import { PARTS_OF_DAY, listeningTraits } from "../../services/traits";
+import Calendar from "./Calendar";
+import LongestSessions from "./LongestSessions";
 import PartsOfDay from "./PartsOfDay";
-import { listeningTraits } from "./traits";
 import Variety from "./Variety";
 import Week from "./Week";
 
@@ -35,9 +38,6 @@ const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
 // Since the start of times, for the whole history
 const HISTORY_START = new Date(0);
 
-const plural = (n: number, word: string) =>
-  `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
-
 export default function Habits() {
   const user = useSelector(selectUser);
   const { interval } = useSelector(selectRawIntervalDetail);
@@ -48,6 +48,13 @@ export default function Habits() {
   // The whole history, to compare the period with the usual listening
   const historyEnd = useMemo(() => new Date(), []);
   const history = useAPI(api.getOverview, HISTORY_START, historyEnd);
+  // Shared with "Who you listen to when", the hero shows one of them
+  const partArtists = useAPI(
+    api.getBestOfPartOfDay<"artists">,
+    interval.start,
+    interval.end,
+    "artists",
+  );
 
   if (!user) {
     return null;
@@ -63,24 +70,49 @@ export default function Habits() {
   const openDay = (date: Date) =>
     openPeriod(date, endOfDay(date), "/top/songs");
 
-  const header = (
-    <Header
+  // Comparing the whole history with itself tells nothing
+  const usual =
+    history && overview && history.plays !== overview.plays ? history : null;
+  const [rhythm, weekTrait, discoveryTrait] =
+    overview && history && overview.plays > 0
+      ? listeningTraits(overview, usual, value)
+      : [];
+  // The part of the day the rhythm is about, else the one with most listening
+  const leadPart = partArtists?.length
+    ? (partArtists.find((p) => p.part === rhythm?.part) ??
+      partArtists.reduce((a, b) => (b.total > a.total ? b : a)))
+    : undefined;
+  const leadArtist = leadPart?.items[0]?.item;
+  const leadPartName = PARTS_OF_DAY.find((p) => p.key === leadPart?.part)?.name;
+
+  const empty = overview?.plays === 0;
+  const hero = (
+    <PageHero
       title="Habits"
-      subtitle="When and how you listen, compared with your whole history"
+      images={leadArtist?.images}
+      round
+      name={rhythm?.title}
+      nameText={rhythm?.title}
+      meta={
+        rhythm && (
+          <>
+            {rhythm.text}
+            {leadArtist && (
+              <>
+                {" "}
+                Most played {leadPartName}:{" "}
+                <Link to={`/artist/${leadArtist.id}`}>{leadArtist.name}</Link>.
+              </>
+            )}
+          </>
+        )
+      }
+      empty={empty ? "Nothing played in this period." : undefined}
     />
   );
 
-  if (overview && overview.plays === 0) {
-    return (
-      <div>
-        {header}
-        <div className={s.content}>
-          <Text size="normal">
-            You did not listen to anything in this period.
-          </Text>
-        </div>
-      </div>
-    );
+  if (empty) {
+    return hero;
   }
 
   const now = new Date();
@@ -107,144 +139,96 @@ export default function Habits() {
   }));
   const weekTotal = perWeekday.reduce((sum, day) => sum + day.value, 0);
   const favourite = perWeekday.reduce((a, b) => (b.value > a.value ? b : a));
-
-  const cards: {
-    title: string;
-    main?: string | null;
-    sub?: React.ReactNode;
-  }[] = [
-    {
-      title: "Busiest day",
-      main:
-        overview?.busiestDay &&
-        DateFormatter.toWeekdayDayMonthYear(fromDay(overview.busiestDay.date)),
-      sub: overview?.busiestDay && (
-        <>
-          {msToMinutes(overview.busiestDay.durationMs).toLocaleString()} min,{" "}
-          {plural(overview.busiestDay.plays, "play")} ·{" "}
-          <Link
-            component="button"
-            color="inherit"
-            sx={{ verticalAlign: "baseline" }}
-            onClick={() => openDay(fromDay(overview.busiestDay!.date))}>
-            top songs
-          </Link>
-        </>
-      ),
-    },
-    {
-      title: "Longest streak",
-      main: overview && plural(overview.streaks.longest?.days ?? 0, "day"),
-      sub: overview?.streaks.longest && (
-        <>
-          {DateFormatter.toDayMonthYear(
-            fromDay(overview.streaks.longest.start),
-          )}{" "}
-          to{" "}
-          {DateFormatter.toDayMonthYear(fromDay(overview.streaks.longest.end))}
-        </>
-      ),
-    },
-    ...(ongoing
-      ? [
-          {
-            title: "Current streak",
-            main: overview && plural(overview.streaks.current, "day"),
-            sub: "Days in a row with music, up to today",
-          },
-        ]
-      : []),
-    // Needs every weekday at least once
-    ...(daysInPeriod >= 7
-      ? [
-          {
-            title: "Favourite weekday",
-            main:
-              weekTotal > 0
-                ? DateFormatter.fromIsoWeekdayLong(favourite.weekday)
-                : null,
-            sub:
-              weekTotal > 0 &&
-              `${Math.round((favourite.value / weekTotal) * 100)}% of your listening, ${format(favourite.value)}`,
-          },
-        ]
-      : []),
-    {
-      title: "Active days",
-      main:
-        overview &&
-        `${Math.round((overview.activeDays / daysInPeriod) * 100)}%`,
-      sub:
-        overview &&
-        `${overview.activeDays.toLocaleString()} of ${plural(daysInPeriod, "day")} with music`,
-    },
-  ];
-
-  // Comparing the whole history with itself tells nothing
-  const usual =
-    history && overview && history.plays !== overview.plays ? history : null;
-  const traits =
-    overview && history ? listeningTraits(overview, usual, value) : undefined;
+  const busiest = overview?.busiestDay;
+  const longest = overview?.streaks.longest;
 
   return (
     <div>
-      {header}
-      <div className={s.content}>
-        <Grid container spacing={2}>
-          {cards.map((card) => (
-            <Grid
-              key={card.title}
-              size={{ xs: 12, md: 6, lg: 12 / cards.length }}>
-              <TitleCard title={card.title} className={s.card}>
-                <Text element="div" size="huge">
-                  {overview ? (card.main ?? "-") : <Skeleton width={120} />}
-                </Text>
-                <Text element="div" size="normal" greyed>
-                  {overview ? card.sub : <Skeleton width={200} />}
-                </Text>
-              </TitleCard>
-            </Grid>
-          ))}
-          {(traits ?? [undefined, undefined, undefined]).map((trait, index) => (
-            <Grid key={trait?.title ?? index} size={{ xs: 12, lg: 4 }}>
-              <TitleCard title={trait?.title ?? "…"} className={s.card}>
-                <Text element="div" size="normal">
-                  {trait?.text ?? <Skeleton />}
-                </Text>
-              </TitleCard>
-            </Grid>
-          ))}
-          <Grid size={{ xs: 12 }}>
-            {calendar ? (
-              <Calendar
-                days={calendar}
-                start={interval.start}
-                end={interval.end}
-                value={value}
-                format={format}
-                onDayClick={openDay}
-              />
-            ) : (
-              <TitleCard title="Calendar">
-                <Skeleton variant="rectangular" height={120} />
-              </TitleCard>
-            )}
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Week
-              heatmap={overview?.heatmap}
-              usual={usual}
-              value={value}
-              format={format}
-            />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <PartsOfDay format={format} />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Variety />
-          </Grid>
-        </Grid>
+      {hero}
+      <StatStrip
+        stats={[
+          {
+            label: "Busiest day",
+            value: busiest
+              ? DateFormatter.toDayLongMonth(fromDay(busiest.date))
+              : "—",
+            note: busiest && (
+              <>
+                {DateFormatter.fromIsoWeekday(getISODay(fromDay(busiest.date)))}{" "}
+                {fromDay(busiest.date).getFullYear()} ·{" "}
+                {msToMinutes(busiest.durationMs).toLocaleString()} min ·{" "}
+                <MuiLink
+                  component="button"
+                  color="inherit"
+                  sx={{ verticalAlign: "baseline", font: "inherit" }}
+                  onClick={() => openDay(fromDay(busiest.date))}>
+                  top songs
+                </MuiLink>
+              </>
+            ),
+          },
+          {
+            label: "Longest streak",
+            value: overview ? plural(longest?.days ?? 0, "day") : "—",
+            note:
+              longest && dayRange(fromDay(longest.start), fromDay(longest.end)),
+          },
+          ...(ongoing
+            ? [
+                {
+                  label: "Current streak",
+                  value: overview
+                    ? plural(overview.streaks.current, "day")
+                    : "—",
+                  note: "Days in a row, up to today",
+                },
+              ]
+            : []),
+          // Needs every weekday at least once
+          ...(daysInPeriod >= 7
+            ? [
+                {
+                  label: "Favourite weekday",
+                  value:
+                    weekTotal > 0
+                      ? DateFormatter.fromIsoWeekdayLong(favourite.weekday)
+                      : "—",
+                  note:
+                    weekTotal > 0 &&
+                    `${Math.round((favourite.value / weekTotal) * 100)}% · ${format(favourite.value)}`,
+                },
+              ]
+            : []),
+          {
+            label: "Active days",
+            value: overview
+              ? `${Math.round((overview.activeDays / daysInPeriod) * 100)}%`
+              : "—",
+            note:
+              overview &&
+              `${overview.activeDays.toLocaleString()} of ${plural(daysInPeriod, "day")}`,
+          },
+        ]}
+      />
+      <div className={s.sections}>
+        <Calendar
+          days={calendar}
+          start={interval.start}
+          end={interval.end}
+          value={value}
+          format={format}
+          onDayClick={openDay}
+        />
+        <Week
+          heatmap={overview?.heatmap}
+          usual={usual}
+          trait={weekTrait}
+          value={value}
+          format={format}
+        />
+        <PartsOfDay format={format} artists={partArtists} />
+        <Variety trait={discoveryTrait} />
+        <LongestSessions />
       </div>
     </div>
   );

@@ -1,18 +1,20 @@
-import { Fragment } from "react";
 import clsx from "clsx";
+import { Fragment } from "react";
+
+import { DateFormatter } from "../../../services/date";
+import { useMobile } from "../../../services/hooks/hooks";
 import { msToDuration } from "../../../services/stats";
 import { Album, Artist, Track as TrackType } from "../../../services/types";
+import { GridRowWrapper } from "../../Grid";
+import InlineAlbum from "../../InlineAlbum";
 import InlineArtist from "../../InlineArtist";
+import InlineTrack from "../../InlineTrack";
+import LongClickableTrack from "../../LongClickableTrack";
+import PlayButton from "../../PlayButton";
 import Text from "../../Text";
 import TrackOptions from "../../TrackOptions";
-import InlineTrack from "../../InlineTrack";
-import { GridRowWrapper } from "../../Grid";
-import PlayButton from "../../PlayButton";
-import { useMobile } from "../../../services/hooks/hooks";
-import LongClickableTrack from "../../LongClickableTrack";
-import InlineAlbum from "../../InlineAlbum";
-import { DateFormatter } from "../../../services/date";
 import { trackGrid } from "./TrackGrid";
+
 import s from "./index.module.css";
 
 interface TrackProps {
@@ -48,6 +50,11 @@ export default function Track({
               </Fragment>
             ))}
           </div>
+          {isMobile && listenedAt && (
+            <div className="subtitle num">
+              {DateFormatter.listenedAt(listenedAt)}
+            </div>
+          )}
         </div>
       ),
     },
@@ -60,13 +67,17 @@ export default function Track({
     {
       ...trackGrid.duration,
       node: !isMobile && (
-        <Text size="normal">{msToDuration(track.duration_ms)}</Text>
+        <Text size="normal" className="num">
+          {msToDuration(track.duration_ms)}
+        </Text>
       ),
     },
     {
       ...trackGrid.listened,
       node: listenedAt && !isMobile && (
-        <Text size="normal">{DateFormatter.listenedAt(listenedAt)}</Text>
+        <Text size="normal" className="num">
+          {DateFormatter.listenedAt(listenedAt)}
+        </Text>
       ),
     },
     { ...trackGrid.option, node: !isMobile && <TrackOptions track={track} /> },

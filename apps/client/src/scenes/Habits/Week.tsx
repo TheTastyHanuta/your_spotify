@@ -1,10 +1,13 @@
-import { MenuItem, Select, Skeleton, Tooltip } from "@mui/material";
+import { Skeleton, Tooltip } from "@mui/material";
+import clsx from "clsx";
 import { useState } from "react";
 
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { OverviewResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
+import { EMPTY, heat } from "../../services/heatmap";
+import type { Trait } from "../../services/traits";
 import type { Counts } from "./Habits";
 import { compareCells, weekSummary } from "./usual";
 
@@ -14,19 +17,13 @@ type Heatmap = OverviewResponse["heatmap"];
 type View = "period" | "usual";
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
+const VIEWS = [
+  { value: "period", label: "This period" },
+  { value: "usual", label: "Compared with usual" },
+];
 const HOURS = Array.from(Array(24).keys());
-const EMPTY = "rgba(var(--primary-tuple), 0.07)";
 // Colours reach full strength at 4 times or a quarter of the usual
 const MAX_RATIO = 4;
-
-// From the background through the middle of the scale to its strongest
-// step, so quiet hours fade out
-export const heat = (share: number) => {
-  const f = 0.1 + 0.9 * share;
-  return f < 0.5
-    ? `color-mix(in oklab, var(--scale-3) ${Math.round(f * 200)}%, var(--background))`
-    : `color-mix(in oklab, var(--scale-5) ${Math.round((f - 0.5) * 200)}%, var(--scale-3))`;
-};
 
 // Red above the usual, blue below, grey in the middle
 const diverging = (ratio: number) => {
@@ -45,11 +42,19 @@ interface WeekProps {
   heatmap: Heatmap | undefined;
   // The whole history, null when the period is the whole history
   usual: { heatmap: Heatmap; clump: number } | null;
+  // The weekend trait, said above the period's grid
+  trait: Trait | undefined;
   value: (counts: Counts) => number;
   format: (value: number) => string;
 }
 
-export default function Week({ heatmap, usual, value, format }: WeekProps) {
+export default function Week({
+  heatmap,
+  usual,
+  trait,
+  value,
+  format,
+}: WeekProps) {
   const [view, setView] = useState<View>("period");
   const comparing = view === "usual" && usual !== null;
 
@@ -104,34 +109,33 @@ export default function Week({ heatmap, usual, value, format }: WeekProps) {
     const total = [...values.values()].reduce((sum, v) => sum + v, 0) || 1;
     const max = Math.max(1, ...values.values());
     body = (
-      <WeekGrid
-        cell={(weekday, hour) => {
-          const v = values.get(`${weekday}-${hour}`) ?? 0;
-          return {
-            color: v === 0 ? EMPTY : heat(v / max),
-            title: `${when(weekday, hour)}: ${format(v)}, ${Math.round((v / total) * 1000) / 10}% of your listening`,
-          };
-        }}
-      />
+      <>
+        {trait && (
+          <Text element="div" size="normal" className={s.summary}>
+            {trait.text}
+          </Text>
+        )}
+        <WeekGrid
+          cell={(weekday, hour) => {
+            const v = values.get(`${weekday}-${hour}`) ?? 0;
+            return {
+              color: v === 0 ? EMPTY : heat(v / max),
+              title: `${when(weekday, hour)}: ${format(v)}, ${Math.round((v / total) * 1000) / 10}% of your listening`,
+            };
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <TitleCard
+    <Section
       title="Week"
-      right={
-        usual && (
-          <Select
-            value={view}
-            onChange={(ev) => setView(ev.target.value as View)}
-            variant="standard">
-            <MenuItem value="period">This period</MenuItem>
-            <MenuItem value="usual">Compared with usual</MenuItem>
-          </Select>
-        )
-      }>
+      tabs={usual ? VIEWS : undefined}
+      tab={comparing ? "usual" : "period"}
+      onTab={(tab) => setView(tab as View)}>
       {body}
-    </TitleCard>
+    </Section>
   );
 }
 
@@ -145,7 +149,7 @@ function WeekGrid({ cell }: WeekGridProps) {
       {HOURS.filter((hour) => hour % 3 === 0).map((hour) => (
         <span
           key={hour}
-          className={s.label}
+          className={clsx(s.label, { [s.minorHour]: hour % 6 !== 0 })}
           style={{ gridRow: 1, gridColumn: `${hour + 2} / span 3` }}>
           {DateFormatter.fromNumberToHour(hour)}
         </span>
@@ -168,6 +172,8 @@ function WeekGrid({ cell }: WeekGridProps) {
               title={title}>
               <span
                 className={s.cell}
+                role="img"
+                aria-label={title}
                 style={{
                   gridRow: weekday + 1,
                   gridColumn: hour + 2,

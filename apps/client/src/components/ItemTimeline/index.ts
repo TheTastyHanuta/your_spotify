@@ -1,1 +1,1 @@
-export { default } from "./ItemTimeline";
+export { default, useTimelineSummary } from "./ItemTimeline";

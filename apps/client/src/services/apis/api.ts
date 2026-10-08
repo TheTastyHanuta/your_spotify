@@ -16,7 +16,6 @@ import {
   TrackInfoWithFullArtistAlbum,
   SpotifyMe,
   CollaborativeMode,
-  UnboxPromise,
   TrackWithFullArtistAlbum,
   AlbumWithFullArtist,
 } from "../types";
@@ -36,29 +35,6 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-// Adds latency to requests without having to use chrome latency
-// const get = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   new Promise((res, rej) => {
-//     setTimeout(() => axios.get(url, { params }).then(res).catch(rej), 1000);
-//   });
-
-// const post = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   new Promise((res, rej) => {
-//     setTimeout(() => axios.post(url, params).then(res).catch(rej), 1000);
-//   });
-
-// const get = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   axios.get(`${url}${api.publicToken ? `?token=${api.publicToken}` : ''}`, { params });
-
-// const post = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   axios.post(`${url}${api.publicToken ? `?token=${api.publicToken}` : ''}`, params);
-
-// const put = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   axios.put(`${url}${api.publicToken ? `?token=${api.publicToken}` : ''}`, params);
-
-// const delet = <T>(url: string, params: Record<string, any> = {}): Promise<{ data: T }> =>
-//   axios.delete(`${url}${api.publicToken ? `?token=${api.publicToken}` : ''}`, params);
 
 const get = <T>(
   url: string,
@@ -86,10 +62,9 @@ const delet = <T>(
 
 export type ArtistStatsResponse = {
   artist: Artist;
-  bestPeriod: { _id: DateId; count: number; total: number }[];
   firstLast: {
-    first: TrackInfo & { track: TrackWithAlbum };
-    last: TrackInfo & { track: TrackWithAlbum };
+    first: TrackInfo & { track: Track };
+    last: TrackInfo & { track: Track };
   };
   mostListened: { _id: string; count: number; track: TrackWithAlbum }[];
   albumMostListened: { _id: string; count: number; album: Album }[];
@@ -157,9 +132,9 @@ export type GenresResponse = {
   })[];
 };
 
-type ShortArtist = Pick<Artist, "id" | "name" | "images">;
+export type ShortArtist = Pick<Artist, "id" | "name" | "images">;
 // The fields the part of day query selects
-type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
+export type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
   full_album: Pick<Album, "id" | "name" | "images">;
   full_artists: Pick<Artist, "id" | "name">[];
 };
@@ -288,7 +263,6 @@ export type TrackStatsResponse = {
   artists: Artist[];
   album: Album;
   listenedOn: { count: number; album: Album }[];
-  bestPeriod: { _id: DateId; count: number; total: number }[];
   firstLast: { first: TrackInfo; last: TrackInfo };
   recentHistory: TrackInfo[];
   total: { count: number };
@@ -298,20 +272,25 @@ export type AlbumStatsResponse = {
   album: Album;
   artists: Artist[];
   tracks: { track: Track; count: number }[];
-  bestPeriod: { _id: DateId; count: number; total: number }[];
   firstLast: {
-    first: TrackInfo & { track: TrackWithAlbum };
-    last: TrackInfo & { track: TrackWithAlbum };
+    first: TrackInfo & { track: Track };
+    last: TrackInfo & { track: Track };
   };
-  recentHistory: TrackInfo[];
-  total: { count: number };
+};
+
+// The item's place in the user's all-time chart (index 0 is first) and its
+// neighbours there, in chart order
+export type RankResponse = {
+  index: number;
+  isMax: boolean;
+  isMin: boolean;
+  results: { id: string; count: number }[];
 };
 
 export const api = {
   publicToken: null as string | null,
 
   version: () => get<{ update: boolean; version: string }>("/version"),
-  spotify: () => get("/oauth/spotify"),
   logout: () => axios.post("/logout"),
 
   me: () => get<{ status: true; user: User } | { status: false }>("/me"),
@@ -336,8 +315,6 @@ export const api = {
       "/spotify/most_listened",
       { start, end, timeSplit },
     ),
-  listened_to: (start: Date, end: Date) =>
-    get("/spotify/listened_to", { start, end }),
   songsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<
       {
@@ -354,11 +331,6 @@ export const api = {
       end,
       timeSplit,
     }),
-  bestArtistsPer: (start: Date, end: Date, timeSplit: Timesplit) =>
-    get<{ artists: Artist[]; counts: number[]; _id: DateId | null }[]>(
-      "/spotify/best_artists_per",
-      { start, end, timeSplit },
-    ),
   setSetting: (settingName: keyof User["settings"], settingValue: any) =>
     axios.post("/settings", { [settingName]: settingValue }),
   timePerHourOfDay: (start: Date, end: Date) =>
@@ -372,13 +344,7 @@ export const api = {
   getAlbums: (ids: string[]) => get<Album[]>(`/album/${ids.join(",")}`),
   getAlbumStats: (id: string) =>
     get<AlbumStatsResponse | { code: "NEVER_LISTENED" }>(`/album/${id}/stats`),
-  getAlbumRank: (id: string) =>
-    get<{
-      index: number;
-      isMax: boolean;
-      isMin: boolean;
-      results: { id: string; count: number }[];
-    }>(`/album/${id}/rank`),
+  getAlbumRank: (id: string) => get<RankResponse>(`/album/${id}/rank`),
   getArtists: (ids: string[]) => get<Artist[]>(`/artist/${ids.join(",")}`),
   getOverview: (start: Date, end: Date) =>
     get<OverviewResponse>("/spotify/overview", { start, end }),
@@ -439,13 +405,7 @@ export const api = {
     get<ArtistStatsResponse | { code: "NEVER_LISTENED" }>(
       `/artist/${id}/stats`,
     ),
-  getArtistRank: (id: string) =>
-    get<{
-      index: number;
-      isMax: boolean;
-      isMin: boolean;
-      results: { id: string; count: number }[];
-    }>(`/artist/${id}/rank`),
+  getArtistRank: (id: string) => get<RankResponse>(`/artist/${id}/rank`),
   search: (str: string) =>
     get<{
       artists: Artist[];
@@ -553,44 +513,20 @@ export const api = {
   getTrackDetails: (ids: string[]) => get<Track[]>(`/track/${ids.join(",")}`),
   getTrackStats: (id: string) =>
     get<TrackStatsResponse | { code: "NEVER_LISTENED" }>(`/track/${id}/stats`),
-  getTrackRank: (id: string) =>
-    get<{
-      index: number;
-      isMax: boolean;
-      isMin: boolean;
-      results: { id: string; count: number }[];
-    }>(`/track/${id}/rank`),
+  getTrackRank: (id: string) => get<RankResponse>(`/track/${id}/rank`),
   blacklistArtist: (artistId: string) => post(`/artist/blacklist/${artistId}`),
   unblacklistArtist: (artistId: string) =>
     post(`/artist/unblacklist/${artistId}`),
   getLongestSessions: (start: Date, end: Date) =>
     get<
       {
+        // From the first play's start to the end of the last one, in ms
         sessionLength: number;
+        plays: TrackInfo[];
         full_tracks: Record<string, Track>;
         full_albums: Record<string, Album>;
-        distanceToLast: { distance: { subtract: number; info: TrackInfo }[] };
       }[]
     >("/spotify/top/sessions", { start, end }),
 };
 
 export const DEFAULT_ITEMS_TO_LOAD = 20;
-
-type ApiSignature = typeof api;
-
-export type RecordAsTuples<F, K extends keyof F = keyof F> = K extends K
-  ? [K, F[K]]
-  : never;
-type Signatures = RecordAsTuples<ApiSignature>;
-type TupleToUnbox<T extends [string, any]> = T extends [
-  string,
-  (...args: any[]) => Promise<{ data: any }>,
-]
-  ? [T[0], UnboxPromise<ReturnType<T[1]>>]
-  : never;
-
-type NamesAndReturns = TupleToUnbox<Signatures>;
-export type ApiData<T extends NamesAndReturns[0]> = Extract<
-  NamesAndReturns,
-  [T, any]
->[1]["data"];

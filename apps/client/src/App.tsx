@@ -26,11 +26,13 @@ import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
 import Discoveries from "./scenes/Discoveries";
 import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
+import NotFound from "./scenes/Error/NotFound";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
 import Habits from "./scenes/Habits";
+import HistoryPage from "./scenes/History";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
-import LongestSessions from "./scenes/LongestSessions";
+import OnThisDayPage from "./scenes/OnThisDay";
 import Recap from "./scenes/Recap";
 import Settings from "./scenes/Settings";
 import Story from "./scenes/Story";
@@ -81,15 +83,25 @@ function App() {
                   }
                 />
                 <Route
-                  path="/sessions"
+                  path="/history"
                   element={
                     <PrivateRoute>
-                      <LongestSessions />
+                      <HistoryPage />
                     </PrivateRoute>
                   }
                 />
-                {/* "All stats" was split into Habits and Taste */}
-                <Route path="/all" element={<AllStatsRedirect />} />
+                <Route
+                  path="/on-this-day"
+                  element={
+                    <PrivateRoute>
+                      <OnThisDayPage />
+                    </PrivateRoute>
+                  }
+                />
+                {/* "All stats" was split into Habits and Taste, and the
+                    longest sessions moved into Habits */}
+                <Route path="/all" element={<HabitsRedirect />} />
+                <Route path="/sessions" element={<HabitsRedirect />} />
                 <Route
                   path="/taste"
                   element={
@@ -236,6 +248,14 @@ function App() {
                     </PrivateRoute>
                   }
                 />
+                <Route
+                  path="*"
+                  element={
+                    <PrivateRoute>
+                      <NotFound />
+                    </PrivateRoute>
+                  }
+                />
               </Routes>
             </Layout>
           </BrowserRouter>
@@ -248,7 +268,7 @@ function App() {
 export default App;
 
 // Keeps the query, shared links carry the period in it
-function AllStatsRedirect() {
+function HabitsRedirect() {
   const { search } = useLocation();
   return <Navigate to={`/habits${search}`} replace />;
 }

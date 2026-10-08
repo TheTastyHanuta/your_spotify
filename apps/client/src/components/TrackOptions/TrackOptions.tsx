@@ -1,17 +1,17 @@
-import { MouseEvent, useRef } from "react";
-import { IconButton, Popover } from "@mui/material";
 import { MoreVert } from "@mui/icons-material";
-import { Track } from "../../services/types";
+import { IconButton, Popover } from "@mui/material";
+import { MouseEvent, useRef } from "react";
+
 import { useBooleanState, useIsGuest } from "../../services/hooks/hooks";
-import TrackOptionsContent from "../TrackOptionsContent";
+import { Track } from "../../services/types";
 import { MenuTitle } from "../MenuTitle/MenuTitle";
+import TrackOptionsContent from "../TrackOptionsContent";
+
 import s from "./index.module.css";
 
 interface TrackOptionsProps {
   track: Track;
 }
-
-export const TRACK_OPTIONS_WIDTH = 34;
 
 export default function TrackOptions({ track }: TrackOptionsProps) {
   const ref = useRef(null);

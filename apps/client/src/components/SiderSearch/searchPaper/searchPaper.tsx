@@ -1,3 +1,9 @@
+import { Search } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
+import { useRef } from "react";
+
+import { useMobile } from "../../../services/hooks/hooks";
+import { useKeyNavigation } from "../../../services/hooks/useKeyNavigation";
 import {
   Album,
   AlbumWithFullArtist,
@@ -5,15 +11,11 @@ import {
   Track,
   TrackWithFullArtistAlbum,
 } from "../../../services/types";
-import Text from "../../Text";
-import { Search } from "@mui/icons-material";
-import s from "./index.module.css";
-import { Section } from "./section/section";
 import { AutoHeight } from "../../autoHeight/autoHeight";
-import { CircularProgress } from "@mui/material";
-import { useKeyNavigation } from "../../../services/hooks/useKeyNavigation";
-import { useRef } from "react";
-import { useMobile } from "../../../services/hooks/hooks";
+import Text from "../../Text";
+import { Section } from "./section/section";
+
+import s from "./index.module.css";
 
 interface SearchPaperProps {
   loading: boolean;
@@ -56,7 +58,7 @@ export function SearchPaper({
   return (
     <div className={s.root}>
       <div className={s.searchwrapper}>
-        <Search fontSize="large" />
+        <Search className={s.searchIcon} />
         <input
           ref={inputRef}
           autoFocus
@@ -66,10 +68,10 @@ export function SearchPaper({
           placeholder={`Search for an ${displays.join(", ")}...`}
         />
         {loading ? (
-          <CircularProgress size={20} style={{ color: "var(--text-grey)" }} />
+          <CircularProgress size={20} style={{ color: "var(--muted)" }} />
         ) : isMobile ? null : (
-          <Text size="big" greyed className={s.resultcount}>
-            {resultCount} results
+          <Text size="normal" greyed className={s.resultcount}>
+            <span className="num">{resultCount}</span> results
           </Text>
         )}
       </div>
@@ -91,6 +93,7 @@ export function SearchPaper({
               items={artists}
               getContent={(item) => [item.name]}
               getImages={(item) => item.images}
+              round
               onClick={onArtistClick}
             />
             <Section

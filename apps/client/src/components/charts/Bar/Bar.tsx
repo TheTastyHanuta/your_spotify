@@ -25,19 +25,27 @@ export default function Bar({
 }: BarProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
+      {/* Room for the last label at the right edge */}
+      <BarChart data={data} margin={{ right: 24 }}>
         <XAxis
           dataKey="x"
           tickFormatter={xFormat}
           tick={customXTick}
-          style={{ fontWeight: "bold" }}
+          tickMargin={8}
+          // Labels are set in the wider mono font after recharts measures them
+          minTickGap={16}
         />
-        <YAxis dataKey="y" tickFormatter={yFormat} width="auto" />
-        <RBar dataKey="y" fill="var(--primary)" />
+        <YAxis
+          dataKey="y"
+          tickFormatter={yFormat}
+          width="auto"
+          tickMargin={6}
+        />
+        <RBar dataKey="y" fill="var(--tint)" />
         <Tooltip
           wrapperStyle={{ zIndex: 10 }}
-          contentStyle={{ backgroundColor: "var(--background)" }}
-          labelStyle={{ color: "var(--text-on-light)" }}
+          contentStyle={{ backgroundColor: "var(--surface)" }}
+          labelStyle={{ color: "var(--text)" }}
           content={customTooltip}
         />
       </BarChart>

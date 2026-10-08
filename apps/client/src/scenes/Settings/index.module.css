@@ -1,3 +1,4 @@
-.content {
-  padding: var(--page-padding);
+/* Panels two by two in .ruled-columns, a rule under each */
+.panels > * {
+  border-bottom: 1px solid var(--line);
 }

@@ -3,27 +3,21 @@ import { useSelector } from "react-redux";
 import AddToPlaylist from "../../components/AddToPlaylist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { api } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
+import { dayRange, fromDay } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
-import { plural } from "../../services/tools";
-import { fromDay } from "../Habits/Calendar";
 
-// "3 – 9 Mar 2024", or a single day
-const days = (from: string, to: string) =>
-  from === to
-    ? DateFormatter.toDayMonthYear(fromDay(from))
-    : `${DateFormatter.toDayMonth(fromDay(from))} – ${DateFormatter.toDayMonthYear(fromDay(to))}`;
+const days = (from: string, to: string) => dayRange(fromDay(from), fromDay(to));
 
 export default function OnRepeat() {
   const { interval } = useSelector(selectRawIntervalDetail);
   const songs = useAPI(api.getOnRepeat, interval.start, interval.end);
 
   return (
-    <TitleCard
+    <Section
       title="On repeat"
       info="Songs with the most plays inside 7 days of this period, at least 5"
       right={
@@ -51,17 +45,17 @@ export default function OnRepeat() {
                   prefix={`${days(item.from, item.to)} · `}
                 />
               }
-              right={plural(item.plays, "play")}
+              right={<span className="num">{item.plays.toLocaleString()}</span>}
             />
           ))
         ) : (
-          <Text size="normal">
+          <Text size="normal" greyed>
             No song was played 5 times within 7 days in this period.
           </Text>
         )
       ) : (
         <RowsSkeleton />
       )}
-    </TitleCard>
+    </Section>
   );
 }

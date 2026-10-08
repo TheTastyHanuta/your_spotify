@@ -1,4 +1,5 @@
-import { Grid, Skeleton, Tooltip } from "@mui/material";
+import { Skeleton, Tooltip } from "@mui/material";
+import clsx from "clsx";
 import { ReactNode } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -13,14 +14,13 @@ import {
   YAxis,
 } from "recharts";
 
-import ChartCard from "../../components/ChartCard";
-import Header from "../../components/Header";
 import IdealImage from "../../components/IdealImage";
-import LoadingImplementedChart from "../../components/ImplementedCharts/LoadingImplementedChart";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
+import PageHero from "../../components/PageHero";
+import Section, { ChartSkeleton } from "../../components/Section";
+import StatStrip from "../../components/StatStrip";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import ChartTooltip from "../../components/Tooltip";
 import {
   api,
@@ -30,9 +30,10 @@ import {
 } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
+import { medianYear, musicalAge } from "../../services/taste";
+import { percent, plural } from "../../services/tools";
 import ArtistShares from "./ArtistShares";
 import MusicalAgeOverTime from "./MusicalAgeOverTime";
-import { medianYear, musicalAge } from "./taste";
 
 import s from "./index.module.css";
 
@@ -55,10 +56,6 @@ const ALBUM_TYPES: Record<string, string> = {
 
 const exactPercent = (part: number, total: number) =>
   total > 0 ? (part / total) * 100 : 0;
-const percent = (part: number, total: number) =>
-  Math.round(exactPercent(part, total));
-const plural = (n: number, word: string) =>
-  `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
 
 export default function Taste() {
   const { interval } = useSelector(selectRawIntervalDetail);
@@ -72,24 +69,69 @@ export default function Taste() {
     interval.timesplit,
   );
 
-  const header = (
-    <Header
+  const empty = Boolean(taste && genres && genres.totalPlays === 0);
+  // The top genre leads, with its most played artist; without known genres
+  // the top artist does
+  const topGenre = genres?.genres[0];
+  const genreArtist = topGenre?.artists[0];
+  const topArtist = shares?.top[0];
+  const lead = topGenre
+    ? {
+        // MusicBrainz tags are lower case
+        name: topGenre.genre.replace(/^./, (c) => c.toUpperCase()),
+        images: genreArtist?.images,
+        meta: (
+          <>
+            Your top genre ·{" "}
+            <span className="num">
+              {percent(topGenre.plays, genres!.totalPlays)}%
+            </span>{" "}
+            of your plays
+            {genreArtist && (
+              <>
+                {" "}
+                · most played in it:{" "}
+                <Link to={`/artist/${genreArtist.id}`}>{genreArtist.name}</Link>
+              </>
+            )}
+          </>
+        ),
+      }
+    : genres && topArtist
+      ? {
+          name: (
+            <Link to={`/artist/${topArtist.artist.id}`}>
+              {topArtist.artist.name}
+            </Link>
+          ),
+          images: topArtist.artist.images,
+          meta: (
+            <>
+              Your top artist ·{" "}
+              <span className="num">
+                {percent(topArtist.plays, shares!.plays)}%
+              </span>{" "}
+              of your plays
+            </>
+          ),
+        }
+      : undefined;
+  const hero = (
+    <PageHero
       title="Taste"
-      subtitle="What kind of music you listen to, by number of plays"
+      images={lead?.images}
+      round
+      name={lead?.name}
+      nameText={
+        typeof lead?.name === "string" ? lead.name : topArtist?.artist.name
+      }
+      meta={lead?.meta}
+      empty={empty ? "Nothing played in this period." : undefined}
     />
   );
 
-  if (taste && genres && genres.totalPlays === 0) {
-    return (
-      <div>
-        {header}
-        <div className={s.content}>
-          <Text size="normal">
-            You did not listen to anything in this period.
-          </Text>
-        </div>
-      </div>
-    );
+  if (empty) {
+    return hero;
   }
 
   const datedPlays = taste?.years.reduce((sum, y) => sum + y.plays, 0) ?? 0;
@@ -104,160 +146,116 @@ export default function Taste() {
     : 0;
 
   const topPlays = shares?.top.reduce((sum, top) => sum + top.plays, 0) ?? 0;
-  const firstArtist = shares?.top[0];
-
-  const numberCards: {
-    title: string;
-    info?: string;
-    loaded: boolean;
-    main?: string | null;
-    sub?: string;
-  }[] = [
-    {
-      title: "Musical age",
-      loaded: Boolean(taste),
-      info: "A playful estimate. People tend to love the music of their late teens most, so the median release year of what you listen to hints at when you were 17.",
-      main:
-        median === undefined
-          ? undefined
-          : plural(musicalAge(median, ageYear), "year"),
-      sub:
-        median === undefined
-          ? undefined
-          : `Half of your plays are of music released in ${median} or before`,
-    },
-    {
-      title: "Nostalgic",
-      loaded: Boolean(taste),
-      main: taste && `${percent(taste.ageWhenPlayed.nostalgic, datedPlays)}%`,
-      sub: "of your plays were of songs at least 10 years old at the time",
-    },
-    {
-      title: "Fresh",
-      loaded: Boolean(taste),
-      main: taste && `${percent(taste.ageWhenPlayed.fresh, datedPlays)}%`,
-      sub: "of your plays were of songs released that year or the year before",
-    },
-    {
-      title: "Top artists",
-      loaded: Boolean(shares),
-      main: shares && `${percent(topPlays, shares.plays)}%`,
-      sub:
-        shares && firstArtist
-          ? `of your plays were by your top ${shares.top.length} artists, ${percent(firstArtist.plays, shares.plays)}% by ${firstArtist.artist.name} alone`
-          : undefined,
-    },
-  ];
 
   return (
     <div>
-      {header}
-      <div className={s.content}>
-        <Grid container spacing={2}>
-          {numberCards.map((card) => (
-            <Grid key={card.title} size={{ xs: 12, md: 6, lg: 3 }}>
-              <TitleCard title={card.title} info={card.info} className={s.card}>
-                <Text element="div" size="huge">
-                  {card.loaded ? (card.main ?? "-") : <Skeleton width={120} />}
-                </Text>
-                <Text element="div" size="normal" greyed>
-                  {card.loaded ? card.sub : <Skeleton width={200} />}
-                </Text>
-              </TitleCard>
-            </Grid>
-          ))}
-          <Grid size={{ xs: 12, lg: 7 }}>
-            <TitleCard title="Genres" className={s.card}>
-              {genres ? <Genres genres={genres} /> : <RowsSkeleton />}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 5 }}>
-            <TitleCard title="Most played release years" className={s.card}>
-              {taste ? <TopYears years={taste.years} /> : <RowsSkeleton />}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            {shares ? (
-              <ArtistShares
-                shares={shares}
-                start={interval.start}
-                end={interval.end}
+      {hero}
+      <StatStrip
+        stats={[
+          {
+            label: "Musical age",
+            value:
+              median === undefined
+                ? "—"
+                : plural(musicalAge(median, ageYear), "year"),
+            note:
+              median !== undefined &&
+              `Half your plays from ${median} or before`,
+          },
+          {
+            label: "Nostalgic",
+            value: taste
+              ? `${percent(taste.ageWhenPlayed.nostalgic, datedPlays)}%`
+              : "—",
+            note: "Songs 10+ years old when played",
+          },
+          {
+            label: "Fresh",
+            value: taste
+              ? `${percent(taste.ageWhenPlayed.fresh, datedPlays)}%`
+              : "—",
+            note: "Released that year or the one before",
+          },
+          {
+            label: `Top ${shares?.top.length ?? ""} artists`,
+            value: shares ? `${percent(topPlays, shares.plays)}%` : "—",
+            note:
+              shares &&
+              topArtist &&
+              `${topArtist.artist.name} alone ${percent(topArtist.plays, shares.plays)}%`,
+          },
+        ]}
+      />
+      <div className={clsx("ruled-columns", s.work)}>
+        <Section title="Genres">
+          {genres ? <Genres genres={genres} /> : <RowsSkeleton />}
+        </Section>
+        <Section
+          title="Most played release years"
+          info="The number is all your plays of songs released that year; the song is that year's most played.">
+          {taste ? <TopYears years={taste.years} /> : <RowsSkeleton />}
+        </Section>
+      </div>
+      <div className={s.sections}>
+        {shares ? (
+          <ArtistShares
+            shares={shares}
+            start={interval.start}
+            end={interval.end}
+          />
+        ) : (
+          <ChartSkeleton title="Top artists over time" />
+        )}
+        {taste ? (
+          <ReleaseYears years={taste.years} median={median} />
+        ) : (
+          <ChartSkeleton title="Release years" />
+        )}
+        <MusicalAgeOverTime
+          overall={
+            median === undefined ? undefined : musicalAge(median, ageYear)
+          }
+        />
+        {decades ? (
+          decades.length > 0 && <DecadesPerYear years={decades} />
+        ) : (
+          <ChartSkeleton title="Release decades over the years" />
+        )}
+      </div>
+      <div className={clsx("ruled-columns", s.work)}>
+        <Section title="Release types">
+          {taste ? (
+            <>
+              {Object.entries(ALBUM_TYPES).map(([type, label]) => (
+                <ShareRow
+                  key={type}
+                  label={label}
+                  share={exactPercent(taste.albumTypes[type] ?? 0, totalPlays)}
+                />
+              ))}
+              <div className={s.separator} />
+              <ShareRow
+                label="Explicit songs"
+                share={exactPercent(taste.explicit.explicit, totalPlays)}
               />
-            ) : (
-              <LoadingImplementedChart
-                title="Top artists over time"
-                className={s.chart}
+            </>
+          ) : (
+            <RowsSkeleton />
+          )}
+        </Section>
+        <Section title="Song length">
+          {taste ? (
+            taste.lengths.map((plays, index) => (
+              <ShareRow
+                key={LENGTH_LABELS[index]}
+                label={LENGTH_LABELS[index]!}
+                share={exactPercent(plays, totalPlays)}
               />
-            )}
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            {taste ? (
-              <ReleaseYears years={taste.years} median={median} />
-            ) : (
-              <LoadingImplementedChart
-                title="Release years"
-                className={s.chart}
-              />
-            )}
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <MusicalAgeOverTime
-              overall={
-                median === undefined ? undefined : musicalAge(median, ageYear)
-              }
-            />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            {decades ? (
-              decades.length > 0 && <DecadesPerYear years={decades} />
-            ) : (
-              <LoadingImplementedChart
-                title="Decades over the years"
-                className={s.chart}
-              />
-            )}
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TitleCard title="Release types" className={s.card}>
-              {taste ? (
-                <>
-                  {Object.entries(ALBUM_TYPES).map(([type, label]) => (
-                    <ShareRow
-                      key={type}
-                      label={label}
-                      share={exactPercent(
-                        taste.albumTypes[type] ?? 0,
-                        totalPlays,
-                      )}
-                    />
-                  ))}
-                  <div className={s.separator} />
-                  <ShareRow
-                    label="Explicit songs"
-                    share={exactPercent(taste.explicit.explicit, totalPlays)}
-                  />
-                </>
-              ) : (
-                <RowsSkeleton />
-              )}
-            </TitleCard>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <TitleCard title="Song length" className={s.card}>
-              {taste ? (
-                taste.lengths.map((plays, index) => (
-                  <ShareRow
-                    key={LENGTH_LABELS[index]}
-                    label={LENGTH_LABELS[index]!}
-                    share={exactPercent(plays, totalPlays)}
-                  />
-                ))
-              ) : (
-                <RowsSkeleton />
-              )}
-            </TitleCard>
-          </Grid>
-        </Grid>
+            ))
+          ) : (
+            <RowsSkeleton />
+          )}
+        </Section>
       </div>
     </div>
   );
@@ -296,7 +294,7 @@ function ShareRow({ label, share, max = 100, title, right }: ShareRowProps) {
             style={{ width: `${(share / (max || 1)) * 100}%` }}
           />
         </div>
-        <Text size="normal" className={s.rowValue}>
+        <Text size="normal" className={clsx("num", s.rowValue)}>
           {Math.round(share)}%
         </Text>
         {right}
@@ -363,7 +361,7 @@ function TopYears({ years }: { years: TasteResponse["years"] }) {
         const track = year.top.track;
         return (
           <div key={year.year} className={s.year}>
-            <Text size="big" weight="bold">
+            <Text size="normal" className={clsx("num", s.yearNumber)}>
               {year.year}
             </Text>
             {track ? (
@@ -395,12 +393,9 @@ function TopYears({ years }: { years: TasteResponse["years"] }) {
               <span />
             )}
             {/* All songs of the year, the song is only the most played */}
-            <div className={s.yearTotal}>
-              <Text size="normal">{plural(year.plays, "play")}</Text>
-              <Text size="small" greyed>
-                all songs from {year.year}
-              </Text>
-            </div>
+            <Text size="normal" greyed className="num">
+              {year.plays.toLocaleString()}
+            </Text>
           </div>
         );
       })}
@@ -439,41 +434,47 @@ function ReleaseYears({
   };
 
   return (
-    <ChartCard title="Release years" className={s.chart}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 24 }}>
-          <XAxis dataKey="x" style={{ fontWeight: "bold" }} />
-          <YAxis width="auto" />
-          <RTooltip
-            wrapperStyle={{ zIndex: 10 }}
-            content={
-              <ChartTooltip<typeof data>
-                title={({ x }) => `Released in ${x}`}
-                value={tooltipValue}
-              />
-            }
-          />
-          <Bar
-            dataKey="y"
-            fill="var(--primary)"
-            maxBarSize={24}
-            radius={[4, 4, 0, 0]}
-          />
-          {median && (
-            <ReferenceLine
-              x={median}
-              stroke="var(--text-grey)"
-              strokeDasharray="4 4"
-              label={{
-                value: `Median: ${median}`,
-                position: "top",
-                className: s.median,
-              }}
+    <Section title="Release years">
+      <div className={s.chart}>
+        <ResponsiveContainer width="100%" height="100%">
+          {/* Room for the median's label near the right edge */}
+          <BarChart data={data} margin={{ top: 24, right: 24 }}>
+            <XAxis dataKey="x" minTickGap={16} />
+            <YAxis
+              width="auto"
+              tickFormatter={(v: number) => v.toLocaleString()}
             />
-          )}
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartCard>
+            <RTooltip
+              wrapperStyle={{ zIndex: 10 }}
+              content={
+                <ChartTooltip<typeof data>
+                  title={({ x }) => `Released in ${x}`}
+                  value={tooltipValue}
+                />
+              }
+            />
+            <Bar
+              dataKey="y"
+              fill="var(--tint)"
+              maxBarSize={24}
+              radius={[4, 4, 0, 0]}
+            />
+            {median && (
+              <ReferenceLine
+                x={median}
+                stroke="var(--muted)"
+                strokeDasharray="4 4"
+                label={{
+                  value: `Median: ${median}`,
+                  position: "top",
+                  className: s.median,
+                }}
+              />
+            )}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
   );
 }
 
@@ -484,13 +485,13 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
   const shown = allDecades.slice(-NB_DECADES);
   const hasEarlier = allDecades.length > shown.length;
   // Oldest first, so they stack from the bottom. The newest decade gets the
-  // strongest step of the scale.
+  // full tint, older ones fade towards the background.
   const series = [
     ...(hasEarlier ? [{ key: "earlier", label: `Before ${shown[0]}` }] : []),
     ...shown.map((decade) => ({ key: `${decade}`, label: `${decade}s` })),
   ].map((serie, index, all) => ({
     ...serie,
-    fill: `var(--scale-${5 - (all.length - 1 - index)})`,
+    fill: `color-mix(in oklab, var(--tint) ${100 - 20 * (all.length - 1 - index)}%, var(--bg))`,
   }));
 
   const data = years.map(({ year, decades }) => {
@@ -507,48 +508,50 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
     series.find((serie) => serie.key === key)?.label ?? key;
 
   return (
-    <ChartCard title="Release decades over the years" className={s.chart}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <XAxis dataKey="x" style={{ fontWeight: "bold" }} />
-          <YAxis
-            width="auto"
-            domain={[0, 100]}
-            ticks={[0, 25, 50, 75, 100]}
-            allowDataOverflow
-            tickFormatter={(v: number) => `${v}%`}
-          />
-          <RTooltip
-            wrapperStyle={{ zIndex: 10 }}
-            content={
-              <ChartTooltip<typeof data>
-                title={({ x }) => `Played in ${x}`}
-                value={(_, value, root) =>
-                  `${label(String(root.dataKey))}: ${Math.round(value)}%`
-                }
-              />
-            }
-          />
-          <Legend
-            formatter={(value: string) => (
-              <span className={s.legend}>{value}</span>
-            )}
-            itemSorter={null}
-          />
-          {series.map((serie) => (
-            <Bar
-              key={serie.key}
-              dataKey={serie.key}
-              name={serie.label}
-              stackId="decades"
-              fill={serie.fill}
-              stroke="var(--background)"
-              strokeWidth={1}
-              maxBarSize={48}
+    <Section title="Release decades over the years">
+      <div className={s.chart}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <XAxis dataKey="x" minTickGap={16} />
+            <YAxis
+              width="auto"
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              allowDataOverflow
+              tickFormatter={(v: number) => `${v}%`}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartCard>
+            <RTooltip
+              wrapperStyle={{ zIndex: 10 }}
+              content={
+                <ChartTooltip<typeof data>
+                  title={({ x }) => `Played in ${x}`}
+                  value={(_, value, root) =>
+                    `${label(String(root.dataKey))}: ${Math.round(value)}%`
+                  }
+                />
+              }
+            />
+            <Legend
+              formatter={(value: string) => (
+                <span className={s.legend}>{value}</span>
+              )}
+              itemSorter={null}
+            />
+            {series.map((serie) => (
+              <Bar
+                key={serie.key}
+                dataKey={serie.key}
+                name={serie.label}
+                stackId="decades"
+                fill={serie.fill}
+                stroke="var(--bg)"
+                strokeWidth={1}
+                maxBarSize={48}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
   );
 }

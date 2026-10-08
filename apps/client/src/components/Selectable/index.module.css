@@ -4,10 +4,9 @@
 }
 
 .selected {
-  background-color: var(--selected);
+  background-color: color-mix(in srgb, var(--text) 12%, transparent);
 }
 
 .root:hover:not(.selected) {
-  background-color: var(--hover);
+  background-color: color-mix(in srgb, var(--text) 6%, transparent);
 }
-

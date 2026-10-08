@@ -8,18 +8,31 @@
   text-align: center;
 }
 
+/* Redesigned pages show the guest notice in their status strip */
+:global(body:has(.page-hero)) .publictoken {
+  display: none;
+}
+
 .sider {
   position: fixed;
-  width: 250px;
   z-index: 1;
 }
 
 .content {
   width: 100%;
   position: relative;
-  background-color: var(--content-background);
+  background-color: var(--bg);
+  min-height: 100vh;
 }
 
-.contentdrawer {
-  padding-left: 250px;
+.withsider {
+  padding-left: 212px;
+}
+
+.withrail {
+  padding-left: 64px;
+}
+
+.withbar {
+  padding-bottom: 64px;
 }

@@ -8,7 +8,7 @@ import {
   YAxis,
 } from "recharts";
 
-import ChartCard from "../../components/ChartCard";
+import Section from "../../components/Section";
 import ChartTooltip from "../../components/Tooltip";
 import { ArtistSharesResponse } from "../../services/apis/api";
 import {
@@ -77,85 +77,83 @@ export default function ArtistShares({
     series.find((serie) => serie.key === key)?.label ?? key;
 
   return (
-    <ChartCard title="Top artists over time" className={s.chart}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <XAxis
-            dataKey="x"
-            tickFormatter={formatX}
-            style={{ fontWeight: "bold" }}
-          />
-          <YAxis
-            width="auto"
-            allowDecimals={false}
-            tickFormatter={(v: number) => `${v}%`}
-          />
-          <RTooltip
-            wrapperStyle={{ zIndex: 10 }}
-            content={
-              <ChartTooltip<typeof data>
-                title={(coordinates, payload) => (
-                  <>
-                    {formatXAxisDateTooltip(coordinates, payload)}
-                    <br />
-                    <span className={s.tooltipNote}>
-                      These {series.length} artists:{" "}
-                      {share(
-                        series.reduce(
-                          (sum, serie) => sum + (payload[serie.key] ?? 0),
-                          0,
-                        ),
-                      )}{" "}
-                      of the plays
-                    </span>
-                  </>
-                )}
-                value={(_, value, root) => (
-                  <span className={s.tooltipRow}>
-                    <span
-                      className={s.swatch}
-                      style={{ backgroundColor: String(root.fill) }}
-                    />
-                    {label(String(root.dataKey))}
-                    <span className={s.tooltipValue}>{share(value)}</span>
-                  </span>
-                )}
-                dontShowNullValues
-                sortByValue
-              />
-            }
-          />
-          {/* Its own legend, recharts would colour it with the outline */}
-          <Legend
-            content={() => (
-              <div className={s.seriesLegend}>
-                {series.map((serie) => (
-                  <span key={serie.key} className={s.seriesLegendItem}>
-                    <span
-                      className={s.swatch}
-                      style={{ backgroundColor: serie.fill }}
-                    />
-                    {serie.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          />
-          {series.map((serie) => (
-            <Area
-              key={serie.key}
-              dataKey={serie.key}
-              name={serie.label}
-              type="linear"
-              stackId="artists"
-              fill={serie.fill}
-              fillOpacity={1}
-              stroke="var(--background)"
-              strokeWidth={1}
+    <Section title="Top artists over time">
+      <div className={s.chart}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <XAxis dataKey="x" tickFormatter={formatX} minTickGap={16} />
+            <YAxis
+              width="auto"
+              allowDecimals={false}
+              tickFormatter={(v: number) => `${v}%`}
             />
-          ))}
-        </AreaChart>
-      </ResponsiveContainer>
-    </ChartCard>
+            <RTooltip
+              wrapperStyle={{ zIndex: 10 }}
+              content={
+                <ChartTooltip<typeof data>
+                  title={(coordinates, payload) => (
+                    <>
+                      {formatXAxisDateTooltip(coordinates, payload)}
+                      <br />
+                      <span className={s.tooltipNote}>
+                        These {series.length} artists:{" "}
+                        {share(
+                          series.reduce(
+                            (sum, serie) => sum + (payload[serie.key] ?? 0),
+                            0,
+                          ),
+                        )}{" "}
+                        of the plays
+                      </span>
+                    </>
+                  )}
+                  value={(_, value, root) => (
+                    <span className={s.tooltipRow}>
+                      <span
+                        className={s.swatch}
+                        style={{ backgroundColor: String(root.fill) }}
+                      />
+                      {label(String(root.dataKey))}
+                      <span className={s.tooltipValue}>{share(value)}</span>
+                    </span>
+                  )}
+                  dontShowNullValues
+                  sortByValue
+                />
+              }
+            />
+            {/* Its own legend, recharts would colour it with the outline */}
+            <Legend
+              content={() => (
+                <div className={s.seriesLegend}>
+                  {series.map((serie) => (
+                    <span key={serie.key} className={s.seriesLegendItem}>
+                      <span
+                        className={s.swatch}
+                        style={{ backgroundColor: serie.fill }}
+                      />
+                      {serie.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            />
+            {series.map((serie) => (
+              <Area
+                key={serie.key}
+                dataKey={serie.key}
+                name={serie.label}
+                type="linear"
+                stackId="artists"
+                fill={serie.fill}
+                fillOpacity={1}
+                stroke="var(--bg)"
+                strokeWidth={1}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
   );
 }

@@ -1,8 +1,9 @@
 import { Button } from "@mui/material";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { useSelector } from "react-redux";
+
+import Section from "../../../components/Section";
 import Text from "../../../components/Text";
-import TitleCard from "../../../components/TitleCard";
 import { alertMessage } from "../../../services/redux/modules/message/reducer";
 import { selectUser } from "../../../services/redux/modules/user/selector";
 import {
@@ -11,6 +12,7 @@ import {
 } from "../../../services/redux/modules/user/thunk";
 import { useAppDispatch } from "../../../services/redux/tools";
 import SettingLine from "../SettingLine";
+
 import s from "./index.module.css";
 
 export default function PublicToken() {
@@ -42,13 +44,13 @@ export default function PublicToken() {
   const link = `${location}/?token=${user.publicToken}`;
 
   return (
-    <TitleCard title="Public token">
+    <Section title="Public token">
       <Text element="div" className={s.disclaimer} size="normal">
         The generated url will allow anyone with it to view your stats
         indefinitely. The user won&apos;t be able to execute any action that
         modifies your account. Regenerating it will cause the older link to be
-        deprecated instantly. You can also share the page you&apos;re currently
-        viewing using the <code>Share this page</code> button on the side.
+        deprecated instantly. To share the page you&apos;re viewing, use
+        &ldquo;Share this page&rdquo; in the account menu.
       </Text>
       <SettingLine
         left="Your public token"
@@ -75,6 +77,6 @@ export default function PublicToken() {
           </div>
         }
       />
-    </TitleCard>
+    </Section>
   );
 }

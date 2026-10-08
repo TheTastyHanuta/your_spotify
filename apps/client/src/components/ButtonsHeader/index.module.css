@@ -1,14 +1,19 @@
+/* Like the Charts pages' tab bar */
 .tabs {
-  border-bottom: 1px solid var(--divider);
-  margin-bottom: 16px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line);
 }
 
-@media screen and (max-width: 960px) {
-    .tabs {
-        margin-bottom: 8px;
-    }
+.tabs :global(.MuiTab-root) {
+  color: var(--muted);
 }
 
-.item {
-  border-radius: var(--radius) !important;
+.tabs :global(.MuiTab-root.Mui-selected) {
+  color: var(--text);
+}
+
+@media screen and (max-width: 900px) {
+  .tabs {
+    padding: 0 16px;
+  }
 }

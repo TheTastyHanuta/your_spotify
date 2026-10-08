@@ -1,6 +1,7 @@
 import { MouseEvent, ReactNode, useContext } from "react";
-import { SelectableContext } from "../Selectable/Selectable.context";
+
 import { Pointer } from "../../services/pointer";
+import { SelectableContext } from "../Selectable/Selectable.context";
 
 export interface VirtualElement {
   getBoundingClientRect: () => DOMRect;

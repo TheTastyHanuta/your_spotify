@@ -1,13 +1,15 @@
 import { Button } from "@mui/material";
 import { useState } from "react";
 import { useSelector } from "react-redux";
+
 import Dialog from "../../../components/Dialog";
 import LoadingButton from "../../../components/LoadingButton";
-import TitleCard from "../../../components/TitleCard";
+import Section from "../../../components/Section";
 import { selectAccounts } from "../../../services/redux/modules/admin/selector";
 import { deleteUser } from "../../../services/redux/modules/admin/thunk";
 import { useAppDispatch } from "../../../services/redux/tools";
 import SettingLine from "../SettingLine";
+
 import s from "./index.module.css";
 
 export default function DeleteUser() {
@@ -33,7 +35,7 @@ export default function DeleteUser() {
   };
 
   return (
-    <TitleCard title="Delete users">
+    <Section title="Delete users">
       <Dialog
         title="Are you sure you want to delete this user?"
         onClose={() => setOpen(false)}
@@ -57,6 +59,6 @@ export default function DeleteUser() {
           right={<Button onClick={() => askDelete(user.id)}>Delete</Button>}
         />
       ))}
-    </TitleCard>
+    </Section>
   );
 }

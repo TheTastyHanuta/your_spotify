@@ -1,0 +1,15 @@
+.segmented {
+  flex-wrap: nowrap;
+}
+
+.segmented :global(.MuiToggleButton-root) {
+  color: inherit;
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
+  white-space: nowrap;
+}
+
+.segmented :global(.MuiToggleButton-root.Mui-selected),
+.segmented :global(.MuiToggleButton-root.Mui-selected:hover) {
+  background: var(--text);
+  color: var(--bg);
+}

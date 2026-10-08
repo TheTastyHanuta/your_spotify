@@ -1,16 +1,15 @@
 import Text from "../../../components/Text";
-import s from "../index.module.css";
+
+import s from "../../../styles/centered.module.css";
 
 export default function RegistrationsDisabled() {
   return (
-    <div className={s.root}>
-      <Text element="h1" size="pagetitle">
-        Registrations are disabled
+    <main className={s.root}>
+      <h1 className={s.wordmark}>Registrations are disabled</h1>
+      <Text element="p" size="normal" className={s.explain}>
+        No new account can be created for now. An admin of this installation can
+        allow registrations again in Settings.
       </Text>
-      <Text className={s.explain} size="normal">
-        Cannot register any new account for the moment. Any admin account on
-        this installation can enable the registrations back.
-      </Text>
-    </div>
+    </main>
   );
 }

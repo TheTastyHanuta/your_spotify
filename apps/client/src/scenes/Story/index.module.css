@@ -1,25 +1,29 @@
-.content {
-  padding: var(--page-padding);
+/* Each group: a header section, then its two lists sharing rules; the
+   rules between the parts come from here */
+.groups > * {
+  border-bottom: 1px solid var(--line);
 }
 
-/* The picker reads as part of the sentence */
-.since {
-  font-size: inherit;
-  color: var(--text-on-light);
+/* The two lists stacked on smaller screens get a rule between them */
+@media screen and (max-width: 1100px) {
+  .work > :nth-child(even) {
+    border-top: 1px solid var(--line);
+  }
 }
 
-.section {
-  margin: 0 0 4px;
+.intro {
+  max-width: 75ch;
+}
+
+/* The timeline under its sentence */
+.intro + * {
+  margin-top: 16px;
 }
 
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.nextSection {
-  margin-top: 24px;
 }
 
 /* Eras: two lanes and the years under them */
@@ -61,15 +65,15 @@
   top: 0;
   bottom: 0;
   min-width: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
 }
 
 .artistEra {
-  background-color: var(--series-1);
+  background-color: var(--tint);
 }
 
 .genreEra {
-  background-color: var(--series-2);
+  background-color: color-mix(in srgb, var(--text) 35%, transparent);
 }
 
 .year {

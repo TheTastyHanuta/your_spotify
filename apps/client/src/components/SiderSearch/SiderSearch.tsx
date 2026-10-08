@@ -1,14 +1,17 @@
-import { Popover } from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
+import { IconButton, Popover } from "@mui/material";
 import clsx from "clsx";
 import { useRef, useState } from "react";
+
 import { api } from "../../services/apis/api";
 import { useConditionalAPI } from "../../services/hooks/hooks";
-import { Album, Artist, Track } from "../../services/types";
 import { useRegisterShortcut } from "../../services/shortcuts";
-import s from "./index.module.css";
-import { SearchPaper } from "./searchPaper/searchPaper";
-import { AbsoluteShortcut } from "../shortcut/shortcut";
 import { compact } from "../../services/tools";
+import { Album, Artist, Track } from "../../services/types";
+import { AbsoluteShortcut } from "../shortcut/shortcut";
+import { SearchPaper } from "./searchPaper/searchPaper";
+
+import s from "./index.module.css";
 
 interface SiderSearchProps {
   onTrackClick?: (track: Track) => void;
@@ -16,6 +19,10 @@ interface SiderSearchProps {
   onAlbumClick?: (album: Album) => void;
   inputClassname?: string;
   showShortcut: boolean;
+  // Icon only, for the narrow sidebar and the phone bar
+  iconOnly?: boolean;
+  // With iconOnly: a label under the icon, the whole thing one button
+  iconLabel?: string;
 }
 
 export default function SiderSearch({
@@ -24,6 +31,8 @@ export default function SiderSearch({
   onAlbumClick,
   inputClassname,
   showShortcut,
+  iconOnly,
+  iconLabel,
 }: SiderSearchProps) {
   const [search, setSearch] = useState("");
   const [results, loading] = useConditionalAPI(
@@ -66,15 +75,33 @@ export default function SiderSearch({
 
   return (
     <>
-      <div
-        className={clsx(s.input, inputClassname)}
-        role="button"
-        onClick={() => setOpen(true)}>
-        Search...
-        {showShortcut && (
-          <AbsoluteShortcut sequence="Meta+k" right={8} top={8} />
-        )}
-      </div>
+      {iconOnly && iconLabel ? (
+        <button
+          type="button"
+          className={inputClassname}
+          onClick={() => setOpen(true)}>
+          <SearchIcon />
+          {iconLabel}
+        </button>
+      ) : iconOnly ? (
+        <IconButton
+          aria-label="Search"
+          className={inputClassname}
+          onClick={() => setOpen(true)}>
+          <SearchIcon />
+        </IconButton>
+      ) : (
+        <button
+          type="button"
+          className={clsx(s.input, inputClassname)}
+          onClick={() => setOpen(true)}>
+          <SearchIcon fontSize="small" />
+          Search
+          {showShortcut && (
+            <AbsoluteShortcut sequence="Meta+k" right={8} top={7} />
+          )}
+        </button>
+      )}
 
       <div
         ref={wrapperRef}
@@ -98,7 +125,7 @@ export default function SiderSearch({
           slotProps={{
             paper: {
               style: {
-                borderRadius: 20,
+                border: "1px solid var(--line)",
                 overflow: "hidden",
                 width: "min(600px, 95vw)",
               },

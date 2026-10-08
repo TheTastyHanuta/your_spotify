@@ -1,19 +1,19 @@
 import { Tooltip } from "@mui/material";
+import clsx from "clsx";
 import { useSelector } from "react-redux";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
-import Masonry from "../../components/Masonry";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { api, LoyalResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
+import { EMPTY, heat } from "../../services/heatmap";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectUser } from "../../services/redux/modules/user/selector";
 import { plural } from "../../services/tools";
-import { heat } from "../Habits/Week";
 
 import s from "./index.module.css";
 
@@ -42,7 +42,12 @@ export default function Loyal() {
     const plays = new Map(item.years.map((y) => [y.year, y.plays]));
     const max = Math.max(1, ...plays.values());
     return (
-      <span className={s.yearStrip}>
+      <span
+        className={s.yearStrip}
+        role="img"
+        aria-label={years
+          .map((year) => `${year}: ${plural(plays.get(year) ?? 0, "play")}`)
+          .join(", ")}>
         {years.map((year) => {
           const n = plays.get(year) ?? 0;
           return (
@@ -52,12 +57,7 @@ export default function Loyal() {
               title={`${year}: ${plural(n, "play")}`}>
               <span
                 className={s.yearCell}
-                style={{
-                  backgroundColor:
-                    n === 0
-                      ? "rgba(var(--primary-tuple), 0.07)"
-                      : heat(n / max),
-                }}
+                style={{ backgroundColor: n === 0 ? EMPTY : heat(n / max) }}
               />
             </Tooltip>
           );
@@ -66,22 +66,31 @@ export default function Loyal() {
     );
   };
 
-  if (!loyal) {
-    return (
-      <TitleCard title="Evergreen songs">
-        <RowsSkeleton />
-      </TitleCard>
-    );
-  }
-  if (loyal.tracks.length === 0 && loyal.artists.length === 0) {
-    return <Text size="normal">No listens yet.</Text>;
+  const header = (
+    <Section title="Always there">
+      <Text element="div" size="normal" greyed className={s.intro}>
+        The songs and artists you played in the most different months.{" "}
+        <span className={s.wideOnly}>
+          The small bars show your plays in each year.
+        </span>
+      </Text>
+      {!loyal && <RowsSkeleton />}
+      {loyal && loyal.tracks.length === 0 && loyal.artists.length === 0 && (
+        <Text size="normal" greyed>
+          No listens yet.
+        </Text>
+      )}
+    </Section>
+  );
+  if (!loyal || (loyal.tracks.length === 0 && loyal.artists.length === 0)) {
+    return header;
   }
 
   return (
-    <Masonry>
-      {[
-        <TitleCard
-          key="tracks"
+    <>
+      {header}
+      <div className={clsx("ruled-columns", s.work)}>
+        <Section
           title="Evergreen songs"
           right={
             loyal.tracks.length > 0 && (
@@ -110,8 +119,8 @@ export default function Loyal() {
               right={strip(item)}
             />
           ))}
-        </TitleCard>,
-        <TitleCard key="artists" title="Loyal artists">
+        </Section>
+        <Section title="Loyal artists">
           {loyal.artists.map((item, index) => (
             <ItemRow
               key={item.artist.id}
@@ -123,8 +132,8 @@ export default function Loyal() {
               right={strip(item)}
             />
           ))}
-        </TitleCard>,
-      ]}
-    </Masonry>
+        </Section>
+      </div>
+    </>
   );
 }

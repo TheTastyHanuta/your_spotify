@@ -16,13 +16,6 @@ export enum Timesplit {
   month = "month",
   year = "year",
 }
-export const isTimesplit = (str: string | null): str is Timesplit => {
-  if (!str) {
-    return false;
-  }
-  return Object.values(Timesplit).includes(str as Timesplit);
-};
-
 export enum Precision {
   hour = "hour",
   day = "day",

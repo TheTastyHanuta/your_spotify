@@ -1,8 +1,9 @@
-import Text from "../../Text";
-import { GridRowWrapper } from "../../Grid";
 import { useMobile } from "../../../services/hooks/hooks";
-import s from "./index.module.css";
+import { GridRowWrapper } from "../../Grid";
+import Text from "../../Text";
 import { trackGrid } from "./TrackGrid";
+
+import s from "./index.module.css";
 
 export default function TrackHeader() {
   const [isMobile, isTablet] = useMobile();

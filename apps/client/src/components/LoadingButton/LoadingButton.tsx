@@ -1,4 +1,5 @@
 import { Button, ButtonProps, CircularProgress } from "@mui/material";
+
 import s from "./index.module.css";
 
 interface LoadingButtonProps extends ButtonProps {

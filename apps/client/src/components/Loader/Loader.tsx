@@ -1,7 +1,9 @@
 import { CircularProgress } from "@mui/material";
 import clsx from "clsx";
+
 import { HTMLProps } from "../../services/types";
 import Text from "../Text";
+
 import s from "./index.module.css";
 
 interface LoaderProps extends HTMLProps<"div"> {

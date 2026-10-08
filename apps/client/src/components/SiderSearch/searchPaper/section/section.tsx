@@ -1,7 +1,10 @@
+import clsx from "clsx";
+
 import { enterClicks } from "../../../../services/html";
 import { SpotifyImage } from "../../../../services/types";
 import IdealImage from "../../../IdealImage";
 import Text from "../../../Text";
+
 import s from "./index.module.css";
 
 interface SectionProps<T extends { id: string }> {
@@ -10,6 +13,8 @@ interface SectionProps<T extends { id: string }> {
   onClick: (item: T) => void;
   getContent: (item: T) => [title: string, subtitle?: string];
   getImages: (item: T) => Array<SpotifyImage>;
+  // Round covers, for artists
+  round?: boolean;
 }
 
 export function Section<T extends { id: string }>({
@@ -18,6 +23,7 @@ export function Section<T extends { id: string }>({
   onClick,
   getImages,
   getContent,
+  round,
 }: SectionProps<T>) {
   const shouldDisplay = items && items.length > 0;
 
@@ -27,9 +33,7 @@ export function Section<T extends { id: string }>({
 
   return (
     <div className={s.section}>
-      <Text size="big" greyed className={s.sticky}>
-        {title}
-      </Text>
+      <div className={`label ${s.heading}`}>{title}</div>
       <div className={s.results}>
         {items?.map((item) => {
           const [itemTitle, subtitle] = getContent(item);
@@ -43,12 +47,12 @@ export function Section<T extends { id: string }>({
               onClick={() => onClick(item)}
               onKeyDown={enterClicks(() => onClick(item))}>
               <IdealImage
-                className={s.cover}
+                className={clsx(s.cover, { [s.round]: round })}
                 images={getImages(item)}
-                size={48}
+                size={40}
               />
               <div className={s.texts}>
-                <Text size="big" className={s.name}>
+                <Text size="normal" className={s.name}>
                   {itemTitle}
                 </Text>
                 {subtitle && (

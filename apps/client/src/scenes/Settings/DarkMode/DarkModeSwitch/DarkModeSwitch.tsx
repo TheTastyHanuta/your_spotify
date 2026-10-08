@@ -1,5 +1,6 @@
-import { MenuItem, Select } from "@mui/material";
 import { useSelector } from "react-redux";
+
+import Segmented from "../../../../components/Segmented";
 import { selectDarkMode } from "../../../../services/redux/modules/user/selector";
 import { setDarkMode } from "../../../../services/redux/modules/user/thunk";
 import { DarkModeType } from "../../../../services/redux/modules/user/types";
@@ -14,13 +15,15 @@ export default function DarkModeSwitch() {
   };
 
   return (
-    <Select
-      variant="standard"
+    <Segmented<DarkModeType>
+      label="Theme"
       value={dark}
-      onChange={(ev) => changeDarkMode(ev.target.value as DarkModeType)}>
-      <MenuItem value="follow">Follow system theme</MenuItem>
-      <MenuItem value="dark">Use dark theme</MenuItem>
-      <MenuItem value="light">Use light theme</MenuItem>
-    </Select>
+      options={[
+        { value: "follow", label: "System" },
+        { value: "dark", label: "Dark" },
+        { value: "light", label: "Light" },
+      ]}
+      onChange={changeDarkMode}
+    />
   );
 }

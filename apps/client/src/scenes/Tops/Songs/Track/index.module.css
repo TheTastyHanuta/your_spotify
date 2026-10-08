@@ -1,22 +1,21 @@
 .row {
-  height: 48px;
+  min-height: 52px;
   overflow: hidden;
 }
 
 .header {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .count {
   display: flex;
   align-items: center;
-  justify-content:left;
+  justify-content: left;
 }
 
 .total {
   display: flex;
   align-items: center;
-  justify-content:center;
 }
 
 .names > :first-child {

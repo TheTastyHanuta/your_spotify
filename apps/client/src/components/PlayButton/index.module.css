@@ -1,9 +1,9 @@
 .root {
   position: relative;
-  height: 48px;
-  width: 48px;
+  height: 40px;
+  width: 40px;
   overflow: hidden;
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,11 +13,11 @@
   position: absolute;
   top: 0px;
   left: 0px;
-  height: 48px;
-  width: 48px;
+  height: 40px;
+  width: 40px;
   object-fit: cover;
 }
 
 .icon {
-  color: var(--primary) !important;
+  color: var(--text) !important;
 }

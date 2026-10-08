@@ -1,0 +1,8 @@
+.root {
+  --rank-col: 5ch;
+}
+
+.current,
+.current * {
+  font-weight: 600;
+}

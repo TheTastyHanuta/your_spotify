@@ -1,13 +1,14 @@
 import { CircularProgress } from "@mui/material";
+import clsx from "clsx";
 import { useSelector } from "react-redux";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
+
 import ButtonsHeader from "../../components/ButtonsHeader";
 import FullscreenCentered from "../../components/FullscreenCentered";
-import Header from "../../components/Header";
-import Masonry from "../../components/Masonry";
+import PageHero from "../../components/PageHero";
 import Text from "../../components/Text";
 import { api } from "../../services/apis/api";
-import { useAPI } from "../../services/hooks/hooks";
+import { useConditionalAPI } from "../../services/hooks/hooks";
 import { selectSettings } from "../../services/redux/modules/settings/selector";
 import {
   selectIsPublic,
@@ -18,23 +19,25 @@ import AccountInfos from "./AccountInfos";
 import AllowRegistration from "./AllowRegistration";
 import BlacklistArtist from "./BlacklistArtist";
 import DarkMode from "./DarkMode";
+import DateFormat from "./DateFormat";
 import DeleteUser from "./DeleteUser";
+import EnableAffinity from "./EnableAffinity";
 import Importer from "./Importer";
-import s from "./index.module.css";
 import PublicToken from "./PublicToken";
 import RelogToSpotify from "./RelogToSpotify";
 import SetAdmin from "./SetAdmin";
 import SpotifyAccountInfos from "./SpotifyAccountInfos";
-import Timezone from "./Timezone";
-import DateFormat from "./DateFormat";
 import { StatMeasurement } from "./StatMeasurement";
-import EnableAffinity from "./EnableAffinity";
+import Timezone from "./Timezone";
+
+import s from "./index.module.css";
 
 export default function Settings() {
   const settings = useSelector(selectSettings);
-  const sme = useAPI(api.sme);
   const user = useSelector(selectUser);
   const isPublic = useSelector(selectIsPublic);
+  // Needs a login: a guest's 401 would send them to the login page
+  const [sme] = useConditionalAPI(!isPublic, api.sme);
 
   if (!settings) {
     return (
@@ -65,18 +68,26 @@ export default function Settings() {
 
   return (
     <div>
-      <Header
+      <PageHero
         title="Settings"
-        subtitle="Here are the settings for Your Spotify, anyone with an account can access this page"
         hideInterval
+        images={sme?.images}
+        round
+        name={user.username}
+        nameText={user.username}
+        meta={
+          sme && !isPublic
+            ? `Linked to ${sme.display_name} on Spotify · ${sme.product}`
+            : undefined
+        }
       />
       <ButtonsHeader items={tabs} />
-      <div className={s.content}>
+      <div>
         <Routes>
           <Route
             path="/account"
             element={
-              <Masonry>
+              <div className={clsx("ruled-columns", s.panels)}>
                 {!isPublic && (
                   <AccountInfos
                     user={user}
@@ -91,13 +102,13 @@ export default function Settings() {
                 {!isPublic && <RelogToSpotify />}
                 {!isPublic && <Importer />}
                 {!isPublic && <PublicToken />}
-              </Masonry>
+              </div>
             }
           />
           <Route
             path="/admin"
             element={
-              <Masonry>
+              <div className={clsx("ruled-columns", s.panels)}>
                 {user.admin && !isPublic && <SetAdmin />}
                 {user.admin && !isPublic && <DeleteUser />}
                 {user.admin && !isPublic && (
@@ -106,19 +117,23 @@ export default function Settings() {
                 {user.admin && !isPublic && (
                   <EnableAffinity settings={settings} />
                 )}
-              </Masonry>
+              </div>
             }
           />
           <Route
             path="/statistics"
             element={
-              <Masonry>
+              <div className={clsx("ruled-columns", s.panels)}>
                 {!isPublic && <BlacklistArtist />}
                 {!isPublic && <Timezone />}
                 {!isPublic && <DateFormat />}
                 {!isPublic && <StatMeasurement />}
-              </Masonry>
+              </div>
             }
+          />
+          <Route
+            path="*"
+            element={<Navigate to="/settings/account" replace />}
           />
         </Routes>
       </div>

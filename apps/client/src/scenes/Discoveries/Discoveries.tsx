@@ -1,20 +1,21 @@
-import { Grid, Skeleton } from "@mui/material";
+import clsx from "clsx";
 import { formatDuration, intervalToDuration } from "date-fns";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
-import Header from "../../components/Header";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
-import Masonry from "../../components/Masonry";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
+import StatStrip from "../../components/StatStrip";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
-import { plural } from "../../services/tools";
+import { percent } from "../../services/tools";
 import ExploringOverTime from "./ExploringOverTime";
 import OnRepeat from "./OnRepeat";
 import Stick from "./Stick";
@@ -22,9 +23,6 @@ import Stick from "./Stick";
 import s from "./index.module.css";
 
 const NB_DISCOVERIES = 20;
-
-const percent = (part: number, total: number) =>
-  total > 0 ? Math.round((part / total) * 100) : 0;
 
 // "1 year 3 months", at least "1 month"
 const breakLength = (from: Date, to: Date) => {
@@ -49,66 +47,48 @@ export default function Discoveries() {
     NB_DISCOVERIES,
   );
 
-  const header = (
-    <Header
+  const empty = overview?.plays === 0;
+  // The most played new artist leads
+  const lead = artists?.[0];
+  const hero = (
+    <PageHero
       title="Discoveries"
-      subtitle="What was new to you, what came back and what you played on repeat"
+      images={lead?.artist.images}
+      round
+      name={
+        lead && <Link to={`/artist/${lead.artist.id}`}>{lead.artist.name}</Link>
+      }
+      nameText={lead?.artist.name}
+      meta={
+        lead && (
+          <>
+            Your top discovery ·{" "}
+            <span className="num">{lead.plays.toLocaleString()}</span> plays ·
+            first heard {DateFormatter.toDayMonthYear(new Date(lead.first))}
+            {lead.firstTrack && <> with {lead.firstTrack.name}</>}
+          </>
+        )
+      }
+      empty={
+        empty
+          ? "Nothing played in this period."
+          : artists?.length === 0
+            ? "No new artists in this period."
+            : undefined
+      }
     />
   );
 
-  if (overview?.plays === 0) {
-    return (
-      <div>
-        {header}
-        <div className={s.content}>
-          <Text size="normal">
-            You did not listen to anything in this period.
-          </Text>
-        </div>
-      </div>
-    );
+  if (empty) {
+    return hero;
   }
 
   // Every play of the period is of a song new in it: the period starts before
   // the first listen, there is nothing to compare with
   const wholeHistory = overview && overview.newTrackPlays === overview.plays;
 
-  const numberCards = [
-    {
-      title: "New artists",
-      main: overview && overview.newArtists.toLocaleString(),
-      sub: "heard for the first time ever",
-    },
-    {
-      title: "New songs",
-      main: overview && overview.newTracks.toLocaleString(),
-      sub:
-        overview &&
-        (wholeHistory
-          ? "every song is new over your whole history"
-          : `${overview.newTracksByKnownArtists.toLocaleString()} of them by artists you already knew`),
-    },
-    // Always 100% over the whole history, plays per song tell instead, like
-    // the Habits trait
-    wholeHistory
-      ? {
-          title: "Plays per song",
-          main: (overview.plays / overview.newTracks).toLocaleString(
-            undefined,
-            { maximumFractionDigits: 1 },
-          ),
-          sub: "on average over your whole history",
-        }
-      : {
-          title: "Plays of new songs",
-          main:
-            overview && `${percent(overview.newTrackPlays, overview.plays)}%`,
-          sub: "of your plays were of songs new to you",
-        },
-  ];
-
   const lists = [
-    <TitleCard
+    <Section
       key="artists"
       title="New artists"
       info="Artists you heard for the first time ever in this period, most played first">
@@ -137,19 +117,21 @@ export default function Discoveries() {
                   on {DateFormatter.toDayMonthYear(new Date(item.first))}
                 </Text>
               }
-              right={plural(item.plays, "play")}
+              right={<Plays n={item.plays} />}
             />
           ))
         ) : (
-          <Text size="normal">No new artists in this period.</Text>
+          <Text size="normal" greyed>
+            No new artists in this period.
+          </Text>
         )
       ) : (
         <RowsSkeleton />
       )}
-    </TitleCard>,
+    </Section>,
     <OnRepeat key="repeat" />,
     !wholeHistory && (
-      <TitleCard
+      <Section
         key="known"
         title="New songs by artists you knew"
         info="Songs heard for the first time in this period, by artists you had played before it"
@@ -173,21 +155,21 @@ export default function Discoveries() {
                 image={item.track.full_album.images}
                 title={<InlineTrack track={item.track} size="normal" />}
                 subtitle={<ArtistNames artists={item.track.full_artists} />}
-                right={plural(item.plays, "play")}
+                right={<Plays n={item.plays} />}
               />
             ))
           ) : (
-            <Text size="normal">
+            <Text size="normal" greyed>
               No new songs by artists you knew in this period.
             </Text>
           )
         ) : (
           <RowsSkeleton />
         )}
-      </TitleCard>
+      </Section>
     ),
     !wholeHistory && (
-      <TitleCard
+      <Section
         key="comebacks"
         title="Back after a break"
         info="Artists you had played at least 10 times, then not for at least 6 months, and played again in this period">
@@ -201,47 +183,70 @@ export default function Discoveries() {
                 round
                 title={<InlineArtist artist={item.artist} size="normal" />}
                 subtitle={`Back after ${breakLength(new Date(item.lastBefore), new Date(item.back))}, on ${DateFormatter.toDayMonthYear(new Date(item.back))}`}
-                right={plural(item.plays, "play")}
+                right={<Plays n={item.plays} />}
               />
             ))
           ) : (
-            <Text size="normal">No comebacks in this period.</Text>
+            <Text size="normal" greyed>
+              No comebacks in this period.
+            </Text>
           )
         ) : (
           <RowsSkeleton />
         )}
-      </TitleCard>
+      </Section>
     ),
   ].filter(Boolean);
 
   return (
     <div>
-      {header}
-      <div className={s.content}>
-        <Grid container spacing={2}>
-          {numberCards.map((card) => (
-            <Grid key={card.title} size={{ xs: 12, md: 4 }}>
-              <TitleCard title={card.title} className={s.card}>
-                <Text element="div" size="huge">
-                  {overview ? card.main : <Skeleton width={120} />}
-                </Text>
-                <Text element="div" size="normal" greyed>
-                  {overview ? card.sub : <Skeleton width={200} />}
-                </Text>
-              </TitleCard>
-            </Grid>
-          ))}
-          <Grid size={{ xs: 12 }}>
-            <Masonry>{lists}</Masonry>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Stick stick={overview?.stick} />
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <ExploringOverTime />
-          </Grid>
-        </Grid>
+      {hero}
+      <StatStrip
+        stats={[
+          {
+            label: "New artists",
+            value: overview ? overview.newArtists.toLocaleString() : "—",
+            note: "Heard for the first time ever",
+          },
+          {
+            label: "New songs",
+            value: overview ? overview.newTracks.toLocaleString() : "—",
+            note:
+              overview &&
+              (wholeHistory
+                ? "Every song is new over your whole history"
+                : `${overview.newTracksByKnownArtists.toLocaleString()} by artists you knew`),
+          },
+          // Always 100% over the whole history, plays per song tell instead,
+          // like the Habits trait
+          wholeHistory
+            ? {
+                label: "Plays per song",
+                value: (overview.plays / overview.newTracks).toLocaleString(
+                  undefined,
+                  { maximumFractionDigits: 1 },
+                ),
+                note: "On average over your whole history",
+              }
+            : {
+                label: "Plays of new songs",
+                value: overview
+                  ? `${percent(overview.newTrackPlays, overview.plays)}%`
+                  : "—",
+                note: "Of your plays in this period",
+              },
+        ]}
+      />
+      <div className={clsx("ruled-columns", s.work)}>{lists}</div>
+      <div className={s.sections}>
+        <Stick stick={overview?.stick} />
+        <ExploringOverTime />
       </div>
     </div>
   );
+}
+
+// Plays in a row's right column
+function Plays({ n }: { n: number }) {
+  return <span className="num">{n.toLocaleString()}</span>;
 }

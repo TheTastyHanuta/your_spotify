@@ -1,10 +1,7 @@
-import { Album, Artist, SpotifyImage } from "./types";
+import { SpotifyImage } from "./types";
 
 const NO_DATA_IMAGE = "/no_data_faded.png";
 const PIXEL_RATIO = window.devicePixelRatio ?? 1;
-
-export const getImage = (value: Artist | Album | undefined) =>
-  value?.images[0]?.url || NO_DATA_IMAGE;
 
 export function getAtLeastImage(images: SpotifyImage[], size: number) {
   const realSize = size * PIXEL_RATIO;
@@ -67,6 +64,8 @@ export function uniq<T>(array: T[]) {
 export const plural = (n: number, word: string) =>
   `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
 
-export function noop() {}
+// A whole percentage, 0 when there is nothing to divide
+export const percent = (part: number, total: number) =>
+  total > 0 ? Math.round((part / total) * 100) : 0;
 
-export const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
+export function noop() {}
