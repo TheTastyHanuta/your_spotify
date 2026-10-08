@@ -553,6 +553,20 @@ Get the artists heard for the first time in the period, most played first, with 
 
 - `200`: Array of artists with their plays in the period, first listen and first song
 
+#### `GET /spotify/discoveries/songs`
+
+Get the songs heard for the first time in the period that were played again at least 30 days after the first listen (that play may be after the period), most played in the period first.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of songs to return (1-20, default 5)
+
+**Response:**
+
+- `200`: Array of songs with `plays` in the period, `first` (first listen) and `months` (number of months of the period with plays, in the stats timezone)
+
 #### `GET /spotify/discoveries/overview`
 
 Get the numbers of new artists and songs, the new songs by artists played before the period, the artists back after a break (at least 10 plays, then none for 6 months) and whether the artists discovered in the period stuck (at least 3 plays from 3 months after the first listen).

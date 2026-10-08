@@ -23,6 +23,8 @@ const BREAK_DAYS = 182;
 // On repeat: the most plays inside any window of this many days
 const REPEAT_DAYS = 7;
 const REPEAT_MIN_PLAYS = 5;
+// Kept listening: played again this many days after the first listen
+const KEPT_DAYS = 30;
 // Did they stick: discovered artists with at least this many plays, stuck
 // when played this many times from this many days after the first listen.
 // Faded only once that window had a month to fill, too early before.
@@ -281,6 +283,68 @@ export const getOnRepeat = async (user: User, start: Date, end: Date) => {
     (track, index) => {
       const { plays, from, to } = best[index]!;
       return { track, plays, from, to };
+    },
+  );
+};
+
+// Songs first heard in the period that you kept playing: played again at
+// least KEPT_DAYS after the first listen (that play may come after the
+// period). Most played in the period first, with the number of months of the
+// period they were played in.
+export const getSongDiscoveries = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const rows: {
+    _id: string;
+    first: Date;
+    plays: number;
+    months: (string | null)[];
+  }[] = await InfosModel.aggregate([
+    allListens(user),
+    {
+      $group: {
+        _id: "$id",
+        first: { $min: "$played_at" },
+        last: { $max: "$played_at" },
+        plays: { $sum: { $cond: [inPeriod(start, end), 1, 0] } },
+        months: {
+          $addToSet: {
+            $cond: [
+              inPeriod(start, end),
+              {
+                $dateToString: {
+                  format: "%Y-%m",
+                  date: "$played_at",
+                  timezone,
+                },
+              },
+              null,
+            ],
+          },
+        },
+      },
+    },
+    {
+      $match: {
+        first: { $gt: start, $lt: end },
+        $expr: { $gte: ["$last", { $add: ["$first", KEPT_DAYS * DAY_MS] }] },
+      },
+    },
+    { $sort: { plays: -1, _id: 1 } },
+    { $limit: nb },
+  ]);
+
+  const docs = await findTracks(rows.map((row) => row._id));
+  return keepOrder(
+    rows.map((row) => row._id),
+    docs,
+    (track, index) => {
+      const { plays, first, months } = rows[index]!;
+      return { track, plays, first, months: months.filter(Boolean).length };
     },
   );
 };

@@ -25,6 +25,7 @@ import {
   getDiscoveryOverview,
   getNewPlaysPer,
   getOnRepeat,
+  getSongDiscoveries,
 } from "../database/queries/discoveries";
 import {
   getCalendar,
@@ -507,6 +508,12 @@ router.get("/discoveries", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, nb } = validate(req.query, discoveriesSchema);
   res.status(200).send(await getDiscoveries(user, start, end, nb));
+});
+
+router.get("/discoveries/songs", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, nb } = validate(req.query, discoveriesSchema);
+  res.status(200).send(await getSongDiscoveries(user, start, end, nb));
 });
 
 router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {

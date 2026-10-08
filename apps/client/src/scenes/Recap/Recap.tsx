@@ -44,6 +44,10 @@ import s from "./index.module.css";
 const NB_TOP = 30;
 const NB_SHOWN = 5;
 const NB_DISCOVERIES = 10;
+const DISCOVERY_TABS = [
+  { value: "artists", label: "Artists" },
+  { value: "songs", label: "Songs" },
+];
 
 export default function Recap() {
   const user = useSelector(selectUser);
@@ -51,6 +55,7 @@ export default function Recap() {
   const openPeriod = useOpenPeriod();
   const dispatch = useAppDispatch();
   const [sharing, setSharing] = useState(false);
+  const [discoveryTab, setDiscoveryTab] = useState("artists");
 
   const currentYear = new Date().getFullYear();
   // Not set before the first listen
@@ -102,6 +107,12 @@ export default function Recap() {
   const albums = useAPI(api.getBestAlbums, start, end, 1, 0);
   const months = useAPI(api.timePer, start, end, Timesplit.month);
   const discoveries = useAPI(api.getDiscoveries, start, end, NB_DISCOVERIES);
+  const songDiscoveries = useAPI(
+    api.getSongDiscoveries,
+    start,
+    end,
+    NB_DISCOVERIES,
+  );
   const taste = useAPI(api.getTaste, start, end);
   const genres = useAPI(api.getGenres, start, end, 1);
 
@@ -469,8 +480,41 @@ export default function Recap() {
         <div className={clsx("ruled-columns", s.work)}>
           <Section
             title="Best discoveries"
-            info="Artists you heard for the first time this year, most played first">
-            {discoveries ? (
+            info={
+              discoveryTab === "songs"
+                ? "Songs you heard for the first time this year and still played a month later, most played first, with the day of the first listen and the number of months you played them in"
+                : "Artists you heard for the first time this year, most played first"
+            }
+            tabs={DISCOVERY_TABS}
+            tab={discoveryTab}
+            onTab={setDiscoveryTab}>
+            {discoveryTab === "songs" ? (
+              songDiscoveries ? (
+                songDiscoveries.length > 0 ? (
+                  songDiscoveries.map((item, index) => (
+                    <ItemRow
+                      key={item.track.id}
+                      rank={index + 1}
+                      image={item.track.full_album.images}
+                      title={<InlineTrack track={item.track} size="normal" />}
+                      subtitle={
+                        <ArtistNames
+                          artists={item.track.full_artists}
+                          prefix={`Since ${DateFormatter.toDayMonth(new Date(item.first))} · ${plural(item.months, "month")} · `}
+                        />
+                      }
+                      right={<Count n={item.plays} />}
+                    />
+                  ))
+                ) : (
+                  <Text size="normal" greyed>
+                    No new song stayed with you this year.
+                  </Text>
+                )
+              ) : (
+                <RowsSkeleton />
+              )
+            ) : discoveries ? (
               discoveries.length > 0 ? (
                 discoveries.map((item, index) => (
                   <ItemRow
