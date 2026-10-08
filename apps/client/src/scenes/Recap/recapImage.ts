@@ -2,7 +2,8 @@
 // white like the app: the pictures are the only colour.
 export interface RecapImageData {
   year: number;
-  minutes: string;
+  // Whole hours
+  hours: string;
   // Like "12% more than in 2024"
   change?: string;
   topArtist?: { name: string; image?: string };
@@ -105,8 +106,8 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   label(`${data.year} in music`, MARGIN, 150);
-  text(data.minutes, MARGIN - 6, 360, 200, 800);
-  text("minutes listened", MARGIN, 450, 52, 600);
+  text(data.hours, MARGIN - 6, 360, 200, 800);
+  text("hours listened", MARGIN, 450, 52, 600);
   if (data.change) {
     text(data.change, MARGIN, 515, 36, 500, GREY);
   }

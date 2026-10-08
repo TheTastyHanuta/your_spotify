@@ -268,10 +268,13 @@ export const formatXAxisDateTooltip: TitleFormatter<
 
 export const msToMinutes = (ms: number) => Math.floor(ms / 1000 / 60);
 
-// "12h 5m"
+// "12h 5m", or whole hours ("804h") from 100 hours on
 export function formatHours(ms: number) {
   const minutes = Math.round(ms / 60000);
-  return `${Math.floor(minutes / 60).toLocaleString()}h ${minutes % 60}m`;
+  if (minutes >= 100 * 60) {
+    return `${Math.round(minutes / 60).toLocaleString()}h`;
+  }
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
 export const msToDuration = (ms: number) => {

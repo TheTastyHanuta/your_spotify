@@ -30,7 +30,7 @@ import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { alertMessage } from "../../services/redux/modules/message/reducer";
 import { selectUser } from "../../services/redux/modules/user/selector";
 import { useAppDispatch } from "../../services/redux/tools";
-import { getPercentMore, msToMinutes } from "../../services/stats";
+import { formatHours, getPercentMore } from "../../services/stats";
 import { medianYear, musicalAge } from "../../services/taste";
 import { getAtLeastImage, plural } from "../../services/tools";
 import { listeningTraits } from "../../services/traits";
@@ -44,8 +44,6 @@ import s from "./index.module.css";
 const NB_TOP = 30;
 const NB_SHOWN = 5;
 const NB_DISCOVERIES = 10;
-
-const minutes = (ms: number) => msToMinutes(ms).toLocaleString();
 
 export default function Recap() {
   const user = useSelector(selectUser);
@@ -136,7 +134,7 @@ export default function Recap() {
       const topArtist = artists[0]?.artist;
       const blob = await renderRecapImage({
         year,
-        minutes: minutes(overview.durationMs),
+        hours: Math.round(overview.durationMs / 3_600_000).toLocaleString(),
         change:
           hasPrevious && previous
             ? change(previous.durationMs, overview.durationMs)
@@ -244,9 +242,10 @@ export default function Recap() {
   const stat = (
     label: string,
     pick: (o: NonNullable<typeof overview>) => number,
+    format = (v: number) => v.toLocaleString(),
   ) => ({
     label,
-    value: overview ? pick(overview).toLocaleString() : "—",
+    value: overview ? format(pick(overview)) : "—",
     delta:
       overview && hasPrevious && previous
         ? formatDelta(pick(previous), pick(overview))
@@ -256,12 +255,10 @@ export default function Recap() {
   });
 
   const monthData = Array.from(Array(12).keys())
-    .map((index) => ({
-      x: index + 1,
-      y: msToMinutes(
-        months?.find((m) => m._id?.month === index + 1)?.count ?? 0,
-      ),
-    }))
+    .map((index) => {
+      const ms = months?.find((m) => m._id?.month === index + 1)?.count ?? 0;
+      return { x: index + 1, y: ms / 3_600_000, ms };
+    })
     .filter((month) => new Date(year, month.x - 1, 1) <= end);
   const peak = monthData.reduce(
     (best, month) => (month.y > best.y ? month : best),
@@ -280,7 +277,7 @@ export default function Recap() {
         )
       : undefined;
 
-  // The hour of the day with the most minutes
+  // The hour of the day with the most listening
   const perHour = Array.from(Array(24).keys()).map((hour) => ({
     hour,
     durationMs:
@@ -306,7 +303,7 @@ export default function Recap() {
       {hero}
       <StatStrip
         stats={[
-          stat("Minutes", (o) => msToMinutes(o.durationMs)),
+          stat("Time listened", (o) => o.durationMs, formatHours),
           stat("Plays", (o) => o.plays),
           stat("Artists", (o) => o.artists),
           stat("Songs", (o) => o.tracks),
@@ -370,7 +367,7 @@ export default function Recap() {
       <div className={s.sections}>
         {months ? (
           <Section
-            title="Minutes per month"
+            title="Hours per month"
             right={
               peak.y > 0 && (
                 <Text size="normal" greyed>
@@ -388,6 +385,7 @@ export default function Recap() {
                   />
                   <YAxis
                     width="auto"
+                    allowDecimals={false}
                     tickFormatter={(v: number) => v.toLocaleString()}
                   />
                   <RTooltip
@@ -395,9 +393,9 @@ export default function Recap() {
                     content={
                       <ChartTooltip<typeof monthData>
                         title={({ x }) => `${monthName(x)} ${year}`}
-                        value={(_, value) => (
+                        value={(month) => (
                           <div>
-                            {value.toLocaleString()} min
+                            {formatHours(month.ms)}
                             <br />
                             <span className={s.hint}>
                               Click to see your top songs of that month
@@ -440,7 +438,7 @@ export default function Recap() {
             </div>
           </Section>
         ) : (
-          <ChartSkeleton title="Minutes per month" />
+          <ChartSkeleton title="Hours per month" />
         )}
         {artistMoves && songMoves && (
           <div className={clsx("ruled-columns", s.work)}>
@@ -512,7 +510,7 @@ export default function Recap() {
                     {DateFormatter.toWeekdayDayMonthYear(
                       fromDay(overview.busiestDay.date),
                     )}
-                    , {minutes(overview.busiestDay.durationMs)} min
+                    , {formatHours(overview.busiestDay.durationMs)}
                   </Fact>
                 )}
                 {overview.durationMs > 0 && (
@@ -523,7 +521,7 @@ export default function Recap() {
                     {Math.round(
                       (goldenHour.durationMs / overview.durationMs) * 100,
                     )}
-                    % of your minutes
+                    % of your listening time
                   </Fact>
                 )}
                 {overview.streaks.longest && (

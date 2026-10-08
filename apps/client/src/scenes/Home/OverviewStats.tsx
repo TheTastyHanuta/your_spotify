@@ -7,7 +7,6 @@ import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { formatHours, getLastPeriod } from "../../services/stats";
 
-// Hours and minutes, for totals that run into days
 // The period's totals, each compared with the period just before it
 export default function OverviewStats() {
   const { interval, unit } = useSelector(selectRawIntervalDetail);
