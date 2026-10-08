@@ -34,7 +34,7 @@ export interface Artist {
   _id: string;
   external_urls: any;
   genres: string[];
-  // Looked up on MusicBrainz by the server, preferred over Spotify's genres
+  // Looked up on MusicBrainz by the server, used when Spotify gave no genres
   mbGenres?: string[];
   href: string;
   id: string;

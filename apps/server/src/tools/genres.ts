@@ -104,6 +104,7 @@ export async function genresLoop() {
   }
 }
 
-// Genres used by the stats: MusicBrainz's, or Spotify's when it has none
+// Genres used by the stats: Spotify's, which are more precise, or
+// MusicBrainz's for artists Spotify gave none
 export const genresOf = (artist: { genres?: string[]; mbGenres?: string[] }) =>
-  artist.mbGenres?.length ? artist.mbGenres : (artist.genres ?? []);
+  artist.genres?.length ? artist.genres : (artist.mbGenres ?? []);

@@ -40,10 +40,10 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
     return <CircularProgress />;
   }
 
-  // MusicBrainz's genres when it has some, like the genre stats
-  const genres = stats.artist.mbGenres?.length
-    ? stats.artist.mbGenres
-    : stats.artist.genres;
+  // Spotify's genres, MusicBrainz's when it has none, like the genre stats
+  const genres = stats.artist.genres.length
+    ? stats.artist.genres
+    : (stats.artist.mbGenres ?? []);
   const first = stats.firstLast.first;
   const last = stats.firstLast.last;
   // The rank counts listens where the artist is credited first

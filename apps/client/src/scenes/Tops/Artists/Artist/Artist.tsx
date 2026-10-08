@@ -31,9 +31,9 @@ export default function Artist({
   const [isMobile, isTablet] = useMobile();
   const artistGrid = useArtistGrid();
 
-  // MusicBrainz's genres when it has some, like the artist page
+  // Spotify's genres, MusicBrainz's when it has none, like the artist page
   const genres = (
-    artist.mbGenres?.length ? artist.mbGenres : artist.genres
+    artist.genres.length ? artist.genres : (artist.mbGenres ?? [])
   ).join(", ");
 
   const columns: ColumnDescription[] = [
