@@ -1,14 +1,16 @@
-import { useRef, useState } from "react";
 import { MoreHoriz, MoreVert } from "@mui/icons-material";
 import {
   Button,
   ClickAwayListener,
   Fade,
   IconButton,
+  Paper,
   Popper,
   Tooltip,
 } from "@mui/material";
 import clsx from "clsx";
+import { useRef, useState } from "react";
+
 import s from "./index.module.css";
 
 export interface ThreePointItem {
@@ -53,7 +55,8 @@ export default function ThreePoints({ items, horizontal }: ThreePointsProps) {
           transition>
           {({ TransitionProps }) => (
             <Fade {...TransitionProps}>
-              <div className={s.popper}>
+              {/* The same overlay as MUI's menus */}
+              <Paper elevation={8} className={s.popper}>
                 {items.map((item, index) => (
                   <Tooltip
                     key={item.label}
@@ -76,7 +79,7 @@ export default function ThreePoints({ items, horizontal }: ThreePointsProps) {
                     No action available
                   </Button>
                 )}
-              </div>
+              </Paper>
             </Fade>
           )}
         </Popper>

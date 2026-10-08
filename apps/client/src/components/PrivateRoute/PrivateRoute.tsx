@@ -1,12 +1,13 @@
 import { CircularProgress } from "@mui/material";
 import { ReactNode, useEffect } from "react";
 import { useSelector } from "react-redux";
+
+import { useNavigate } from "../../services/hooks/useNavigate";
+import { selectAccounts } from "../../services/redux/modules/admin/selector";
 import {
   selectLoaded,
   selectUser,
 } from "../../services/redux/modules/user/selector";
-import { selectAccounts } from "../../services/redux/modules/admin/selector";
-import { useNavigate } from "../../services/hooks/useNavigate";
 
 interface PrivateRouteProps {
   children: ReactNode;

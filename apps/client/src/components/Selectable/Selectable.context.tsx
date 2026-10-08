@@ -1,7 +1,9 @@
-import { createContext, MouseEvent, ReactNode, useContext } from "react";
 import clsx from "clsx";
-import { uniq } from "../../services/tools";
+import { createContext, MouseEvent, ReactNode, useContext } from "react";
+
 import { Pointer } from "../../services/pointer";
+import { uniq } from "../../services/tools";
+
 import s from "./index.module.css";
 
 function hasAdditiveSelectKeyPressed(ctrlKey: boolean, metaKey: boolean) {

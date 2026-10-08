@@ -10,9 +10,9 @@ import {
 import { ReactNode, useState } from "react";
 import { useSelector } from "react-redux";
 
-import Header from "../../components/Header";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { api } from "../../services/apis/api";
 import {
   selectRawIntervalDetail,
@@ -116,22 +116,10 @@ export default function Benchmarks() {
       request: () =>
         api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),
     },
-    {
-      title: "Get forgotten favorites",
-      request: () => api.getForgotten(182),
-    },
-    {
-      title: "Get eras",
-      request: () => api.getEras(),
-    },
-    {
-      title: "Get on this day",
-      request: () => api.getOnThisDay(),
-    },
-    {
-      title: "Get loyal songs and artists",
-      request: () => api.getLoyal(),
-    },
+    { title: "Get forgotten favorites", request: () => api.getForgotten(182) },
+    { title: "Get eras", request: () => api.getEras() },
+    { title: "Get on this day", request: () => api.getOnThisDay() },
+    { title: "Get loyal songs and artists", request: () => api.getLoyal() },
     {
       title: "Get longest sessions",
       request: () => api.getLongestSessions(interval.start, interval.end),
@@ -207,9 +195,12 @@ export default function Benchmarks() {
 
   return (
     <div>
-      <Header title="Benchmarks" subtitle="Analyze server queries time" />
-      <TitleCard
+      <PageHero
         title="Benchmarks"
+        empty="How long the server takes for each query, in the period chosen here."
+      />
+      <Section
+        title="Queries"
         right={
           <Button variant="contained" onClick={runAll}>
             Run All
@@ -257,7 +248,7 @@ export default function Benchmarks() {
             );
           })}
         </Table>
-      </TitleCard>
+      </Section>
     </div>
   );
 }

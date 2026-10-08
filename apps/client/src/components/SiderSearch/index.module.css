@@ -1,17 +1,22 @@
 .input {
-  border: none;
-  font-size: unset;
-  outline: none;
-  background-color: var(--secondary-dark);
-  color: lightgrey;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  font: inherit;
+  font-size: 14px;
+  background: transparent;
+  color: var(--muted);
   border-radius: var(--radius);
-  padding: 8px;
-  margin-bottom: 32px;
+  padding: 7px 10px;
+  margin-bottom: 14px;
   width: 100%;
   cursor: pointer;
   position: relative;
+  text-align: left;
 }
 
 .input:hover {
-  background-color: var(--secondary-dark-hover);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--text) 25%, transparent);
 }

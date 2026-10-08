@@ -1,20 +1,18 @@
-import { Grid, MenuItem, Select } from "@mui/material";
+import clsx from "clsx";
 import { formatDistanceToNowStrict } from "date-fns";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
-import Header from "../../components/Header";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
-import Masonry from "../../components/Masonry";
+import PageHero from "../../components/PageHero";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
-import { plural } from "../../services/tools";
-import Eras from "./Eras";
+import Eras, { dates, ongoing, shortMonth } from "./Eras";
 import Loyal from "./Loyal";
 
 import s from "./index.module.css";
@@ -27,6 +25,10 @@ const SINCE = {
 };
 type Since = keyof typeof SINCE;
 const DEFAULT_SINCE: Since = "6m";
+const SINCE_TABS = Object.entries(SINCE).map(([value, { label }]) => ({
+  value,
+  label,
+}));
 
 // "last heard 4 months ago · most in Dec 2023"
 const when = (item: { peak: string; last: string }) => {
@@ -40,145 +42,126 @@ export default function Story() {
   const since: Since =
     asked && asked in SINCE ? (asked as Since) : DEFAULT_SINCE;
   const forgotten = useAPI(api.getForgotten, SINCE[since].days);
+  const eras = useAPI(api.getEras);
 
   const quiet = SINCE[since].label;
   const empty = (
-    <Text size="normal">
+    <Text size="normal" greyed>
       Nothing you played 10 times or more has been quiet for {quiet}.
     </Text>
   );
+  // The latest artist era leads, the one going on if there is one
+  const lead = eras?.artists.at(-1);
 
   return (
     <div>
-      <Header
+      <PageHero
         title="Your story"
-        subtitle="Your whole history, whatever the period"
         hideInterval
+        images={lead?.artist.images}
+        round
+        name={
+          lead && (
+            <Link to={`/artist/${lead.artist.id}`}>{lead.artist.name}</Link>
+          )
+        }
+        nameText={lead?.artist.name}
+        meta={
+          lead && (
+            <>
+              {ongoing(lead)
+                ? `Your era since ${shortMonth(lead.from)}`
+                : `Your latest era, ${dates(lead)}`}{" "}
+              ·{" "}
+              <span className="num">
+                {Math.round((lead.plays / lead.total) * 100)}%
+              </span>{" "}
+              of your listening
+              {lead.track && <> · mostly {lead.track.name}</>}
+            </>
+          )
+        }
       />
-      <div className={s.content}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12 }}>
-            <Text element="h2" size="huge" className={s.section}>
-              Forgotten favorites
-            </Text>
-            <Text element="div" size="normal" greyed>
-              Your most played songs and artists that you have not played for{" "}
-              <Select
-                variant="standard"
-                value={since}
-                className={s.since}
-                onChange={(event) =>
-                  setParams((query) => {
-                    query.set("since", event.target.value);
-                    return query;
-                  })
-                }>
-                {Object.entries(SINCE).map(([key, { label }]) => (
-                  <MenuItem key={key} value={key}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Text>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Masonry>
-              {[
-                <TitleCard
-                  key="tracks"
-                  title="Songs"
-                  right={
-                    forgotten &&
-                    forgotten.tracks.length > 0 && (
-                      <AddToPlaylist
-                        context={{
-                          type: "specific",
-                          songIds: forgotten.tracks.map((t) => t.track.id),
-                        }}
-                      />
-                    )
-                  }>
-                  {forgotten ? (
-                    forgotten.tracks.length > 0 ? (
-                      forgotten.tracks.map((item, index) => (
-                        <ItemRow
-                          key={item.track.id}
-                          rank={index + 1}
-                          image={item.track.full_album.images}
-                          title={
-                            <InlineTrack track={item.track} size="normal" />
-                          }
-                          subtitle={
-                            <>
-                              <ArtistNames artists={item.track.full_artists} />
-                              <Text size="normal" greyed className={s.ellipsis}>
-                                {when(item)}
-                              </Text>
-                            </>
-                          }
-                          right={plural(item.total, "play")}
-                        />
-                      ))
-                    ) : (
-                      empty
-                    )
-                  ) : (
-                    <RowsSkeleton />
-                  )}
-                </TitleCard>,
-                <TitleCard key="artists" title="Artists">
-                  {forgotten ? (
-                    forgotten.artists.length > 0 ? (
-                      forgotten.artists.map((item, index) => (
-                        <ItemRow
-                          key={item.artist.id}
-                          rank={index + 1}
-                          image={item.artist.images}
-                          round
-                          title={
-                            <InlineArtist artist={item.artist} size="normal" />
-                          }
-                          subtitle={when(item)}
-                          right={plural(item.total, "play")}
-                        />
-                      ))
-                    ) : (
-                      empty
-                    )
-                  ) : (
-                    <RowsSkeleton />
-                  )}
-                </TitleCard>,
-              ]}
-            </Masonry>
-          </Grid>
-          <Grid size={{ xs: 12 }} className={s.nextSection}>
-            <Text element="h2" size="huge" className={s.section}>
-              Eras
-            </Text>
-            <Text element="div" size="normal" greyed>
-              Stretches of at least 3 months when one artist or genre clearly
-              led your listening.
-            </Text>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Eras />
-          </Grid>
-          <Grid size={{ xs: 12 }} className={s.nextSection}>
-            <Text element="h2" size="huge" className={s.section}>
-              Always there
-            </Text>
-            <Text element="div" size="normal" greyed>
-              The songs and artists you played in the most different months.{" "}
-              <span className={s.wideOnly}>
-                The small bars show your plays in each year.
-              </span>
-            </Text>
-          </Grid>
-          <Grid size={{ xs: 12 }}>
-            <Loyal />
-          </Grid>
-        </Grid>
+      <div className={s.groups}>
+        <Section
+          title="Forgotten favorites"
+          tabs={SINCE_TABS}
+          tab={since}
+          onTab={(value) =>
+            setParams((query) => {
+              query.set("since", value);
+              return query;
+            })
+          }>
+          <Text element="div" size="normal" greyed className={s.intro}>
+            Your most played songs and artists that you have not played for{" "}
+            {quiet}.
+          </Text>
+        </Section>
+        <div className={clsx("ruled-columns", s.work)}>
+          <Section
+            title="Songs"
+            right={
+              forgotten &&
+              forgotten.tracks.length > 0 && (
+                <AddToPlaylist
+                  context={{
+                    type: "specific",
+                    songIds: forgotten.tracks.map((t) => t.track.id),
+                  }}
+                />
+              )
+            }>
+            {forgotten ? (
+              forgotten.tracks.length > 0 ? (
+                forgotten.tracks.map((item, index) => (
+                  <ItemRow
+                    key={item.track.id}
+                    rank={index + 1}
+                    image={item.track.full_album.images}
+                    title={<InlineTrack track={item.track} size="normal" />}
+                    subtitle={
+                      <>
+                        <ArtistNames artists={item.track.full_artists} />
+                        <Text size="normal" greyed className={s.ellipsis}>
+                          {when(item)}
+                        </Text>
+                      </>
+                    }
+                    right={<span className="num">{item.total}</span>}
+                  />
+                ))
+              ) : (
+                empty
+              )
+            ) : (
+              <RowsSkeleton />
+            )}
+          </Section>
+          <Section title="Artists">
+            {forgotten ? (
+              forgotten.artists.length > 0 ? (
+                forgotten.artists.map((item, index) => (
+                  <ItemRow
+                    key={item.artist.id}
+                    rank={index + 1}
+                    image={item.artist.images}
+                    round
+                    title={<InlineArtist artist={item.artist} size="normal" />}
+                    subtitle={when(item)}
+                    right={<span className="num">{item.total}</span>}
+                  />
+                ))
+              ) : (
+                empty
+              )
+            ) : (
+              <RowsSkeleton />
+            )}
+          </Section>
+        </div>
+        <Eras eras={eras} />
+        <Loyal />
       </div>
     </div>
   );

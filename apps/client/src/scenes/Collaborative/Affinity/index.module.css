@@ -1,108 +1,36 @@
-.root {
-  margin: auto;
-  height: 100vh;
+/* The two parts of the form, ruled like the other pages */
+.form > * {
+  border-bottom: 1px solid var(--line);
+}
+
+.accounts {
   display: flex;
   flex-direction: column;
-}
-
-.content {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
-
-.content > div {
-  width: 100%;
-  text-align: center;
-}
-
-.title {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-
-.question {
-  margin-left: 8px;
-  color: grey;
-}
-
-.accountselection {
-  margin: auto;
-  width: 40%;
-  margin-bottom: 32px;
-}
-
-.section {
-  text-align: left;
-  margin-left: 8px;
-  margin-bottom: 8px;
 }
 
 .account {
-  padding-left: 8px;
+  width: fit-content;
+}
+
+.controls {
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  transition: all 250ms;
-  border-radius: 6px;
-  border: none;
-  outline: none;
-  font-size: unset;
-  background-color: transparent;
-  width: 100%;
-  cursor: pointer;
+  gap: 12px 16px;
 }
 
-.account:hover {
-  background-color: rgb(233, 233, 233);
+.submit {
+  margin-top: 18px !important;
 }
 
-.modeselection {
-  display: flex;
-  flex-direction: row;
+.hint {
+  margin-top: 8px;
+}
+
+/* "Most by …" and the song's menu in a result row */
+.right {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  width: 40%;
-  margin: auto;
-  margin-bottom: 8px;
-}
-
-.typeselection {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 40%;
-  margin: auto;
-  margin-bottom: 8px;
-}
-
-.timeselection {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 40%;
-  margin: auto;
-  margin-bottom: 32px;
-}
-
-@media screen and (max-width: 500px) {
-  .accountselection {
-    width: 90%;
-  }
-  .modeselection {
-    width: 90%;
-  }
-  .typeselection {
-    width: 90%;
-  }
-  .timeselection {
-    width: 90%;
-  }
+  gap: 8px;
+  white-space: nowrap;
 }

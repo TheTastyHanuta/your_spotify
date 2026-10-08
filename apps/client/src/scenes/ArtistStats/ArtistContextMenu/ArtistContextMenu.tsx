@@ -1,7 +1,7 @@
 import BlacklistArtistDialog from "../../../components/BlacklistArtistDialog";
 import ThreePoints from "../../../components/ThreePoints";
 import { ThreePointItem } from "../../../components/ThreePoints/ThreePoints";
-import { useSheetState } from "../../../services/hooks/hooks";
+import { useBooleanState } from "../../../services/hooks/hooks";
 import { compact, conditionalEntry } from "../../../services/tools";
 
 interface ArtistContextMenuProps {
@@ -15,7 +15,7 @@ export default function ArtistContextMenu({
   artistName,
   blacklisted,
 }: ArtistContextMenuProps) {
-  const [open, setOpen, setClosed] = useSheetState();
+  const [open, setOpen, setClosed] = useBooleanState();
 
   const items: Array<ThreePointItem> = compact([
     conditionalEntry(

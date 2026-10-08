@@ -4,14 +4,15 @@
   width: 100%;
 }
 
-.otext {
+.otext,
+.otext > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .subtitle {
-  color: var(--text-grey);
+  color: var(--muted);
 }
 
 .play-button-holder .play-image {
@@ -22,19 +23,19 @@
   display: none;
 }
 
-@media screen and (min-width: 960px) {
+@media screen and (min-width: 901px) {
   .play-button-holder .play-image {
     opacity: inherit;
   }
-  
+
   .play-button-holder .play-button {
     display: none !important;
   }
-  
+
   .play-button-holder:hover .play-image {
     opacity: 0.4;
   }
-  
+
   .play-button-holder:hover .play-button {
     display: inherit !important;
   }

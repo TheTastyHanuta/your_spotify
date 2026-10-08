@@ -8,16 +8,18 @@
   margin-top: 16px !important;
 }
 
+/* A file name looks wrong: a notice, like the status strip */
 .alert {
-  color: orange;
-  font-weight: bold;
-  margin: 16px 0px;
   display: block;
+  margin: 16px 0;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--notice-bg);
+  color: var(--notice-text) !important;
 }
 
+/* No colour for "all good", green only means up */
 .noalert {
-  color: green;
-  font-weight: bold;
-  margin: 16px 0px;
   display: block;
+  margin: 16px 0;
 }

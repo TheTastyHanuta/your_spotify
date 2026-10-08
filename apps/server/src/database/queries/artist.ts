@@ -1,8 +1,6 @@
 import { escapeRegExp } from "../../tools/misc";
-import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
-import { getGroupByDateProjection, getGroupingByTimeSplit } from "./statsTools";
 
 export const getArtists = (artistIds: string[]) =>
   ArtistModel.find({ id: { $in: artistIds } });
@@ -100,29 +98,6 @@ export const getMostListenedSongOfArtist = async (
       },
     },
     { $unwind: "$track.album" },
-  ]);
-  return res;
-};
-
-export const bestPeriodOfArtist = async (user: User, artistId: string) => {
-  // Non sense to compute blacklist here
-  const res = await InfosModel.aggregate([
-    { $match: matchArtistListens(user, artistId) },
-    { $project: getGroupByDateProjection(user.settings.timezone) },
-    {
-      $group: { _id: null, items: { $push: "$$CURRENT" }, total: { $sum: 1 } },
-    },
-    { $unwind: "$items" },
-    {
-      $group: {
-        _id: getGroupingByTimeSplit(Timesplit.month, "items"),
-        artist: { $last: "$items" },
-        count: { $sum: 1 },
-        total: { $last: "$total" },
-      },
-    },
-    { $sort: { count: -1 } },
-    { $limit: 2 },
   ]);
   return res;
 };

@@ -1,17 +1,23 @@
-.importhistory > h3 {
-  margin-top: 16px;
-  margin-bottom: 8px;
+/* A heading inside the Import data section, the size of section titles */
+.title {
+  margin: 18px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.importertype {
-  color: grey;
-  font-style: italic;
-  margin-left: 8px;
+.date {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.count {
+  white-space: nowrap;
 }
 
 .right {
   display: flex;
   align-items: center;
+  text-align: right;
 }
 
 .right > span {
@@ -20,6 +26,5 @@
 
 .ratelimited {
   display: block;
-  color: grey;
-  font-style: italic;
+  color: var(--muted);
 }

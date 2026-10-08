@@ -1,124 +1,127 @@
-import { MenuItem, Select, Skeleton, Tooltip } from "@mui/material";
+import { Tooltip } from "@mui/material";
 import { useState } from "react";
 import { useSelector } from "react-redux";
 
-import IdealImage from "../../components/IdealImage";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
+import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
-import { api } from "../../services/apis/api";
+import {
+  api,
+  BestOfPartOfDayResponse,
+  ShortArtist,
+} from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { useAPI } from "../../services/hooks/hooks";
+import { useConditionalAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
-import { PARTS_OF_DAY } from "./traits";
+import { PARTS_OF_DAY } from "../../services/traits";
 
 import s from "./index.module.css";
 
 type Type = "artists" | "tracks";
 
+const TABS = [
+  { value: "artists", label: "Artists" },
+  { value: "tracks", label: "Songs" },
+];
+
 interface PartsOfDayProps {
   format: (value: number) => string;
+  // Fetched by the page, which shows one of them in its hero
+  artists: BestOfPartOfDayResponse<ShortArtist> | null;
 }
 
 // The top artists or songs of each part of the day
-export default function PartsOfDay({ format }: PartsOfDayProps) {
+export default function PartsOfDay({ format, artists }: PartsOfDayProps) {
   const { interval } = useSelector(selectRawIntervalDetail);
   const [type, setType] = useState<Type>("artists");
-  // Only the shown type, both are as slow as each other on a long period
-  const result = useAPI(
-    api.getBestOfPartOfDay,
+  // Only when asked for, they are as slow as the artists on a long period
+  const [tracks] = useConditionalAPI(
+    type === "tracks",
+    api.getBestOfPartOfDay<"tracks">,
     interval.start,
     interval.end,
-    type,
+    "tracks",
   );
+  // Both kinds as the same rows
+  const result =
+    type === "artists"
+      ? artists?.map(({ part, total, items }) => ({
+          part,
+          total,
+          rows: items.map(({ item, total: plays }) => ({
+            id: item.id,
+            total: plays,
+            image: item.images,
+            round: true,
+            title: <InlineArtist artist={item} size="normal" />,
+            subtitle: undefined,
+          })),
+        }))
+      : tracks?.map(({ part, total, items }) => ({
+          part,
+          total,
+          rows: items.map(({ item, total: plays }) => ({
+            id: item.id,
+            total: plays,
+            image: item.full_album.images,
+            round: false,
+            title: <InlineTrack track={item} size="normal" />,
+            subtitle: <ArtistNames artists={item.full_artists} />,
+          })),
+        }));
 
   return (
-    <TitleCard
+    <Section
       title="Who you listen to when"
-      right={
-        <Select
-          value={type}
-          onChange={(ev) => setType(ev.target.value as Type)}
-          variant="standard">
-          <MenuItem value="artists">Artists</MenuItem>
-          <MenuItem value="tracks">Songs</MenuItem>
-        </Select>
-      }>
+      tabs={TABS}
+      tab={type}
+      onTab={(value) => setType(value as Type)}>
       <div className={s.parts}>
         {PARTS_OF_DAY.map((part) => {
           const found = result?.find((r) => r.part === part.key);
           return (
             <div key={part.key} className={s.part}>
-              <div>
-                <Text element="div" size="normal" weight="bold">
+              <div className={s.partHead}>
+                <Text size="normal" weight="bold">
                   {part.label}
                 </Text>
-                <Text element="div" size="small" greyed>
+                <Text size="normal" greyed className="num">
                   {DateFormatter.fromNumberToHour(part.from)} –{" "}
                   {DateFormatter.fromNumberToHour(part.to)}
                 </Text>
               </div>
-              {!result &&
-                [0, 1, 2, 3, 4].map((index) => (
-                  <Skeleton key={index} height={40} />
-                ))}
+              {!result && <RowsSkeleton />}
               {result && !found && (
                 <Text size="normal" greyed>
                   Nothing played
                 </Text>
               )}
-              {found?.items.map(({ item, total }) => {
+              {found?.rows.map((row) => {
                 // One decimal, the shares are often small
-                const share = ((total / found.total) * 100).toFixed(1);
-                const images =
-                  "full_album" in item ? item.full_album.images : item.images;
+                const share = ((row.total / found.total) * 100).toFixed(1);
                 return (
-                  <Tooltip
-                    key={item.id}
-                    disableInteractive
-                    title={`${share}% of your listening ${part.name}, ${format(total)}`}>
-                    <div className={s.partItem}>
-                      <IdealImage
-                        images={images}
-                        size={40}
-                        className={type === "artists" ? s.avatar : undefined}
-                      />
-                      <div className={s.partName}>
-                        {"full_album" in item ? (
-                          <>
-                            <InlineTrack
-                              track={item}
-                              size="normal"
-                              className={s.ellipsis}
-                            />
-                            <Text
-                              element="div"
-                              size="small"
-                              greyed
-                              className={s.ellipsis}>
-                              {item.full_artists
-                                .map((artist) => artist.name)
-                                .join(", ")}
-                            </Text>
-                          </>
-                        ) : (
-                          <InlineArtist
-                            artist={item}
-                            size="normal"
-                            className={s.ellipsis}
-                          />
-                        )}
-                      </div>
-                      <Text size="normal">{share}%</Text>
-                    </div>
-                  </Tooltip>
+                  <ItemRow
+                    key={row.id}
+                    image={row.image}
+                    round={row.round}
+                    title={row.title}
+                    subtitle={row.subtitle}
+                    right={
+                      <Tooltip
+                        disableInteractive
+                        title={`${share}% of your listening ${part.name}, ${format(row.total)}`}>
+                        <span className="num">{share}%</span>
+                      </Tooltip>
+                    }
+                  />
                 );
               })}
             </div>
           );
         })}
       </div>
-    </TitleCard>
+    </Section>
   );
 }

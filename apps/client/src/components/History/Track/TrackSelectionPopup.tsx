@@ -1,9 +1,11 @@
 import { Popover } from "@mui/material";
 import { useDispatch } from "react-redux";
-import { VirtualElement } from "../../RightClickable/RightClickable";
+
+import { useIsGuest } from "../../../services/hooks/hooks";
 import { setPlaylistContext } from "../../../services/redux/modules/playlist/reducer";
-import { MenuItem } from "../../ui/MenuItem/MenuItem";
 import { MenuTitle } from "../../MenuTitle/MenuTitle";
+import { VirtualElement } from "../../RightClickable/RightClickable";
+import { MenuItem } from "../../ui/MenuItem/MenuItem";
 
 interface TrackSelectionPopupProps {
   anchor: VirtualElement | undefined;
@@ -17,11 +19,17 @@ export function TrackSelectionPopup({
   songIds,
 }: TrackSelectionPopupProps) {
   const dispatch = useDispatch();
+  const isGuest = useIsGuest();
 
   const handlePlaylist = () => {
     onClose();
     dispatch(setPlaylistContext({ type: "specific", songIds }));
   };
+
+  // Its only action needs the owner's Spotify account
+  if (isGuest) {
+    return null;
+  }
 
   return (
     <Popover

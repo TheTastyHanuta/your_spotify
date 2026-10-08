@@ -1,9 +1,14 @@
 .row {
   display: grid;
-  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  /* Wider where ranks run into the thousands, see RankRows */
+  grid-template-columns: var(--rank-col, 24px) auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 4px 0;
+  padding: 6px 0;
+}
+
+.row + .row {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 
 /* Rows without a rank don't keep its column */
@@ -13,10 +18,12 @@
 
 .rank {
   text-align: right;
+  font-family: var(--font-num);
 }
 
 .image {
   object-fit: cover;
+  border-radius: var(--radius-s);
 }
 
 .round {

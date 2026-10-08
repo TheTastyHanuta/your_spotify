@@ -1,0 +1,69 @@
+.root {
+  padding: 18px 28px 22px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 36px;
+  margin-bottom: 12px;
+}
+
+.titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tabs :global(.MuiTab-root) {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tabs :global(.MuiTab-root.Mui-selected) {
+  color: var(--text);
+}
+
+.right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Plain links in the text, like the importers' */
+.root a:not([class]) {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link {
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+@media screen and (max-width: 900px) {
+  .root {
+    padding: 16px;
+  }
+
+  .head {
+    flex-wrap: wrap;
+    gap: 8px 18px;
+  }
+}

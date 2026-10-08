@@ -1,5 +1,6 @@
 import { stringifySequence } from "../../services/shortcuts";
 import Text from "../Text";
+
 import s from "./index.module.css";
 
 interface ShortcutProps {
@@ -9,9 +10,7 @@ interface ShortcutProps {
 export function Shortcut({ sequence }: ShortcutProps) {
   return (
     <div className={s.root}>
-      <Text size="small" onDark>
-        {stringifySequence(sequence)}
-      </Text>
+      <Text size="small">{stringifySequence(sequence)}</Text>
     </div>
   );
 }

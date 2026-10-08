@@ -1,9 +1,11 @@
-import { Grid } from "@mui/material";
+import { Skeleton } from "@mui/material";
 import { endOfMonth, startOfMonth } from "date-fns";
+import { CSSProperties, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   Bar,
   BarChart,
+  Cell,
   Legend,
   ReferenceDot,
   ResponsiveContainer,
@@ -14,7 +16,7 @@ import {
 
 import { api, TimelineCounts } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { useAPI } from "../../services/hooks/hooks";
+import { useConditionalAPI } from "../../services/hooks/hooks";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { selectStatMeasurement } from "../../services/redux/modules/user/selector";
 import {
@@ -23,8 +25,7 @@ import {
   msToMinutes,
 } from "../../services/stats";
 import { DateId } from "../../services/types";
-import ChartCard from "../ChartCard";
-import LoadingImplementedChart from "../ImplementedCharts/LoadingImplementedChart";
+import Section from "../Section";
 import Tooltip from "../Tooltip";
 
 import s from "./index.module.css";
@@ -49,15 +50,58 @@ const HOURS = Array.from(Array(24).keys());
 const monthKey = (date: DateId) => `${date.year}-${date.month}`;
 const roundPercent = (value: number) => Math.round(value * 10) / 10;
 
+const TABS = [
+  { value: "months", label: "Months" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "hours", label: "Hours" },
+];
+
+// Time listened and the best month for a detail page's stat strip, by the
+// "stat measurement" setting like the chart, whose peak is the same month.
+// Ties go to the earlier month.
+export function useTimelineSummary(
+  data: Awaited<ReturnType<typeof api.getTimeline>>["data"] | null,
+) {
+  const measurement = useSelector(selectStatMeasurement);
+  if (!data || "code" in data) {
+    return { totalMs: undefined, best: undefined, bestNote: undefined };
+  }
+  const value = (row: Row) =>
+    measurement === "number" ? row.plays : row.durationMs;
+  const best = data.months.reduce<(typeof data.months)[number] | undefined>(
+    (top, month) => (!top || value(month) > value(top) ? month : top),
+    undefined,
+  );
+  return {
+    totalMs: data.months.reduce((sum, month) => sum + month.durationMs, 0),
+    best,
+    bestNote:
+      best &&
+      (measurement === "number"
+        ? `${best.plays.toLocaleString()} plays`
+        : `${msToMinutes(best.durationMs).toLocaleString()} min`),
+  };
+}
+
 interface ItemTimelineProps {
   type: ItemType;
   id: string;
+  // Already fetched by the page; fetched here when not given
+  data?: Awaited<ReturnType<typeof api.getTimeline>>["data"] | null;
 }
 
-export default function ItemTimeline({ type, id }: ItemTimelineProps) {
-  const timeline = useAPI(api.getTimeline, type, id);
+export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
+  const [fetched] = useConditionalAPI(
+    data === undefined,
+    api.getTimeline,
+    type,
+    id,
+  );
+  const timeline = data === undefined ? fetched : data;
+  const [tab, setTab] = useState("months");
   const measurement = useSelector(selectStatMeasurement);
   const openPeriod = useOpenPeriod();
+  const { best } = useTimelineSummary(timeline);
 
   if (timeline && ("code" in timeline || timeline.months.length === 0)) {
     return null;
@@ -97,20 +141,9 @@ export default function ItemTimeline({ type, id }: ItemTimelineProps) {
 
   if (!timeline) {
     return (
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12 }}>
-          <LoadingImplementedChart title="Over time" className={s.chart} />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <LoadingImplementedChart
-            title="Day of the week"
-            className={s.chart}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <LoadingImplementedChart title="Time of day" className={s.chart} />
-        </Grid>
-      </Grid>
+      <Section title="Over time">
+        <Skeleton variant="rectangular" height={300} />
+      </Section>
     );
   }
 
@@ -127,16 +160,17 @@ export default function ItemTimeline({ type, id }: ItemTimelineProps) {
     firstMonth,
     new Date(Math.max(Date.now(), lastMonth.getTime())),
   );
-  const peak = months.reduce(
-    (best, month, index) => (month.y > months[best]!.y ? index : best),
-    0,
-  );
-  const peakDate =
-    months[peak]!.y > 0 ? months[peak]!.dateWithPrecision.date : undefined;
   const dateOf = (x: number) =>
     months.find((month) => month.x === x)?.dateWithPrecision.date;
   const keyOf = (date: Date) =>
     monthKey({ year: date.getFullYear(), month: date.getMonth() + 1 });
+  // The strip's best month, so both always agree
+  const peak = best
+    ? months.findIndex(
+        (month) => keyOf(month.dateWithPrecision.date) === monthKey(best._id),
+      )
+    : -1;
+  const peakDate = peak >= 0 ? months[peak]!.dateWithPrecision.date : undefined;
 
   const openMonth = (date: Date) =>
     openPeriod(startOfMonth(date), endOfMonth(date), topsPage[type].path);
@@ -176,146 +210,167 @@ export default function ItemTimeline({ type, id }: ItemTimelineProps) {
 
   const comparisons = [
     {
+      key: "weekdays",
       title: "Day of the week",
       data: compare(WEEKDAYS, timeline.weekdays, timeline.overall.weekdays),
       format: DateFormatter.fromIsoWeekday,
     },
     {
+      key: "hours",
       title: "Time of day",
       data: compare(HOURS, timeline.hours, timeline.overall.hours),
       format: DateFormatter.fromNumberToHour,
     },
   ];
 
+  const comparison = comparisons.find((c) => c.key === tab);
+
   return (
-    <Grid container spacing={2}>
-      <Grid size={{ xs: 12 }}>
-        <ChartCard title="Over time" className={s.chart}>
+    <Section title="Over time" tabs={TABS} tab={tab} onTab={setTab}>
+      <div className={s.chart}>
+        {!comparison ? (
+          // At least 10px per month: on phones the chart scrolls sideways
+          <div className={s.scroll}>
+            <div
+              className={s.inner}
+              style={{ "--months": months.length } as CSSProperties}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={months} margin={{ top: 24, right: 24 }}>
+                  <XAxis
+                    dataKey="x"
+                    // Labels are set in the wider mono font after recharts
+                    // measures them
+                    minTickGap={16}
+                    tickFormatter={(x: number) => {
+                      const date = dateOf(x);
+                      return date ? DateFormatter.toShortMonthYear(date) : "";
+                    }}
+                  />
+                  <YAxis
+                    width="auto"
+                    tickFormatter={(v: number) =>
+                      measurement === "number" ? `${v}` : `${v}m`
+                    }
+                  />
+                  <RTooltip
+                    wrapperStyle={{ zIndex: 10 }}
+                    content={
+                      <Tooltip<typeof months>
+                        title={({ x }) => {
+                          const date = dateOf(x);
+                          return date
+                            ? DateFormatter.toMonthStringYear(date)
+                            : "";
+                        }}
+                        value={monthTooltipValue}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="y"
+                    maxBarSize={24}
+                    radius={[2, 2, 0, 0]}
+                    cursor="pointer"
+                    // The index recharts passes does not match the data index,
+                    // the clicked bar's own data does
+                    onClick={(bar) => {
+                      const date = (bar.payload as (typeof months)[number])
+                        ?.dateWithPrecision.date;
+                      if (date) {
+                        openMonth(date);
+                      }
+                    }}>
+                    {months.map((month, index) => (
+                      <Cell
+                        key={month.x}
+                        fill={
+                          index === peak ? "var(--tint)" : "var(--tint-bar)"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                  {peakDate && (
+                    // Placed by value: the index a LabelList gets does not match
+                    // the data index
+                    <ReferenceDot
+                      x={months[peak]!.x}
+                      y={months[peak]!.y}
+                      r={0}
+                      ifOverflow="visible"
+                      label={{
+                        content: (props) => {
+                          const { viewBox } = props as {
+                            viewBox?: { x?: number; y?: number };
+                          };
+                          if (
+                            viewBox?.x === undefined ||
+                            viewBox.y === undefined
+                          ) {
+                            return null;
+                          }
+                          // Keep the label inside the chart near its edges
+                          const position =
+                            peak / Math.max(1, months.length - 1);
+                          const anchor =
+                            position < 0.15
+                              ? "start"
+                              : position > 0.85
+                                ? "end"
+                                : "middle";
+                          return (
+                            <text
+                              x={viewBox.x}
+                              y={viewBox.y - 8}
+                              textAnchor={anchor}
+                              className={s.peak}>
+                              {`Peak: ${DateFormatter.toShortMonthYear(peakDate)}`}
+                            </text>
+                          );
+                        },
+                      }}
+                    />
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={months} margin={{ top: 24 }}>
+            <BarChart data={comparison.data} barGap={2}>
               <XAxis
                 dataKey="x"
-                tickFormatter={(x: number) => {
-                  const date = dateOf(x);
-                  return date ? DateFormatter.toShortMonthYear(date) : "";
-                }}
-                style={{ fontWeight: "bold" }}
+                tickFormatter={comparison.format}
+                minTickGap={16}
               />
-              <YAxis
-                width="auto"
-                tickFormatter={(v: number) =>
-                  measurement === "number" ? `${v}` : `${v}m`
-                }
-              />
+              <YAxis width="auto" tickFormatter={(v: number) => `${v}%`} />
               <RTooltip
                 wrapperStyle={{ zIndex: 10 }}
                 content={
-                  <Tooltip<typeof months>
-                    title={({ x }) => {
-                      const date = dateOf(x);
-                      return date ? DateFormatter.toMonthStringYear(date) : "";
-                    }}
-                    value={monthTooltipValue}
+                  <Tooltip<typeof comparison.data>
+                    title={({ x }) => comparison.format(x)}
+                    value={percentTooltipValue}
                   />
                 }
               />
+              <Legend formatter={legend} itemSorter={null} />
               <Bar
                 dataKey="y"
-                fill="var(--primary)"
+                name={itemLabel[type]}
+                fill="var(--tint)"
                 maxBarSize={24}
-                radius={[4, 4, 0, 0]}
-                cursor="pointer"
-                // The index recharts passes does not match the data index,
-                // the clicked bar's own data does
-                onClick={(bar) => {
-                  const date = (bar.payload as (typeof months)[number])
-                    ?.dateWithPrecision.date;
-                  if (date) {
-                    openMonth(date);
-                  }
-                }}
+                radius={[2, 2, 0, 0]}
               />
-              {peakDate && (
-                // Placed by value: the index a LabelList gets does not match
-                // the data index
-                <ReferenceDot
-                  x={months[peak]!.x}
-                  y={months[peak]!.y}
-                  r={0}
-                  ifOverflow="visible"
-                  label={{
-                    content: (props) => {
-                      const { viewBox } = props as {
-                        viewBox?: { x?: number; y?: number };
-                      };
-                      if (viewBox?.x === undefined || viewBox.y === undefined) {
-                        return null;
-                      }
-                      // Keep the label inside the chart near its edges
-                      const position = peak / Math.max(1, months.length - 1);
-                      const anchor =
-                        position < 0.15
-                          ? "start"
-                          : position > 0.85
-                            ? "end"
-                            : "middle";
-                      return (
-                        <text
-                          x={viewBox.x}
-                          y={viewBox.y - 8}
-                          textAnchor={anchor}
-                          className={s.peak}>
-                          {`Peak: ${DateFormatter.toShortMonthYear(peakDate)}`}
-                        </text>
-                      );
-                    },
-                  }}
-                />
-              )}
+              <Bar
+                dataKey="usual"
+                name={USUAL_LABEL}
+                fill="color-mix(in srgb, var(--muted) 45%, transparent)"
+                maxBarSize={24}
+                radius={[2, 2, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
-        </ChartCard>
-      </Grid>
-      {comparisons.map(({ title, data, format }) => (
-        <Grid key={title} size={{ xs: 12, lg: 6 }}>
-          <ChartCard title={title} className={s.chart}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} barGap={2}>
-                <XAxis
-                  dataKey="x"
-                  tickFormatter={format}
-                  style={{ fontWeight: "bold" }}
-                />
-                <YAxis width="auto" tickFormatter={(v: number) => `${v}%`} />
-                <RTooltip
-                  wrapperStyle={{ zIndex: 10 }}
-                  content={
-                    <Tooltip<typeof data>
-                      title={({ x }) => format(x)}
-                      value={percentTooltipValue}
-                    />
-                  }
-                />
-                <Legend formatter={legend} itemSorter={null} />
-                <Bar
-                  dataKey="y"
-                  name={itemLabel[type]}
-                  fill="var(--primary)"
-                  maxBarSize={24}
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar
-                  dataKey="usual"
-                  name={USUAL_LABEL}
-                  fill="rgba(var(--primary-tuple), 0.45)"
-                  maxBarSize={24}
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </Grid>
-      ))}
-    </Grid>
+        )}
+      </div>
+    </Section>
   );
 }

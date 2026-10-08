@@ -2,7 +2,10 @@
 ![Release](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/release.yml/badge.svg)
 
 <p align='center'>
-  <img width="100%" src="https://user-images.githubusercontent.com/17204739/154752226-c2215a51-e20e-4ade-ac63-42c5abb25240.png">
+  <img width="100%" src="docs/screenshots/overview-dark.png" alt="Redesigned Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
+</p>
+<p align="center">
+  <sub>Fictional sample data · <a href="#screenshots">More screenshots</a></sub>
 </p>
 
 # Your Spotify
@@ -12,8 +15,9 @@ It's composed of a web server which polls the Spotify API every now and then and
 
 > **This is a fork** of [Yooooomi/your_spotify](https://github.com/Yooooomi/your_spotify), maintained since April 2026, with some additional features on top of upstream. I try to stay in sync with upstream regularly. This fork adds:
 >
+> - **Complete UI/UX redesign** - a consistent layout across the whole app, with page colors drawn from album and artist artwork, dark and light themes, clearer statistics and period comparisons, readable dates, and explicit loading and empty states. Desktop navigation becomes a compact sidebar on tablets and a bottom bar on phones; calendars and information tooltips can be used with the keyboard
 > - **Track deduplication by ISRC** - merges duplicate tracks (e.g. different releases/remasters of the same song) into a single entry with combined listen history
-> - **Multi-artist support** - track and album pages now show every credited artist (labeled main/featured), not just one; artist pages and search now work for artists you've only ever heard as a featured credit (previously showed "never listened"); and the artist page separates primary listens from featured-artist listens
+> - **Multi-artist support** - track and album pages now show every credited artist, not just one, with main/featured labels on track pages; artist pages and search now work for artists you've only ever heard as a featured credit (previously showed "never listened"); and the artist page separates primary listens from featured-artist listens
 > - **Listened album context** - track and history views show which specific album version a track was actually played from
 > - **Better Spotify auth handling** - detects when Spotify has revoked your tokens and shows a re-authentication prompt instead of failing silently
 > - **Spotify rate limit handling** - a configurable pause between Spotify requests ([`SPOTIFY_API_DELAY_MS`](#environment-variables)) makes bans less likely; when Spotify does ban the app for hours (including an exhausted `QUOTA_EXCEEDED` quota), imports and logins fail with a message showing until when, and the server still starts, instead of everything hanging silently. The login stays valid for 30 days and renews itself while the device is used, so the stats remain usable during a ban, and polling can be turned off ([`DISABLE_POLLING`](#environment-variables))
@@ -22,10 +26,11 @@ It's composed of a web server which polls the Spotify API every now and then and
 > - **Taste and Habits pages** (replacing upstream's "All stats") - Taste shows your genres, release years and decades, how old the songs were when you played them, your top artists over time and your musical age over time; Habits shows streaks, a listening calendar, who you listen to at each time of day, how varied your listening is, and a weekday × hour grid that can also show where the period clearly differs from your usual week. Both compare the selected period with your whole history. Artist, album and song pages show plays per month and compare their weekdays and hours with all your listening
 > - **Discoveries** - the artists you heard for the first time (with the first song you heard by them), new songs by artists you already knew, artists you came back to after a long break, songs you played on repeat, whether the artists you discovered stuck, and how much you explored over time
 > - **Your story** - your whole history at a glance: forgotten favorites you have not played for a while, the eras when one artist or genre led your listening, and the songs and artists that were always there
-> - **On this day** - the Home page shows what you listened to on today's date in earlier years
+> - **History and On this day pages** - browse your listening history on its own page, or revisit today's date in earlier years and open each day's top songs. Overview links to On this day when there are earlier plays
+> - **Longest sessions in Habits** - expand your five longest listening sessions in the selected period to see their songs. Session lengths include the last song, and the calculation also works on MongoDB 4.4
 > - **Playlists from insights** - lists like songs on repeat, forgotten favorites and evergreen songs can be saved as a Spotify playlist
 > - **Importer reliability** - imports no longer silently drop listens, resume from the right place after a failure, and clean up their uploaded files
-> - Various fixes: infinite scroll, affinity stats on empty ranges and large histories, album page crash, searching with special characters, date presets in tabs left open for a long time, and Home's comparison with the previous period now uses the same days (this year so far against the same days last year)
+> - Various fixes: infinite scroll, affinity stats on empty ranges and large histories, album page crash, searching with special characters, date presets in tabs left open for a long time, and Overview's comparison with the previous period now uses the same days (this year so far against the same days last year)
 >
 > This is a personal fork and not officially affiliated with or supported by the upstream project. For the original application, see the link above.
 >
@@ -33,6 +38,8 @@ It's composed of a web server which polls the Spotify API every now and then and
 
 ## Table of contents
 
+- [Using the dashboard](#using-the-dashboard)
+- [Screenshots](#screenshots)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
   - [Choose how to access YourSpotify](#choose-how-to-access-yourspotify)
@@ -56,6 +63,30 @@ It's composed of a web server which polls the Spotify API every now and then and
 - [Contributing](#contributing)
 - [Supporting the original project](#supporting-the-original-project)
 - [License](#license)
+
+## Using the dashboard
+
+- **Overview** (formerly Home) shows your top artist, key statistics with changes against the previous period, listening over time, and top songs and artists. **History** is now a separate page. **Charts** groups the Songs, Artists and Albums rankings.
+- Choose a preset or custom date range in the page header. The selected period stays in the URL so a bookmark opens the same range. **Your story** covers your whole history, **On this day** uses today's date in earlier years, and **Recap** has its own year picker. Old `/sessions` and `/all` links redirect to **Habits**, keeping their query parameters.
+- On desktop, open the account menu at the bottom of the sidebar for **Settings**, **Share this page** and **Log out**. On tablets, use the account avatar in the compact sidebar. On phones, the bottom bar has **Overview**, **Charts**, **Search** and **More**; **More** contains the other pages and account actions.
+- **Settings → Account** contains the theme preference (dark, light or follow the device), Spotify reauthorization, history imports and public tokens. **Statistics** contains the timezone, date format, artist blacklist and the choice of play counts or listening time. Administrators also have an **Admin** tab for accounts, registrations and Affinity.
+- To share a page, first generate a public token in **Settings → Account → Public token**, then choose **Share this page** from the account menu or **More** on a phone. This copies a guest link with the selected period. Anyone with the token can browse your statistics until you delete or regenerate it; it is not restricted to the page you shared.
+
+Page headers also show guest access, Spotify reauthorization requests, ongoing import progress and an import's Spotify rate-limit expiry when applicable. Import progress continues to update while you browse other dashboard pages.
+
+## Screenshots
+
+The screenshots show the redesigned app with fictional listening data, artist and song names, account details and artwork. No personal listening history or public access tokens are included. Click an image to view it at full size.
+
+| Habits · light theme | Song charts · dark theme |
+| --- | --- |
+| [![Habits in light mode with a listening calendar, weekday and hour heatmap, and artists by time of day](docs/screenshots/habits-light.png)](docs/screenshots/habits-light.png) | [![Song rankings in dark mode with play counts, listening time and album details](docs/screenshots/charts-dark.png)](docs/screenshots/charts-dark.png) |
+
+The Overview above brings together period comparisons, listening charts and your top songs and artists. On phones, the same dashboard adapts to a single column with navigation along the bottom:
+
+<p align="center">
+  <a href="docs/screenshots/overview-mobile.png"><img width="280" src="docs/screenshots/overview-mobile.png" alt="Overview on a phone, showing listening statistics, a listening chart and the bottom navigation bar"></a>
+</p>
 
 ## Prerequisites
 
@@ -120,6 +151,8 @@ The images are published on the GitHub Container Registry:
 - `ghcr.io/thetastyhanuta/your_spotify_client`
 
 The `latest` tag is the newest release, `nightly` follows the `master` branch.
+
+These tags do not include unmerged feature branches. To try changes from such a branch, check it out and [build the images yourself](#building-the-images-yourself).
 
 Create a `compose.yaml` file like the one below (also available as [docker-compose-example.yml](docker-compose-example.yml)). Replace the Spotify credentials and, when using an HTTPS reverse proxy, the endpoint values.
 
@@ -186,7 +219,7 @@ The import process uses a cache to limit requests to the Spotify API. It stores 
 > Only gets you the last year of history.
 
 - Request your **privacy data** at Spotify to have access to your history for the past year [here](https://www.spotify.com/us/account/privacy/).
-- Head to the **Settings** page and choose the **Account data** method.
+- Open **Settings → Account → Import data** and choose the **Account data** method.
 - Input your files starting with `StreamingHistoryX.json`.
 - Start your import.
 
@@ -196,7 +229,7 @@ The import process uses a cache to limit requests to the Spotify API. It stores 
 > Gets you the whole history since the creation of your account.
 
 - Request your **Full privacy data** to have access to your history data since the creation of the account [here](https://www.spotify.com/us/account/privacy/).
-- Head to the **Settings** page and choose the **Extended streaming history** method.
+- Open **Settings → Account → Import data** and choose the **Extended streaming history** method.
 - Input your files starting with `Streaming_History_Audio_YYYY-YYYY_X.json`.
 - Start your import.
 
@@ -273,11 +306,11 @@ You can follow the instructions [here](LOCAL_INSTALL.md). Note that you still ne
 
 ### How can I block new registrations?
 
-From an admin account, go to the **Settings** page and hit the **Disable new registrations** button.
+From an admin account, go to **Settings → Admin → Allow registrations** and set **Allow new registrations** to **NO**.
 
 ### Songs don't seem to synchronize anymore
 
-This can happen if you revoked access on your Spotify account. To re-sync the songs, go to settings and hit the **Relog to Spotify** button.
+This can happen if you revoked access on your Spotify account. To re-sync the songs, go to **Settings → Account → Miscellaneous** and click **Relog** next to **Relog to Spotify**.
 
 ### The web application is telling me it cannot retrieve global preferences
 

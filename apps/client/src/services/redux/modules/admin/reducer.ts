@@ -1,4 +1,5 @@
 import { createReducer } from "@reduxjs/toolkit";
+
 import { deleteUser, getAccounts, setAdmin } from "./thunk";
 
 export interface AdminAccount {

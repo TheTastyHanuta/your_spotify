@@ -1,16 +1,14 @@
-import { Grid, Link as MuiLink, Tooltip } from "@mui/material";
+import { Link as MuiLink, Tooltip } from "@mui/material";
 import clsx from "clsx";
 import { formatDuration } from "date-fns";
 
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
-import Masonry from "../../components/Masonry";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
-import { api, ErasResponse } from "../../services/apis/api";
+import { ErasResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { useAPI } from "../../services/hooks/hooks";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { plural } from "../../services/tools";
 
@@ -27,12 +25,12 @@ const monthStart = (month: string) => {
   const [year, m] = month.split("-").map(Number);
   return new Date(year!, m! - 1, 1);
 };
-const shortMonth = (month: string) =>
+export const shortMonth = (month: string) =>
   DateFormatter.toShortMonthYear(monthStart(month));
 
 // The current month may not have enough plays yet to lead, an era that
 // ended last month is still going on
-const ongoing = (era: Era) => {
+export const ongoing = (era: Era) => {
   const now = new Date();
   return monthNumber(era.to) >= now.getFullYear() * 12 + now.getMonth() - 1;
 };
@@ -45,7 +43,7 @@ const length = (era: Era) => {
   );
 };
 
-const dates = (era: Era) =>
+export const dates = (era: Era) =>
   ongoing(era)
     ? `since ${shortMonth(era.from)}`
     : `${shortMonth(era.from)} – ${shortMonth(era.to)}`;
@@ -55,8 +53,11 @@ const share = (era: Era) =>
 
 const nameOf = (era: Era) => ("artist" in era ? era.artist.name : era.genre);
 
-export default function Eras() {
-  const eras = useAPI(api.getEras);
+const INTRO =
+  "Stretches of at least 3 months when one artist or genre clearly led your listening.";
+
+// Fetched by the page, which shows the latest era in its hero
+export default function Eras({ eras }: { eras: ErasResponse | null }) {
   const openPeriod = useOpenPeriod();
 
   // The dates open the top artists of the era
@@ -75,108 +76,114 @@ export default function Eras() {
     </MuiLink>
   );
 
+  const intro = (
+    <Text element="div" size="normal" greyed className={s.intro}>
+      {INTRO}
+    </Text>
+  );
   if (!eras) {
     return (
-      <TitleCard title="Timeline">
+      <Section title="Eras">
+        {intro}
         <RowsSkeleton />
-      </TitleCard>
+      </Section>
     );
   }
-  if (!eras.first || !eras.last) {
-    return <Text size="normal">No listens yet.</Text>;
-  }
-  if (eras.artists.length === 0 && eras.genres.length === 0) {
+  if (
+    !eras.first ||
+    !eras.last ||
+    (eras.artists.length === 0 && eras.genres.length === 0)
+  ) {
     return (
-      <Text size="normal">
-        No artist or genre clearly led your listening for 3 months or more yet.
-      </Text>
+      <Section title="Eras">
+        {intro}
+        <Text size="normal" greyed>
+          No artist or genre clearly led your listening for 3 months or more
+          yet.
+        </Text>
+      </Section>
     );
   }
 
   return (
-    <Grid container spacing={2}>
-      <Grid size={{ xs: 12 }}>
-        <TitleCard title="Timeline">
-          <Strip first={eras.first} last={eras.last} eras={eras} />
-        </TitleCard>
-      </Grid>
-      <Grid size={{ xs: 12 }}>
-        <Masonry>
-          {[
-            <TitleCard key="artists" title="Artist eras">
-              {eras.artists.length > 0 ? (
-                [...eras.artists].reverse().map((era) => (
-                  <ItemRow
-                    key={era.from}
-                    image={era.artist.images}
-                    round
-                    title={<InlineArtist artist={era.artist} size="normal" />}
-                    subtitle={
-                      <>
-                        <Text size="normal" greyed className={s.ellipsis}>
-                          {datesLink(era)} · {length(era)}
-                        </Text>
-                        <Text size="normal" greyed className={s.ellipsis}>
-                          {Math.round((era.plays / era.total) * 100)}% of your
-                          listening
-                          {era.track && (
-                            <>
-                              {" · mostly "}
-                              <InlineTrack
-                                track={era.track}
-                                size="normal"
-                                noStyle
-                              />
-                            </>
-                          )}
-                        </Text>
-                      </>
-                    }
-                    right={plural(era.plays, "play")}
-                  />
-                ))
-              ) : (
-                <Text size="normal">
-                  No artist clearly led your listening for 3 months or more.
-                </Text>
-              )}
-            </TitleCard>,
-            <TitleCard key="genres" title="Genre eras">
-              {eras.genres.length > 0 ? (
-                [...eras.genres].reverse().map((era) => (
-                  <ItemRow
-                    key={era.from}
-                    image={era.artists[0]?.images ?? []}
-                    round
-                    title={
-                      <Text size="normal" className={s.ellipsis}>
-                        {era.genre}
-                      </Text>
-                    }
-                    subtitle={
-                      <>
-                        <Text size="normal" greyed className={s.ellipsis}>
-                          {datesLink(era)} · {length(era)}
-                        </Text>
-                        <ArtistNames
-                          artists={era.artists}
-                          prefix={`${Math.round((era.plays / era.total) * 100)}% · `}
-                        />
-                      </>
-                    }
-                    right={plural(era.plays, "play")}
-                  />
-                ))
-              ) : (
-                <Text size="normal">
-                  No genre clearly led your listening for 3 months or more.
-                </Text>
-              )}
-            </TitleCard>,
-          ]}
-        </Masonry>
-      </Grid>
-    </Grid>
+    <>
+      <Section title="Eras">
+        {intro}
+        <Strip first={eras.first} last={eras.last} eras={eras} />
+      </Section>
+      <div className={clsx("ruled-columns", s.work)}>
+        <Section title="Artist eras">
+          {eras.artists.length > 0 ? (
+            [...eras.artists].reverse().map((era) => (
+              <ItemRow
+                key={era.from}
+                image={era.artist.images}
+                round
+                title={<InlineArtist artist={era.artist} size="normal" />}
+                subtitle={
+                  <>
+                    <Text size="normal" greyed className={s.ellipsis}>
+                      {datesLink(era)} · {length(era)}
+                    </Text>
+                    <Text size="normal" greyed className={s.ellipsis}>
+                      {Math.round((era.plays / era.total) * 100)}% of your
+                      listening
+                      {era.track && (
+                        <>
+                          {" · mostly "}
+                          <InlineTrack
+                            track={era.track}
+                            size="normal"
+                            noStyle
+                          />
+                        </>
+                      )}
+                    </Text>
+                  </>
+                }
+                right={<span className="num">{era.plays}</span>}
+              />
+            ))
+          ) : (
+            <Text size="normal" greyed>
+              No artist clearly led your listening for 3 months or more.
+            </Text>
+          )}
+        </Section>
+        <Section title="Genre eras">
+          {eras.genres.length > 0 ? (
+            [...eras.genres].reverse().map((era) => (
+              <ItemRow
+                key={era.from}
+                image={era.artists[0]?.images ?? []}
+                round
+                title={
+                  <Text size="normal" className={s.ellipsis}>
+                    {era.genre}
+                  </Text>
+                }
+                subtitle={
+                  <>
+                    <Text size="normal" greyed className={s.ellipsis}>
+                      {datesLink(era)} · {length(era)}
+                    </Text>
+                    <ArtistNames
+                      artists={era.artists}
+                      prefix={`${Math.round((era.plays / era.total) * 100)}% · `}
+                    />
+                  </>
+                }
+                right={<span className="num">{era.plays}</span>}
+              />
+            ))
+          ) : (
+            <Text size="normal" greyed>
+              No genre clearly led your listening for 3 months or more.
+            </Text>
+          )}
+        </Section>
+      </div>
+    </>
   );
 }
 

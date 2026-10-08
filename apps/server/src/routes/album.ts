@@ -38,7 +38,6 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
     getFirstAndLastListenedAlbum(user, id),
     getAlbumSongs(user, id),
     getArtists(album.artists),
-    // getTotalListeningOfAlbum(user, id),
   ];
   const [firstLast, tracks, artists] = await Promise.all(promises);
   // The client dereferences firstLast unguarded, and search lists albums the

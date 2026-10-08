@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { cloneElement, isValidElement, ReactElement, ReactNode } from "react";
+
 import { HTMLProps } from "../../services/types";
+
 import s from "./index.module.css";
 
 export interface ColumnDescription {

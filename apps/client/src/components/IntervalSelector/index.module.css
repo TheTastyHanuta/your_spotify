@@ -1,8 +1,3 @@
-.radiogroup {
-  display: flex;
-  align-items: center;
-}
-
 .dialogcontent {
   display: flex;
   flex-direction: column;

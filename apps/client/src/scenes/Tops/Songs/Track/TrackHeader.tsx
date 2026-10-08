@@ -1,8 +1,9 @@
+import { GridRowWrapper } from "../../../../components/Grid";
 import Text from "../../../../components/Text";
 import { useMobile } from "../../../../services/hooks/hooks";
-import { GridRowWrapper } from "../../../../components/Grid";
-import s from "./index.module.css";
 import { useTrackGrid } from "./TrackGrid";
+
+import s from "./index.module.css";
 
 export default function TrackHeader() {
   const [isMobile, isTablet] = useMobile();
@@ -10,6 +11,7 @@ export default function TrackHeader() {
   const trackGrid = useTrackGrid();
 
   const columns = [
+    { ...trackGrid.rank, node: <div /> },
     { ...trackGrid.cover, node: <div aria-label="cover" /> },
     {
       ...trackGrid.title,
@@ -31,7 +33,7 @@ export default function TrackHeader() {
       ...trackGrid.duration,
       node: !isMobile && (
         <Text element="div" size="normal">
-          Duration
+          Length
         </Text>
       ),
     },
@@ -40,7 +42,7 @@ export default function TrackHeader() {
       node: (
         <div className={s.count}>
           <Text element="div" size="normal">
-            Count
+            Plays ↓
           </Text>
         </div>
       ),
@@ -50,7 +52,7 @@ export default function TrackHeader() {
       node: !isMobile && (
         <div className={s.total}>
           <Text element="div" size="normal">
-            Total
+            Time
           </Text>
         </div>
       ),

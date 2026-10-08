@@ -1,7 +1,7 @@
 .root {
   padding-left: 4px;
   padding-right: 4px;
-  background-color: var(--shortcut-background);
+  background-color: color-mix(in srgb, var(--text) 25%, transparent);
   border-radius: 4px;
 }
 

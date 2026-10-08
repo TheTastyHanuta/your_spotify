@@ -1,7 +1,8 @@
-import { debounce, useMediaQuery } from "@mui/material";
-import { RefObject, TouchEvent, useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "@mui/material";
+import { TouchEvent, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
+
 import { detailIntervalToQuery } from "../intervals";
 import {
   selectIntervalDetail,
@@ -56,10 +57,15 @@ export function useConditionalAPI<
     // A slower answer to older arguments must not replace a newer one
     let stale = false;
     async function fetch() {
-      const result = await call(...args);
-      if (!stale) {
-        setLoading(false);
-        setValue(result.data);
+      try {
+        const result = await call(...args);
+        if (!stale) {
+          setValue(result.data);
+        }
+      } finally {
+        if (!stale) {
+          setLoading(false);
+        }
       }
     }
 
@@ -68,6 +74,7 @@ export function useConditionalAPI<
       fetch().catch(console.error);
     } else {
       setValue(null);
+      setLoading(false);
     }
     return () => {
       stale = true;
@@ -113,46 +120,18 @@ export function useNavigateAndSearch() {
   };
 }
 
-export function useSheetState() {
-  const [open, setOpen] = useState(false);
-
-  const onClose = () => {
-    setOpen(false);
-  };
-
-  const onOpen = () => {
-    setOpen(true);
-  };
-
-  return [open, onOpen, onClose] as const;
-}
-
 export function useIsGuest() {
   const user = useSelector(selectUser);
 
   return !!user?.isGuest;
 }
 
-export function useResizeDebounce(
-  cb: (width: number) => void,
-  ref?: RefObject<HTMLDivElement | null>,
-) {
-  useEffect(() => {
-    const cbWithWidth = () => cb(ref?.current?.clientWidth ?? 0);
-    const internCb = debounce(cbWithWidth, 1000);
-    setTimeout(cbWithWidth, 100);
-    window.addEventListener("resize", internCb);
-    return () => {
-      window.removeEventListener("resize", internCb);
-    };
-  }, [cb, ref]);
-}
-
-export function useMobile(): [boolean, boolean, boolean] {
+// The layout's breakpoints (components/Layout/useSider.ts): phones get the
+// bottom bar up to 900px, the sidebar is a narrow rail up to 1100px
+export function useMobile(): [isMobile: boolean, isTablet: boolean] {
   return [
-    useMediaQuery("(max-width: 960px)"),
-    useMediaQuery("(max-width: 1250px)"),
-    useMediaQuery("(min-width: 1250px)"),
+    useMediaQuery("(max-width: 900px)"),
+    useMediaQuery("(max-width: 1100px)"),
   ];
 }
 

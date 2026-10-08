@@ -1,0 +1,5 @@
+/* The chart alone, the page's Section gives its title */
+.chart {
+  position: relative;
+  height: 260px;
+}

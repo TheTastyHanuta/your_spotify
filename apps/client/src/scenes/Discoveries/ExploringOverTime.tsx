@@ -8,8 +8,7 @@ import {
   YAxis,
 } from "recharts";
 
-import ChartCard from "../../components/ChartCard";
-import LoadingImplementedChart from "../../components/ImplementedCharts/LoadingImplementedChart";
+import Section, { ChartSkeleton } from "../../components/Section";
 import Text from "../../components/Text";
 import ChartTooltip from "../../components/Tooltip";
 import { api } from "../../services/apis/api";
@@ -60,7 +59,7 @@ export default function ExploringOverTime() {
   const formatX = useFormatXAxis(data);
 
   if (!result) {
-    return <LoadingImplementedChart title={TITLE} className={s.chart} />;
+    return <ChartSkeleton title={TITLE} />;
   }
   if (data.length < 2) {
     return null;
@@ -70,46 +69,41 @@ export default function ExploringOverTime() {
     interval.timesplit === Timesplit.all ? "period" : interval.timesplit;
 
   return (
-    <ChartCard
-      title={TITLE}
-      className={s.chart}
-      right={
-        <Text size="normal" greyed>
-          Share of plays of songs first heard that {step}
-        </Text>
-      }>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 24 }}>
-          <XAxis
-            dataKey="x"
-            tickFormatter={formatX}
-            style={{ fontWeight: "bold" }}
-          />
-          <YAxis
-            width="auto"
-            domain={[0, "auto"]}
-            tickFormatter={(value: number) => `${value}%`}
-          />
-          <RTooltip
-            wrapperStyle={{ zIndex: 10 }}
-            content={
-              <ChartTooltip<typeof data>
-                title={formatXAxisDateTooltip}
-                value={(payload, value) =>
-                  `${value}% new: ${payload.newCount.toLocaleString()} of ${payload.count.toLocaleString()} plays`
-                }
-              />
-            }
-          />
-          <Line
-            dataKey="y"
-            type="linear"
-            stroke="var(--primary)"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "var(--primary)" }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </ChartCard>
+    <Section title={TITLE}>
+      <Text element="div" size="normal" className={s.summary}>
+        Share of each {step}&apos;s plays that went to songs first heard that{" "}
+        {step}.
+      </Text>
+      <div className={s.chart}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 24 }}>
+            <XAxis dataKey="x" tickFormatter={formatX} minTickGap={16} />
+            <YAxis
+              width="auto"
+              domain={[0, "auto"]}
+              tickFormatter={(value: number) => `${value}%`}
+            />
+            <RTooltip
+              wrapperStyle={{ zIndex: 10 }}
+              content={
+                <ChartTooltip<typeof data>
+                  title={formatXAxisDateTooltip}
+                  value={(payload, value) =>
+                    `${value}% new: ${payload.newCount.toLocaleString()} of ${payload.count.toLocaleString()} plays`
+                  }
+                />
+              }
+            />
+            <Line
+              dataKey="y"
+              type="linear"
+              stroke="var(--tint)"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "var(--tint)" }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
   );
 }

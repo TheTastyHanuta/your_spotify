@@ -1,6 +1,7 @@
 import { Button } from "@mui/material";
+
+import Section from "../../../components/Section";
 import Text from "../../../components/Text";
-import TitleCard from "../../../components/TitleCard";
 import { enableAffinity } from "../../../services/redux/modules/settings/thunk";
 import { useAppDispatch } from "../../../services/redux/tools";
 import { GlobalPreferences } from "../../../services/types";
@@ -23,7 +24,7 @@ export default function EnableAffinity({ settings }: EnableAffinityProps) {
   };
 
   return (
-    <TitleCard title="Affinity">
+    <Section title="Affinity">
       <SettingLine
         left={<Text size="normal">Enable affinity feature</Text>}
         right={
@@ -32,6 +33,6 @@ export default function EnableAffinity({ settings }: EnableAffinityProps) {
           </Button>
         }
       />
-    </TitleCard>
+    </Section>
   );
 }

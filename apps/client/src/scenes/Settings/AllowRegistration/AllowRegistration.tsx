@@ -1,6 +1,7 @@
 import { Button } from "@mui/material";
+
+import Section from "../../../components/Section";
 import Text from "../../../components/Text";
-import TitleCard from "../../../components/TitleCard";
 import { changeRegistrations } from "../../../services/redux/modules/settings/thunk";
 import { useAppDispatch } from "../../../services/redux/tools";
 import { GlobalPreferences } from "../../../services/types";
@@ -23,7 +24,7 @@ export default function AllowRegistration({
   };
 
   return (
-    <TitleCard title="Allow registrations">
+    <Section title="Allow registrations">
       <SettingLine
         left={<Text size="normal">Allow new registrations</Text>}
         right={
@@ -32,6 +33,6 @@ export default function AllowRegistration({
           </Button>
         }
       />
-    </TitleCard>
+    </Section>
   );
 }

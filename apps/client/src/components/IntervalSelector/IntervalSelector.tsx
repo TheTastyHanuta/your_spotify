@@ -1,16 +1,14 @@
-import { Settings, SettingsOutlined } from "@mui/icons-material";
 import {
   SelectProps,
   Button,
-  FormControlLabel,
-  IconButton,
   MenuItem,
-  Radio,
-  RadioGroup,
   Select,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
-import React, { useState } from "react";
 import { endOfDay, startOfDay } from "date-fns";
+import React, { useState } from "react";
+
 import { getAppropriateTimesplitFromRange } from "../../services/date";
 import { useMobile } from "../../services/hooks/hooks";
 import {
@@ -19,10 +17,19 @@ import {
   IntervalDetail,
 } from "../../services/intervals";
 import Dialog from "../Dialog";
-import Text from "../Text";
-import s from "./index.module.css";
 import RangePicker from "./RangePicker";
 import { Range } from "./RangePicker/RangePicker";
+
+import seg from "../Segmented/index.module.css";
+import s from "./index.module.css";
+
+// Short names for the segmented control
+const LABELS: Record<string, string> = {
+  "This week": "Week",
+  "This month": "Month",
+  "This year": "Year",
+  All: "All time",
+};
 
 interface IntervalSelectorProps {
   value: IntervalDetail;
@@ -63,6 +70,7 @@ export function IntervalSelector({
   if (!upmd) {
     content = (
       <Select
+        size="small"
         variant={selectType}
         value={existingInterval}
         onChange={(ev) => internOnChange(ev.target.value as number)}>
@@ -78,27 +86,26 @@ export function IntervalSelector({
     );
   } else {
     content = (
-      <div className={s.radiogroup}>
-        <RadioGroup
-          row
-          value={existingInterval}
-          onChange={(ev) =>
-            internOnChange(ev.target.value as unknown as number)
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        className={seg.segmented}
+        value={existingInterval}
+        onChange={(_, index: number | null) => {
+          if (index !== null) {
+            internOnChange(index);
           }
-          name="interval radio group">
-          {allIntervals.map((inter, index) => (
-            <FormControlLabel
-              key={inter.name}
-              value={index}
-              control={<Radio />}
-              label={<Text size="normal">{inter.name}</Text>}
-            />
-          ))}
-        </RadioGroup>
-        <IconButton size="small" onClick={() => setOpen(true)}>
-          {existingInterval === -1 ? <Settings /> : <SettingsOutlined />}
-        </IconButton>
-      </div>
+        }}
+        aria-label="Period">
+        {allIntervals.map((inter, index) => (
+          <ToggleButton key={inter.name} value={index}>
+            {LABELS[inter.name] ?? inter.name}
+          </ToggleButton>
+        ))}
+        <ToggleButton value={-1} onClick={() => setOpen(true)}>
+          Custom…
+        </ToggleButton>
+      </ToggleButtonGroup>
     );
   }
 

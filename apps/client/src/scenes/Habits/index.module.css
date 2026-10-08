@@ -1,23 +1,20 @@
-.content {
-  padding: var(--page-padding);
-}
-
-.card {
-  height: 100%;
+/* Full-width sections, the rules between them come from here */
+.sections > * {
+  border-bottom: 1px solid var(--line);
 }
 
 .label {
-  font-size: 11px;
-  color: var(--text-grey);
+  font-size: 12px;
+  color: var(--muted);
   white-space: nowrap;
 }
 
-/* Scrolls inside the card on narrow screens */
+/* Scrolls sideways on narrow screens */
 .calendar {
   overflow-x: auto;
 }
 
-/* The weeks share the card's width, cells are at least 10px */
+/* The weeks share the section's width, cells are at least 10px */
 .calendarGrid {
   display: grid;
   gap: 3px;
@@ -32,7 +29,18 @@
   display: inline-block;
   width: 12px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: var(--radius-s);
+}
+
+/* Calendar days are buttons, without the browser's button look */
+.dayButton {
+  padding: 0;
+  border: 0;
+}
+
+.dayButton:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
 }
 
 .clickable {
@@ -40,7 +48,7 @@
 }
 
 .clickable:hover {
-  outline: 1px solid var(--text-on-light);
+  outline: 1px solid var(--text);
 }
 
 .legend {
@@ -50,7 +58,7 @@
   gap: 3px;
   margin-top: 8px;
   font-size: 12px;
-  color: var(--text-grey);
+  color: var(--muted);
 }
 
 .week {
@@ -62,42 +70,25 @@
 
 .cell {
   height: 24px;
-  border-radius: 3px;
+  border-radius: var(--radius-s);
 }
 
+/* The four parts of the day side by side, two or one on smaller screens */
 .parts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 28px;
 }
 
 .part {
+  min-width: 0;
+}
+
+.partHead {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
   gap: 8px;
-  min-width: 0;
-}
-
-.partItem {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-}
-
-.partName {
-  min-width: 0;
-}
-
-.avatar {
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin-bottom: 4px;
 }
 
 .chart {
@@ -105,11 +96,12 @@
 }
 
 .legendText {
-  color: var(--text-on-light);
+  color: var(--muted);
 }
 
 .summary {
   margin-bottom: 12px;
+  max-width: 75ch;
 }
 
 /* Swatches next to their words, wrapping on phones */
@@ -120,7 +112,7 @@
   gap: 4px 16px;
   margin-top: 8px;
   font-size: 12px;
-  color: var(--text-grey);
+  color: var(--muted);
 }
 
 .weekLegendItem {
@@ -128,4 +120,61 @@
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+}
+
+.session + .session {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* Start, then length and songs, and the arrow; the whole line opens it */
+.sessionHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sessionHead::-webkit-details-marker {
+  display: none;
+}
+
+.sessionHead:hover .sessionDate {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sessionHead:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+
+.chevron {
+  color: var(--muted);
+  transition: transform 150ms ease-out;
+}
+
+.session[open] .chevron {
+  transform: rotate(180deg);
+}
+
+/* Sessions can run past 99 songs */
+.sessionBody {
+  --rank-col: 4ch;
+  padding-bottom: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+/* Phones label the week every 6 hours, the labels would touch */
+@media screen and (max-width: 900px) {
+  .minorHour {
+    visibility: hidden;
+  }
 }

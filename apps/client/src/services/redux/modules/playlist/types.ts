@@ -36,6 +36,3 @@ export type PlaylistContext =
   | PlaylistSingleSongContext
   | PlaylistAffinityContext
   | PlaylistTopArtistSongsContext;
-
-export type PlaylistContextFromType<T extends PlaylistContext["type"]> =
-  Extract<PlaylistContext, { type: T }>;

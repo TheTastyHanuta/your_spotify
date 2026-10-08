@@ -1,18 +1,22 @@
+import { Skeleton } from "@mui/material";
+import clsx from "clsx";
 import { useSelector } from "react-redux";
+
 import { api } from "../../../services/apis/api";
+import { DateFormatter } from "../../../services/date";
 import { useAPI } from "../../../services/hooks/hooks";
-import Bar from "../../charts/Bar";
-import { ImplementedChartProps } from "../types";
-import ChartCard from "../../ChartCard";
-import LoadingImplementedChart from "../LoadingImplementedChart";
 import {
   selectRawIntervalDetail,
   selectStatMeasurement,
 } from "../../../services/redux/modules/user/selector";
+import { msToMinutes } from "../../../services/stats";
+import Bar from "../../charts/Bar";
+import Text from "../../Text";
 import Tooltip from "../../Tooltip";
 import { TitleFormatter } from "../../Tooltip/Tooltip";
-import { DateFormatter } from "../../../services/date";
-import { msToMinutes } from "../../../services/stats";
+import { ImplementedChartProps } from "../types";
+
+import s from "../index.module.css";
 
 interface ListeningRepartitionProps extends ImplementedChartProps {}
 
@@ -62,21 +66,28 @@ export default function ListeningRepartition({
 
   if (!result) {
     return (
-      <LoadingImplementedChart
-        className={className}
-        title="Listening distribution over day"
-      />
+      <div className={clsx(s.chart, className)}>
+        <Skeleton variant="rectangular" height="100%" />
+      </div>
+    );
+  }
+
+  if (total === 0) {
+    return (
+      <Text size="normal" greyed>
+        Nothing played in this period.
+      </Text>
     );
   }
 
   return (
-    <ChartCard className={className} title="Listening distribution over day">
+    <div className={clsx(s.chart, className)}>
       <Bar
         data={data}
         xFormat={DateFormatter.fromNumberToHour}
         yFormat={formatYAxis}
         customTooltip={<Tooltip title={tooltipTitle} value={tooltipValue} />}
       />
-    </ChartCard>
+    </div>
   );
 }

@@ -16,7 +16,7 @@
 }
 
 .item:hover:not(:disabled) {
-  background: var(--hover);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .item:disabled {
@@ -25,5 +25,5 @@
 }
 
 .selected {
-  background: var(--selected);
+  background: color-mix(in srgb, var(--text) 12%, transparent);
 }

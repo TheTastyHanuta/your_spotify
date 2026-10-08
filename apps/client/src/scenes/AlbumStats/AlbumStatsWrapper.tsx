@@ -1,10 +1,11 @@
 import { CircularProgress } from "@mui/material";
 import { useParams } from "react-router-dom";
-import AlbumStats from "./AlbumStats";
-import { api } from "../../services/apis/api";
-import { useAPI } from "../../services/hooks/hooks";
+
 import FullscreenCentered from "../../components/FullscreenCentered";
 import Text from "../../components/Text";
+import { api } from "../../services/apis/api";
+import { useAPI } from "../../services/hooks/hooks";
+import AlbumStats from "./AlbumStats";
 
 export default function AlbumStatsWrapper() {
   const params = useParams();

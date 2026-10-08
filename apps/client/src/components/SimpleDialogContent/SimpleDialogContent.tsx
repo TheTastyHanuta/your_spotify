@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
+
 import Text from "../Text";
+
 import s from "./index.module.css";
 
 interface SimpleDialogContentProps {

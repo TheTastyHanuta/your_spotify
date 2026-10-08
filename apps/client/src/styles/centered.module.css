@@ -1,0 +1,55 @@
+/* Login, logout and the error pages: one centred column on the page
+   background, no hero */
+.root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.wordmark {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+.welcome {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--muted);
+}
+
+.login {
+  margin-top: 8px !important;
+  padding: 8px 24px !important;
+}
+
+.rememberMe {
+  color: var(--muted);
+}
+
+/* The status strip's amber, red only means "down" */
+.error {
+  max-width: 480px;
+  margin: 0;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  background: var(--notice-bg);
+  color: var(--notice-text);
+}
+
+.explain {
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+@media screen and (max-width: 900px) {
+  .wordmark {
+    font-size: 30px;
+  }
+}

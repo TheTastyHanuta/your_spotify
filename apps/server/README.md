@@ -522,7 +522,9 @@ Get the top 5 artists or songs of each part of the day: morning (5–11), aftern
 
 #### `GET /spotify/top/sessions`
 
-Get longest listening sessions.
+Get the five longest listening sessions in the selected period, shown under **Habits → Longest sessions** in the client. A session ends when the next song starts more than 10 minutes after the previous song ends. Duration runs from the first song's start through the last song's end, including pauses within the session; it is also used to rank sessions.
+
+Sessions are split in server code, so this endpoint works with MongoDB 4.4. It loads the selected period's plays into memory before selecting the longest five.
 
 **Query Parameters:**
 
@@ -531,7 +533,7 @@ Get longest listening sessions.
 
 **Response:**
 
-- `200`: Array of listening session data
+- `200`: Array of sessions, longest first. Each has `plays` (listening events in chronological order), `sessionLength` (milliseconds), `full_tracks` (track objects keyed by Spotify ID) and `full_albums` (album objects keyed by Spotify ID)
 
 ### Discoveries
 
@@ -723,13 +725,13 @@ Get artist statistics.
 {
   "artist": ArtistObject,
   "firstLast": FirstLastObject,
-  "mostListened": TrackObject,
-  "albumMostListened": AlbumObject,
-  "bestPeriod": PeriodStats,
-  "total": TotalStats,
-  "dayRepartition": DayStats
+  "mostListened": [{ "_id": string, "count": number, "track": TrackObject }],
+  "albumMostListened": [{ "_id": string, "count": number, "album": AlbumObject }],
+  "total": TotalStats
 }
 ```
+
+`mostListened` and `albumMostListened` each contain up to ten entries. `total` includes `primaryCount` and `featuredCount`. The redesign removed `bestPeriod`; `dayRepartition` is not returned. Use `GET /spotify/timeline?type=artist&id=SPOTIFY_ID` for the listening timeline. When there are no usable listening statistics, the response is `{ "code": "NEVER_LISTENED" }` instead.
 
 #### `GET /artist/search/:query`
 
@@ -827,14 +829,16 @@ Get track statistics.
 ```json
 {
   "track": TrackObject,
-  "artist": ArtistObject,
+  "artists": Artist[],
   "album": AlbumObject,
-  "bestPeriod": PeriodStats,
+  "listenedOn": [{ "_id": string, "count": number, "album": AlbumObject }],
   "firstLast": FirstLastObject,
   "recentHistory": HistoryObject,
   "total": TotalStats
 }
 ```
+
+`artists` follows the track's credit order. `listenedOn` contains the album versions actually played, with their listen counts. The redesign removed `bestPeriod`; use `GET /spotify/timeline?type=track&id=SPOTIFY_ID` for the listening timeline. When the track has no listens, the response is `{ "code": "NEVER_LISTENED" }` instead.
 
 #### `GET /track/:id/rank`
 

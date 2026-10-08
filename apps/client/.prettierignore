@@ -1,0 +1,3 @@
+# scripts/run/variables.sh rewrites tags in it with sed, line by line;
+# formatting would split them across lines
+public/index.html

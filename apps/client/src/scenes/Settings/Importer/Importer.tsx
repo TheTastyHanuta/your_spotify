@@ -1,23 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Select,
-} from "@mui/material";
+import { CircularProgress, LinearProgress } from "@mui/material";
+import { useState } from "react";
 import { useSelector } from "react-redux";
-import { getImports } from "../../../services/redux/modules/import/thunk";
+
+import Section from "../../../components/Section";
+import Segmented from "../../../components/Segmented";
+import Text from "../../../components/Text";
 import { selectImportStates } from "../../../services/redux/modules/import/selector";
 import { ImporterStateType } from "../../../services/redux/modules/import/types";
-import Text from "../../../components/Text";
-import { useAppDispatch } from "../../../services/redux/tools";
-import TitleCard from "../../../components/TitleCard";
-import ImportHistory from "./ImportHistory";
-import s from "./index.module.css";
-import Privacy from "./Privacy";
 import FullPrivacy from "./FullPrivacy";
+import ImportHistory from "./ImportHistory";
+import Privacy from "./Privacy";
+
+import s from "./index.module.css";
 
 const ImportTypeToComponent: Record<ImporterStateType, any> = {
   privacy: { label: "Account data", component: Privacy },
@@ -27,56 +21,23 @@ const ImportTypeToComponent: Record<ImporterStateType, any> = {
   },
 };
 
-const REFRESH_IF_RUNNING_INTERVAL = 2000;
-
 export default function Importer() {
-  const dispatch = useAppDispatch();
   const imports = useSelector(selectImportStates);
   const [importType, setImportType] = useState<ImporterStateType>(
     ImporterStateType.privacy,
   );
-
-  // eslint-disable-next-line react-no-manual-memo/no-hook-memo
-  const fetch = useCallback(
-    (force = false) => dispatch(getImports(force)).catch(console.error),
-    [dispatch],
-  );
-
-  useEffect(() => {
-    fetch().catch(console.error);
-  }, [fetch]);
 
   const running = imports?.find((st) => st.status === "progress");
   const Component = importType
     ? ImportTypeToComponent[importType].component
     : null;
 
-  const isAtLeastOneImportRunning = Boolean(running);
-
-  const timeout = useRef<NodeJS.Timeout | undefined>(undefined);
-
-  useEffect(() => {
-    if (!isAtLeastOneImportRunning) {
-      return;
-    }
-    async function refresh() {
-      await fetch(true).catch(console.error);
-      timeout.current = setTimeout(refresh, REFRESH_IF_RUNNING_INTERVAL);
-    }
-
-    timeout.current = setTimeout(async () => {
-      await refresh();
-    }, REFRESH_IF_RUNNING_INTERVAL);
-
-    return () => clearTimeout(timeout.current);
-  }, [fetch, isAtLeastOneImportRunning]);
-
   if (!imports) {
     return <CircularProgress />;
   }
 
   return (
-    <TitleCard title="Import data">
+    <Section title="Import data">
       <div>
         {running && (
           <div>
@@ -93,26 +54,21 @@ export default function Importer() {
       </div>
       {!running && (
         <div>
-          <FormControl className={s.selectimport}>
-            <InputLabel id="import-type-select">Import type</InputLabel>
-            <Select
-              labelId="import-type-select"
-              value={importType}
+          <div className={s.selectimport}>
+            <Segmented<ImporterStateType>
               label="Import type"
-              onChange={(ev) =>
-                setImportType(ev.target.value as ImporterStateType)
-              }>
-              {Object.values(ImporterStateType).map((typ) => (
-                <MenuItem value={typ} key={typ}>
-                  {ImportTypeToComponent[typ].label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              value={importType}
+              options={Object.values(ImporterStateType).map((typ) => ({
+                value: typ,
+                label: ImportTypeToComponent[typ].label,
+              }))}
+              onChange={setImportType}
+            />
+          </div>
           {Component && <Component />}
         </div>
       )}
       {imports.length > 0 && <ImportHistory />}
-    </TitleCard>
+    </Section>
   );
 }

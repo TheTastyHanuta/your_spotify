@@ -1,24 +1,25 @@
 import { useState } from "react";
-import { useSelector } from "react-redux";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { useSelector } from "react-redux";
+
 import { api } from "../../services/apis/api";
-import Loader from "../Loader";
-import TitleCard from "../TitleCard";
+import { useInfiniteScroll } from "../../services/hooks/scrolling";
+import { useSelectTracks } from "../../services/hooks/useSelectTrack";
 import {
   selectRawAllInterval,
   selectRawIntervalDetail,
 } from "../../services/redux/modules/user/selector";
-import { GridWrapper } from "../Grid";
-import { useInfiniteScroll } from "../../services/hooks/scrolling";
 import CheckboxWithText from "../CheckboxWithText";
+import { GridWrapper } from "../Grid";
+import Loader from "../Loader";
+import { RightClickable } from "../RightClickable/RightClickable";
+import Section from "../Section";
 import {
   Selectable,
   SelectableContextProvider,
 } from "../Selectable/Selectable.context";
-import { RightClickable } from "../RightClickable/RightClickable";
-import { useSelectTracks } from "../../services/hooks/useSelectTrack";
-import TrackHeader from "./Track/TrackHeader";
 import Track from "./Track";
+import TrackHeader from "./Track/TrackHeader";
 import { TrackSelectionPopup } from "./Track/TrackSelectionPopup";
 
 export default function History() {
@@ -39,14 +40,13 @@ export default function History() {
 
   return (
     <>
-      <TitleCard
-        title="Your history"
-        info="You can select tracks by clicking them, ctrl-clicking them to add to the selection. You can also use shift-click to expand your selection"
+      <Section
+        title="Listens"
         right={
           <CheckboxWithText
             checked={followInterval}
             onChecked={handleSetFollowInterval}
-            text="Follow interval"
+            text="Only this period"
           />
         }>
         <SelectableContextProvider
@@ -75,7 +75,7 @@ export default function History() {
             </GridWrapper>
           </InfiniteScroll>
         </SelectableContextProvider>
-      </TitleCard>
+      </Section>
       <TrackSelectionPopup
         anchor={anchor}
         onClose={() => setAnchor(undefined)}

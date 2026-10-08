@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 
 import IdealImage from "../../components/IdealImage";
 import { RowsSkeleton } from "../../components/ItemRow";
+import Section from "../../components/Section";
 import Text from "../../components/Text";
-import TitleCard from "../../components/TitleCard";
 import { DiscoveryOverviewResponse } from "../../services/apis/api";
 import { plural } from "../../services/tools";
 
@@ -21,9 +21,9 @@ interface StickProps {
 export default function Stick({ stick }: StickProps) {
   if (!stick) {
     return (
-      <TitleCard title={TITLE} info={INFO}>
+      <Section title={TITLE} info={INFO}>
         <RowsSkeleton />
-      </TitleCard>
+      </Section>
     );
   }
 
@@ -31,11 +31,11 @@ export default function Stick({ stick }: StickProps) {
   const judged = stuck + faded;
   if (judged + early === 0) {
     return (
-      <TitleCard title={TITLE} info={INFO}>
-        <Text size="normal">
+      <Section title={TITLE} info={INFO}>
+        <Text size="normal" greyed>
           No artist discovered in this period was played 3 times or more.
         </Text>
-      </TitleCard>
+      </Section>
     );
   }
 
@@ -56,8 +56,8 @@ export default function Stick({ stick }: StickProps) {
       : "";
 
   return (
-    <TitleCard title={TITLE} info={INFO}>
-      <Text element="div" size="normal">
+    <Section title={TITLE} info={INFO}>
+      <Text element="div" size="normal" className={s.summary}>
         {judged > 0
           ? `${stuck.toLocaleString()} of the ${plural(judged, "artist")} you discovered stuck (${Math.round((stuck / judged) * 100)}%): you still played them 3 months or more after the first listen.${laterNote}`
           : `Too early to tell: the ${plural(early, "artist")} you discovered were first heard less than 4 months ago.`}
@@ -101,6 +101,6 @@ export default function Stick({ stick }: StickProps) {
           ))}
         </div>
       )}
-    </TitleCard>
+    </Section>
   );
 }

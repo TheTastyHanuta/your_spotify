@@ -1,12 +1,37 @@
 .rowwrapper {
   display: grid;
   width: 100%;
-  grid-gap: 8px;
+  column-gap: 16px;
   align-items: center;
+}
+
+/* Long titles end in an ellipsis instead of running into the next column */
+.rowwrapper > * {
+  min-width: 0;
 }
 
 .wrapper {
   width: 100%;
   display: grid;
-  row-gap: 8px;
+}
+
+/* Rows are separated by faint rules, like a table */
+.wrapper .rowwrapper {
+  padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* The first row is the column header */
+.wrapper > .rowwrapper:first-child {
+  margin-bottom: 0;
+  padding: 8px 0;
+  border-bottom-color: var(--line);
+  color: var(--muted);
+}
+
+/* Text sets its size inline */
+.wrapper > .rowwrapper:first-child :global(*) {
+  font-size: 12px !important;
+  font-weight: 500;
+  color: var(--muted);
 }

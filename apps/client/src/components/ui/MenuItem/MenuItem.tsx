@@ -1,9 +1,12 @@
 import clsx from "clsx";
 import { ButtonHTMLAttributes, ReactNode, forwardRef } from "react";
+
 import s from "./index.module.css";
 
-export interface MenuItemProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "value"> {
+export interface MenuItemProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "value"
+> {
   children: ReactNode;
   value?: unknown;
   selected?: boolean;

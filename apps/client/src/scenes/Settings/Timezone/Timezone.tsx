@@ -1,12 +1,14 @@
 import { MenuItem, Select } from "@mui/material";
 import { useSelector } from "react-redux";
+
+import Section from "../../../components/Section";
 import Text from "../../../components/Text";
-import TitleCard from "../../../components/TitleCard";
 import { changeTimezone } from "../../../services/redux/modules/settings/thunk";
 import { selectTimezone } from "../../../services/redux/modules/user/selector";
 import { useAppDispatch } from "../../../services/redux/tools";
 import SettingLine from "../SettingLine";
 import { timezones } from "./timezones";
+
 import s from "./index.module.css";
 
 export default function Timezone() {
@@ -21,7 +23,7 @@ export default function Timezone() {
   };
 
   return (
-    <TitleCard title="Timezone">
+    <Section title="Timezone">
       <Text element="span" className={s.marginbottom} size="normal">
         Statistics computed by the server need to know your timezone. Change
         this if your history does not match computed stats.
@@ -42,6 +44,6 @@ export default function Timezone() {
           </Select>
         }
       />
-    </TitleCard>
+    </Section>
   );
 }

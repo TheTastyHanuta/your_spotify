@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { UploadFile } from "@mui/icons-material";
 import { Button, CircularProgress } from "@mui/material";
-import { startImportFullPrivacy } from "../../../../services/redux/modules/import/thunk";
+import { useRef, useState } from "react";
+
 import Text from "../../../../components/Text";
+import { startImportFullPrivacy } from "../../../../services/redux/modules/import/thunk";
 import { useAppDispatch } from "../../../../services/redux/tools";
+
 import s from "./index.module.css";
 
 export default function FullPrivacy() {
   const dispatch = useAppDispatch();
   const [files, setFiles] = useState<FileList | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
 
   const onImport = async () => {
@@ -46,19 +50,20 @@ export default function FullPrivacy() {
           here
         </a>
       </Text>
-      <label htmlFor="contained-button-file">
-        <input
-          accept=".json"
-          id="contained-button-file"
-          multiple
-          type="file"
-          style={{ display: "none" }}
-          onChange={(ev) => setFiles(ev.target.files)}
-        />
-        <Button component="span">
-          Select your Streaming_History_Audio.json files
-        </Button>
-      </label>
+      {/* A real button, so the keyboard can open the file picker too */}
+      <input
+        ref={fileInput}
+        accept=".json"
+        multiple
+        type="file"
+        hidden
+        onChange={(ev) => setFiles(ev.target.files)}
+      />
+      <Button
+        startIcon={<UploadFile />}
+        onClick={() => fileInput.current?.click()}>
+        Select your Streaming_History_Audio.json files
+      </Button>
       {files &&
         Array.from(Array(files.length).keys()).map((i) => (
           <Text key={i} element="div" size="normal">

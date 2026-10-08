@@ -1,5 +1,5 @@
 import { OverviewResponse } from "../../services/apis/api";
-import { inPart, NOTABLE, PARTS_OF_DAY } from "./traits";
+import { inPart, NOTABLE, PARTS_OF_DAY } from "../../services/traits";
 
 type Cell = OverviewResponse["heatmap"][number];
 

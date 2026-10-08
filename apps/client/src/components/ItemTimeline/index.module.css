@@ -2,17 +2,41 @@
   height: 300px;
 }
 
+.scroll {
+  height: 100%;
+}
+
+/* Only phones scroll the months sideways. A scroll box around a chart that
+   sizes itself from that box can loop: a scrollbar appears, the chart
+   shrinks, the scrollbar goes, and the restarted animation never draws the
+   bars. Vertical overflow is never allowed. */
+@media screen and (max-width: 900px) {
+  .scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  /* At least 10px per month */
+  .inner {
+    min-width: calc(var(--months) * 10px);
+  }
+}
+
+.inner {
+  height: 100%;
+}
+
 .peak {
-  fill: var(--text-on-light);
+  fill: var(--text);
   font-size: 12px;
   font-weight: bold;
 }
 
 .legend {
-  color: var(--text-on-light);
+  color: var(--text);
 }
 
 .hint {
-  color: var(--text-grey);
+  color: var(--muted);
   font-size: 0.9em;
 }

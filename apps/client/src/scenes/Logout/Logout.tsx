@@ -1,11 +1,14 @@
 import { CircularProgress } from "@mui/material";
 import { useEffect } from "react";
+
 import Text from "../../components/Text";
 import { api } from "../../services/apis/api";
+import { useNavigate } from "../../services/hooks/useNavigate";
 import { logout } from "../../services/redux/modules/user/reducer";
 import { useAppDispatch } from "../../services/redux/tools";
 import { LocalStorage, REMEMBER_ME_KEY } from "../../services/storage";
-import { useNavigate } from "../../services/hooks/useNavigate";
+
+import s from "../../styles/centered.module.css";
 
 export default function Logout() {
   const navigate = useNavigate();
@@ -26,11 +29,11 @@ export default function Logout() {
   }, [navigate, dispatch]);
 
   return (
-    <div>
-      <Text element="h3" size="big">
-        You are being logged out
+    <main className={s.root}>
+      <CircularProgress size={24} color="inherit" />
+      <Text element="p" size="normal" className={s.explain}>
+        Logging you out…
       </Text>
-      <CircularProgress />
-    </div>
+    </main>
   );
 }

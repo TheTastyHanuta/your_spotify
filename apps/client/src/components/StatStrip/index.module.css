@@ -1,0 +1,100 @@
+.root {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.stat {
+  padding: 14px 20px;
+  border-left: 1px solid var(--line);
+  min-width: 0;
+}
+
+.stat:first-child {
+  padding-left: 28px;
+  border-left: none;
+}
+
+.value {
+  font-size: 24px;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 12px;
+  min-height: 20px;
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+}
+
+.delta svg {
+  margin: 0 -2px 0 -6px;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.flat,
+.note {
+  color: var(--muted);
+}
+
+.note {
+  font-family: var(--font);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 900px) {
+  .root {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat,
+  .stat:first-child {
+    padding: 12px 16px;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .stat:nth-child(even) {
+    border-left: 1px solid var(--line);
+  }
+
+  .stat:nth-child(-n + 2) {
+    border-top: none;
+  }
+
+  /* An odd last number takes the whole row */
+  .stat:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .value {
+    font-size: 20px;
+  }
+
+  /* Two columns leave no room for one line: the note wraps */
+  .sub {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .note {
+    white-space: normal;
+  }
+}

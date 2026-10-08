@@ -1,4 +1,5 @@
 import { createSelector } from "@reduxjs/toolkit";
+
 import { RootState } from "../..";
 import {
   getPresetDates,
@@ -20,11 +21,6 @@ export const selectUser = createSelector(
   selectUserState,
   (state) => state.user,
 );
-export const selectInterval = createSelector(
-  [selectUserState, selectPresetDates],
-  (state) => fromReduxIntervalDetail(state.intervalDetail).interval,
-);
-
 export const selectIntervalDetail = createSelector(selectUserState, (state) =>
   fromReduxIntervalDetail(state.intervalDetail),
 );

@@ -1,18 +1,21 @@
-import { Fragment } from "react";
 import clsx from "clsx";
-import { msToDuration } from "../../../../services/stats";
-import { Artist, Album, Track as TrackType } from "../../../../services/types";
-import InlineArtist from "../../../../components/InlineArtist";
-import InlineTrack from "../../../../components/InlineTrack";
-import Text from "../../../../components/Text";
-import PlayButton from "../../../../components/PlayButton";
-import TrackOptions from "../../../../components/TrackOptions";
-import { useMobile } from "../../../../services/hooks/hooks";
+import { Fragment } from "react";
+
 import { GridRowWrapper } from "../../../../components/Grid";
 import InlineAlbum from "../../../../components/InlineAlbum";
+import InlineArtist from "../../../../components/InlineArtist";
+import InlineTrack from "../../../../components/InlineTrack";
 import LongClickableTrack from "../../../../components/LongClickableTrack";
-import s from "./index.module.css";
+import PlayButton from "../../../../components/PlayButton";
+import Text from "../../../../components/Text";
+import TrackOptions from "../../../../components/TrackOptions";
+import { useMobile } from "../../../../services/hooks/hooks";
+import { msToDuration } from "../../../../services/stats";
+import { Artist, Album, Track as TrackType } from "../../../../services/types";
+import ShareCount from "../../ShareCount";
 import { useTrackGrid } from "./TrackGrid";
+
+import s from "./index.module.css";
 
 interface TrackProps {
   track: TrackType;
@@ -21,13 +24,14 @@ interface TrackProps {
   playable?: boolean;
   count: number;
   totalCount: number;
+  // The number one\'s count, for the share bar
+  maxCount: number;
   duration: number;
-  totalDuration: number;
   rank: number;
 }
 
 export default function Track(props: TrackProps) {
-  const [isMobile, isTablet, isDesktop] = useMobile();
+  const [isMobile, isTablet] = useMobile();
   const trackGrid = useTrackGrid();
 
   const {
@@ -36,9 +40,9 @@ export default function Track(props: TrackProps) {
     artists,
     playable,
     duration,
-    totalDuration,
     count,
     totalCount,
+    maxCount,
     rank,
   } = props;
 
@@ -46,8 +50,8 @@ export default function Track(props: TrackProps) {
     {
       ...trackGrid.rank,
       node: (
-        <Text size="normal" element="strong" className={s.mlrank}>
-          #{rank}
+        <Text size="normal" greyed className="num">
+          {rank}
         </Text>
       ),
     },
@@ -87,43 +91,20 @@ export default function Track(props: TrackProps) {
     {
       ...trackGrid.duration,
       node: !isMobile && (
-        <Text element="div" size="normal">
+        <Text element="div" size="normal" className="num">
           {msToDuration(track.duration_ms)}
         </Text>
       ),
     },
     {
       ...trackGrid.count,
-      node: (
-        <Text
-          element="div"
-          size="normal"
-          className={isMobile ? "right" : undefined}>
-          {count}
-          {!isMobile && (
-            <>
-              {" "}
-              <Text size="normal">
-                ({Math.floor((count / totalCount) * 10000) / 100}%)
-              </Text>
-            </>
-          )}
-        </Text>
-      ),
+      node: <ShareCount count={count} total={totalCount} max={maxCount} />,
     },
     {
       ...trackGrid.total,
       node: !isMobile && (
-        <Text element="div" className="center" size="normal">
+        <Text element="div" size="normal" className="num">
           {msToDuration(duration)}
-          {isDesktop && (
-            <>
-              {" "}
-              <Text size="normal">
-                ({Math.floor((duration / totalDuration) * 10000) / 100}%)
-              </Text>
-            </>
-          )}
         </Text>
       ),
     },
