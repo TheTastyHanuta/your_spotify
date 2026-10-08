@@ -12,8 +12,6 @@ import { getTracks } from "./track";
 // Whole history queries: the "Your story" page and "On this day" on Home
 
 const FORGOTTEN_MIN_PLAYS = 10;
-const NB_FORGOTTEN_TRACKS = 20;
-const NB_FORGOTTEN_ARTISTS = 20;
 
 type Forgotten = {
   _id: string;
@@ -67,11 +65,12 @@ const forgottenOf = (
 
 const withoutId = ({ _id, ...rest }: Forgotten) => rest;
 
-export const getForgotten = async (user: User, days: number) => {
+// nb: songs and artists each
+export const getForgotten = async (user: User, days: number, nb: number) => {
   const since = new Date(Date.now() - days * DAY_MS);
   const [tracks, artists] = await Promise.all([
-    forgottenOf(user, "id", since, NB_FORGOTTEN_TRACKS),
-    forgottenOf(user, "primaryArtistId", since, NB_FORGOTTEN_ARTISTS),
+    forgottenOf(user, "id", since, nb),
+    forgottenOf(user, "primaryArtistId", since, nb),
   ]);
   const [trackDocs, artistDocs] = await Promise.all([
     findTracks(tracks.map((t) => t._id)),
@@ -384,8 +383,6 @@ export const getOnThisDay = async (user: User) => {
 
 // Loyalty: the songs and artists played in the most different months, the
 // most played first on ties
-const NB_LOYAL_TRACKS = 20;
-const NB_LOYAL_ARTISTS = 20;
 
 type Loyal = {
   _id: string;
@@ -452,10 +449,11 @@ const loyalFields = ({ months, total, first, perMonth }: Loyal) => ({
   years: perYear(perMonth),
 });
 
-export const getLoyal = async (user: User) => {
+// nb: songs and artists each
+export const getLoyal = async (user: User, nb: number) => {
   const [tracks, artists] = await Promise.all([
-    loyalOf(user, "id", NB_LOYAL_TRACKS),
-    loyalOf(user, "primaryArtistId", NB_LOYAL_ARTISTS),
+    loyalOf(user, "id", nb),
+    loyalOf(user, "primaryArtistId", nb),
   ]);
   const [trackDocs, artistDocs] = await Promise.all([
     findTracks(tracks.map((t) => t._id)),

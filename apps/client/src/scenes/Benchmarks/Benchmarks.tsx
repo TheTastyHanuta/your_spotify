@@ -92,12 +92,12 @@ export default function Benchmarks() {
     {
       title: "Get best artists of part of day",
       request: () =>
-        api.getBestOfPartOfDay(interval.start, interval.end, "artists"),
+        api.getBestOfPartOfDay(interval.start, interval.end, "artists", 5),
     },
     {
       title: "Get best songs of part of day",
       request: () =>
-        api.getBestOfPartOfDay(interval.start, interval.end, "tracks"),
+        api.getBestOfPartOfDay(interval.start, interval.end, "tracks", 5),
     },
     {
       title: "Get discoveries",
@@ -109,24 +109,27 @@ export default function Benchmarks() {
     },
     {
       title: "Get discovery overview",
-      request: () => api.getDiscoveryOverview(interval.start, interval.end),
+      request: () => api.getDiscoveryOverview(interval.start, interval.end, 20),
     },
     {
       title: "Get songs on repeat",
-      request: () => api.getOnRepeat(interval.start, interval.end),
+      request: () => api.getOnRepeat(interval.start, interval.end, 20),
     },
     {
       title: "Get new plays per",
       request: () =>
         api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),
     },
-    { title: "Get forgotten favorites", request: () => api.getForgotten(182) },
+    {
+      title: "Get forgotten favorites",
+      request: () => api.getForgotten(182, 20),
+    },
     { title: "Get eras", request: () => api.getEras() },
     { title: "Get on this day", request: () => api.getOnThisDay() },
-    { title: "Get loyal songs and artists", request: () => api.getLoyal() },
+    { title: "Get loyal songs and artists", request: () => api.getLoyal(20) },
     {
       title: "Get longest sessions",
-      request: () => api.getLongestSessions(interval.start, interval.end),
+      request: () => api.getLongestSessions(interval.start, interval.end, 5),
     },
     {
       title: "Get artist page",

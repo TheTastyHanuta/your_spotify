@@ -315,6 +315,7 @@ export const getLongestListeningSession = async (
   userId: string,
   start: Date,
   end: Date,
+  nb: number,
 ) => {
   const sessionBreakThreshold = 10 * 60 * 1000;
 
@@ -347,7 +348,7 @@ export const getLongestListeningSession = async (
     },
   ]);
 
-  const longest = longestSessions(plays, sessionBreakThreshold, 5);
+  const longest = longestSessions(plays, sessionBreakThreshold, nb);
 
   const infos = longest.flatMap((session) => session.plays);
   const [tracks, albums] = await Promise.all([

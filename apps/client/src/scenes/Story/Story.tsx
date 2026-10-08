@@ -1,47 +1,33 @@
 import clsx from "clsx";
-import { formatDistanceToNowStrict } from "date-fns";
 import { Link, useSearchParams } from "react-router-dom";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
-import InlineArtist from "../../components/InlineArtist";
-import InlineTrack from "../../components/InlineTrack";
-import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
+import { RowsSkeleton } from "../../components/ItemRow";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section from "../../components/Section";
 import Text from "../../components/Text";
 import { api } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import Eras, { dates, ongoing, shortMonth } from "./Eras";
 import Loyal from "./Loyal";
+import {
+  DEFAULT_SINCE,
+  forgottenArtistRow,
+  forgottenTrackRow,
+  SINCE,
+  Since,
+  SINCE_TABS,
+} from "./rows";
 
 import s from "./index.module.css";
-
-// How long a favourite has to be quiet, kept in the URL as ?since=
-const SINCE = {
-  "3m": { days: 91, label: "3 months" },
-  "6m": { days: 182, label: "6 months" },
-  "1y": { days: 365, label: "1 year" },
-};
-type Since = keyof typeof SINCE;
-const DEFAULT_SINCE: Since = "6m";
-const SINCE_TABS = Object.entries(SINCE).map(([value, { label }]) => ({
-  value,
-  label,
-}));
-
-// "last heard 4 months ago · most in Dec 2023"
-const when = (item: { peak: string; last: string }) => {
-  const [year, month] = item.peak.split("-").map(Number);
-  return `last heard ${formatDistanceToNowStrict(new Date(item.last), { addSuffix: true })} · most in ${DateFormatter.toShortMonthYear(new Date(year!, month! - 1))}`;
-};
 
 export default function Story() {
   const [params, setParams] = useSearchParams();
   const asked = params.get("since");
   const since: Since =
     asked && asked in SINCE ? (asked as Since) : DEFAULT_SINCE;
-  const forgotten = useAPI(api.getForgotten, SINCE[since].days);
+  const forgotten = useAPI(api.getForgotten, SINCE[since].days, NB_SHOWN + 1);
   const eras = useAPI(api.getEras);
 
   const quiet = SINCE[since].label;
@@ -101,36 +87,26 @@ export default function Story() {
         <div className={clsx("ruled-columns", s.work)}>
           <Section
             title="Songs"
+            link={seeAll(
+              forgotten?.tracks,
+              `/story/forgotten?since=${since}&tab=tracks`,
+            )}
             right={
               forgotten &&
               forgotten.tracks.length > 0 && (
                 <AddToPlaylist
                   context={{
                     type: "specific",
-                    songIds: forgotten.tracks.map((t) => t.track.id),
+                    songIds: forgotten.tracks
+                      .slice(0, NB_SHOWN)
+                      .map((t) => t.track.id),
                   }}
                 />
               )
             }>
             {forgotten ? (
               forgotten.tracks.length > 0 ? (
-                forgotten.tracks.map((item, index) => (
-                  <ItemRow
-                    key={item.track.id}
-                    rank={index + 1}
-                    image={item.track.full_album.images}
-                    title={<InlineTrack track={item.track} size="normal" />}
-                    subtitle={
-                      <>
-                        <ArtistNames artists={item.track.full_artists} />
-                        <Text size="normal" greyed className={s.ellipsis}>
-                          {when(item)}
-                        </Text>
-                      </>
-                    }
-                    right={<span className="num">{item.total}</span>}
-                  />
-                ))
+                forgotten.tracks.slice(0, NB_SHOWN).map(forgottenTrackRow)
               ) : (
                 empty
               )
@@ -138,20 +114,15 @@ export default function Story() {
               <RowsSkeleton />
             )}
           </Section>
-          <Section title="Artists">
+          <Section
+            title="Artists"
+            link={seeAll(
+              forgotten?.artists,
+              `/story/forgotten?since=${since}&tab=artists`,
+            )}>
             {forgotten ? (
               forgotten.artists.length > 0 ? (
-                forgotten.artists.map((item, index) => (
-                  <ItemRow
-                    key={item.artist.id}
-                    rank={index + 1}
-                    image={item.artist.images}
-                    round
-                    title={<InlineArtist artist={item.artist} size="normal" />}
-                    subtitle={when(item)}
-                    right={<span className="num">{item.total}</span>}
-                  />
-                ))
+                forgotten.artists.slice(0, NB_SHOWN).map(forgottenArtistRow)
               ) : (
                 empty
               )

@@ -1,6 +1,5 @@
-import { Skeleton, Tooltip } from "@mui/material";
+import { Skeleton } from "@mui/material";
 import clsx from "clsx";
-import { ReactNode } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import {
@@ -14,9 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
-import IdealImage from "../../components/IdealImage";
-import InlineArtist from "../../components/InlineArtist";
-import InlineTrack from "../../components/InlineTrack";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section, { ChartSkeleton } from "../../components/Section";
 import StatStrip from "../../components/StatStrip";
@@ -25,7 +22,6 @@ import ChartTooltip from "../../components/Tooltip";
 import {
   api,
   DecadesPerYearResponse,
-  GenresResponse,
   TasteResponse,
 } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
@@ -34,11 +30,20 @@ import { medianYear, musicalAge } from "../../services/taste";
 import { percent, plural } from "../../services/tools";
 import ArtistShares from "./ArtistShares";
 import MusicalAgeOverTime from "./MusicalAgeOverTime";
+import {
+  byPlays,
+  capitalize,
+  exactPercent,
+  genreRow,
+  GENRES_EMPTY,
+  GenresNote,
+  ShareRow,
+  TOP_YEARS_INFO,
+  yearRow,
+} from "./rows";
 
 import s from "./index.module.css";
 
-const NB_GENRES = 12;
-const NB_TOP_YEARS = 8;
 // Decades shown in the years chart, the older ones are put together
 const NB_DECADES = 4;
 const LENGTH_LABELS = [
@@ -54,13 +59,15 @@ const ALBUM_TYPES: Record<string, string> = {
   compilation: "Compilations",
 };
 
-const exactPercent = (part: number, total: number) =>
-  total > 0 ? (part / total) * 100 : 0;
-
 export default function Taste() {
   const { interval } = useSelector(selectRawIntervalDetail);
   const taste = useAPI(api.getTaste, interval.start, interval.end);
-  const genres = useAPI(api.getGenres, interval.start, interval.end, NB_GENRES);
+  const genres = useAPI(
+    api.getGenres,
+    interval.start,
+    interval.end,
+    NB_SHOWN + 1,
+  );
   const decades = useAPI(api.getDecadesPerYear);
   const shares = useAPI(
     api.getArtistShares,
@@ -77,8 +84,7 @@ export default function Taste() {
   const topArtist = shares?.top[0];
   const lead = topGenre
     ? {
-        // MusicBrainz tags are lower case
-        name: topGenre.genre.replace(/^./, (c) => c.toUpperCase()),
+        name: capitalize(topGenre.genre),
         images: genreArtist?.images,
         meta: (
           <>
@@ -187,13 +193,31 @@ export default function Taste() {
         ]}
       />
       <div className={clsx("ruled-columns", s.work)}>
-        <Section title="Genres">
-          {genres ? <Genres genres={genres} /> : <RowsSkeleton />}
+        <Section title="Genres" link={seeAll(genres?.genres, "/taste/genres")}>
+          {genres ? (
+            genres.genres.length > 0 ? (
+              <>
+                <GenresNote genres={genres} />
+                {genres.genres.slice(0, NB_SHOWN).map(genreRow(genres))}
+              </>
+            ) : (
+              <Text size="normal">{GENRES_EMPTY}</Text>
+            )
+          ) : (
+            <RowsSkeleton />
+          )}
         </Section>
         <Section
           title="Most played release years"
-          info="The number is all your plays of songs released that year; the song is that year's most played.">
-          {taste ? <TopYears years={taste.years} /> : <RowsSkeleton />}
+          info={TOP_YEARS_INFO}
+          link={seeAll(taste?.years, "/taste/release-years")}>
+          {taste ? (
+            <div className={s.years}>
+              {byPlays(taste.years).slice(0, NB_SHOWN).map(yearRow)}
+            </div>
+          ) : (
+            <RowsSkeleton />
+          )}
         </Section>
       </div>
       <div className={s.sections}>
@@ -268,138 +292,6 @@ function RowsSkeleton() {
         <Skeleton key={index} height={32} />
       ))}
     </>
-  );
-}
-
-interface ShareRowProps {
-  label: string;
-  // Exact percentage, rounded for display
-  share: number;
-  // Share that fills the bar, 100 by default
-  max?: number;
-  title?: string;
-  right?: ReactNode;
-}
-
-function ShareRow({ label, share, max = 100, title, right }: ShareRowProps) {
-  return (
-    <Tooltip title={title ?? ""} disableInteractive>
-      <div className={s.row}>
-        <Text size="normal" className={s.rowLabel}>
-          {label}
-        </Text>
-        <div className={s.track}>
-          <div
-            className={s.bar}
-            style={{ width: `${(share / (max || 1)) * 100}%` }}
-          />
-        </div>
-        <Text size="normal" className={clsx("num", s.rowValue)}>
-          {Math.round(share)}%
-        </Text>
-        {right}
-      </div>
-    </Tooltip>
-  );
-}
-
-function Genres({ genres }: { genres: GenresResponse }) {
-  if (genres.genres.length === 0) {
-    return (
-      <Text size="normal">
-        No genres known yet. They are looked up on MusicBrainz in the
-        background, about one artist per second.
-      </Text>
-    );
-  }
-  return (
-    <>
-      <Text element="p" size="normal" greyed className={s.note}>
-        {percent(genres.coveredPlays, genres.totalPlays)}% of your plays are by
-        artists with a known genre. An artist can have several genres, so the
-        shares add up to more than 100%.
-      </Text>
-      {genres.genres.map((genre) => {
-        const share = exactPercent(genre.plays, genres.totalPlays);
-        return (
-          <ShareRow
-            key={genre.genre}
-            label={genre.genre}
-            share={share}
-            // Small shares, the bars compare the genres with each other
-            max={exactPercent(genres.genres[0]!.plays, genres.totalPlays)}
-            title={`${Math.round(share)}% of your plays are by artists tagged ${genre.genre}`}
-            right={
-              <div className={s.artists}>
-                {genre.artists.map((artist) => (
-                  <Link key={artist.id} to={`/artist/${artist.id}`}>
-                    <IdealImage
-                      images={artist.images}
-                      size={24}
-                      alt={artist.name}
-                      title={artist.name}
-                      className={s.avatar}
-                    />
-                  </Link>
-                ))}
-              </div>
-            }
-          />
-        );
-      })}
-    </>
-  );
-}
-
-function TopYears({ years }: { years: TasteResponse["years"] }) {
-  const top = [...years]
-    .sort((a, b) => b.plays - a.plays)
-    .slice(0, NB_TOP_YEARS);
-  return (
-    <div className={s.years}>
-      {top.map((year) => {
-        const track = year.top.track;
-        return (
-          <div key={year.year} className={s.year}>
-            <Text size="normal" className={clsx("num", s.yearNumber)}>
-              {year.year}
-            </Text>
-            {track ? (
-              <>
-                <IdealImage images={track.full_album.images} size={40} />
-                <div className={s.yearTrack}>
-                  <InlineTrack
-                    track={track}
-                    size="normal"
-                    className={s.ellipsis}
-                  />
-                  {/* Only the artists are cut when the line is too long */}
-                  <div className={s.yearArtists}>
-                    <Text size="normal" greyed className={s.ellipsis}>
-                      {track.full_artists.map((artist, index) => (
-                        <span key={artist.id}>
-                          {index > 0 && ", "}
-                          <InlineArtist artist={artist} size="normal" noStyle />
-                        </span>
-                      ))}
-                    </Text>
-                    <Text size="normal" greyed className={s.nowrap}>
-                      {`· ${plural(year.top.plays, "play")}`}
-                    </Text>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <span />
-            )}
-            {/* All songs of the year, the song is only the most played */}
-            <Text size="normal" greyed className="num">
-              {year.plays.toLocaleString()}
-            </Text>
-          </div>
-        );
-      })}
-    </div>
   );
 }
 

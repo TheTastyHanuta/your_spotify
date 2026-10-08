@@ -382,7 +382,7 @@ Get the most played genres, using MusicBrainz genres first and Spotify's otherwi
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of genres to return (1-50, default 20)
+- `nb`: number - Number of genres to return (1-500, default 20)
 
 **Response:**
 
@@ -508,13 +508,14 @@ Get top albums in a time period.
 
 #### `GET /spotify/top/part-of-day`
 
-Get the top 5 artists or songs of each part of the day: morning (5–11), afternoon (11–17), evening (17–22) and night (22–5), in the stats timezone. Counts plays or listening time, following the user's statistics setting.
+Get the top artists or songs of each part of the day (5 unless `nb` says otherwise): morning (5–11), afternoon (11–17), evening (17–22) and night (22–5), in the stats timezone. Counts plays or listening time, following the user's statistics setting.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
 - `type`: string - `artists` or `tracks`
+- `nb`: number - Number of items per part of the day (1-500, default 5)
 
 **Response:**
 
@@ -522,14 +523,15 @@ Get the top 5 artists or songs of each part of the day: morning (5–11), aftern
 
 #### `GET /spotify/top/sessions`
 
-Get the five longest listening sessions in the selected period, shown under **Habits → Longest sessions** in the client. A session ends when the next song starts more than 10 minutes after the previous song ends. Duration runs from the first song's start through the last song's end, including pauses within the session; it is also used to rank sessions.
+Get the longest listening sessions in the selected period (five unless `nb` says otherwise), shown under **Habits → Longest sessions** in the client. A session ends when the next song starts more than 10 minutes after the previous song ends. Duration runs from the first song's start through the last song's end, including pauses within the session; it is also used to rank sessions.
 
-Sessions are split in server code, so this endpoint works with MongoDB 4.4. It loads the selected period's plays into memory before selecting the longest five.
+Sessions are split in server code, so this endpoint works with MongoDB 4.4. It loads the selected period's plays into memory before selecting the longest ones.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
+- `nb`: number - Number of sessions to return (1-50, default 5)
 
 **Response:**
 
@@ -547,7 +549,7 @@ Get the artists heard for the first time in the period, most played first, with 
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of artists to return (1-20, default 5)
+- `nb`: number - Number of artists to return (1-500, default 5)
 
 **Response:**
 
@@ -561,7 +563,7 @@ Get the songs heard for the first time in the period that were played again at l
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of songs to return (1-20, default 5)
+- `nb`: number - Number of songs to return (1-500, default 5)
 
 **Response:**
 
@@ -575,6 +577,7 @@ Get the numbers of new artists and songs, the new songs by artists played before
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
+- `nb`: number - Number of rows in `knownArtistTracks` and `comebacks` (1-500, default 20)
 
 **Response:**
 
@@ -582,12 +585,13 @@ Get the numbers of new artists and songs, the new songs by artists played before
 
 #### `GET /spotify/discoveries/on-repeat`
 
-Get the 20 songs with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
+Get the songs (20 unless `nb` says otherwise) with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
+- `nb`: number - Number of songs to return (1-500, default 20)
 
 **Response:**
 
@@ -611,11 +615,12 @@ Get the plays of each time step, and the plays of songs heard for the first time
 
 #### `GET /spotify/story/forgotten`
 
-Get the 20 most played songs and 20 most played artists of all time (at least 10 plays) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
+Get the most played songs and artists of all time (at least 10 plays, 20 of each unless `nb` says otherwise) that were not played for the given number of days, with their total plays, last play, and the month with the most plays (`YYYY-MM` in the stats timezone).
 
 **Query Parameters:**
 
 - `days`: number - `91`, `182` or `365`
+- `nb`: number - Number of songs and of artists to return (1-500, default 20)
 
 **Response:**
 
@@ -631,7 +636,11 @@ Get the stretches of at least 3 months when one artist or genre (an artist's fir
 
 #### `GET /spotify/story/loyal`
 
-Get the 20 songs and 20 artists played in the most different months (months in the stats timezone), the most played first on ties.
+Get the songs and artists (20 of each unless `nb` says otherwise) played in the most different months (months in the stats timezone), the most played first on ties.
+
+**Query Parameters:**
+
+- `nb`: number - Number of songs and of artists to return (1-500, default 20)
 
 **Response:**
 

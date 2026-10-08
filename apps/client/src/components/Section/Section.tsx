@@ -14,7 +14,8 @@ interface SectionProps {
   tabs?: { value: string; label: string }[];
   tab?: string;
   onTab?: (value: string) => void;
-  link?: { to: string; label: string };
+  // onClick replaces the navigation, e.g. to set a period first
+  link?: { to: string; label: string; onClick?: () => void };
   // Extra controls on the right of the heading
   right?: ReactNode;
   children: ReactNode;
@@ -41,21 +42,21 @@ export default function Section({
           <h2 className={s.title}>{title}</h2>
           <ITooltip content={info} />
         </div>
-        {tabs && (
-          <Tabs
-            value={tab}
-            onChange={(_, value: string) => onTab?.(value)}
-            className={s.tabs}>
-            {tabs.map((t) => (
-              <Tab key={t.value} value={t.value} label={t.label} />
-            ))}
-          </Tabs>
-        )}
+        {tabs && <SectionTabs tabs={tabs} tab={tab} onTab={onTab} />}
         {(link || right) && (
           <div className={s.right}>
             {right}
             {link && (
-              <Link to={link.to} className={s.link}>
+              <Link
+                to={link.to}
+                className={s.link}
+                onClick={
+                  link.onClick &&
+                  ((event) => {
+                    event.preventDefault();
+                    link.onClick?.();
+                  })
+                }>
                 {link.label}
               </Link>
             )}
@@ -64,6 +65,26 @@ export default function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+// The section's tabs, also usable as a second set in `right`
+export function SectionTabs({
+  tabs,
+  tab,
+  onTab,
+}: Pick<SectionProps, "tab" | "onTab"> & {
+  tabs: NonNullable<SectionProps["tabs"]>;
+}) {
+  return (
+    <Tabs
+      value={tab}
+      onChange={(_, value: string) => onTab?.(value)}
+      className={s.tabs}>
+      {tabs.map((t) => (
+        <Tab key={t.value} value={t.value} label={t.label} />
+      ))}
+    </Tabs>
   );
 }
 

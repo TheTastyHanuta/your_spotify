@@ -685,7 +685,6 @@ const PARTS_OF_DAY = [
   { name: "afternoon", from: 11, to: 17 },
   { name: "evening", from: 17, to: 22 },
 ];
-const NB_BEST_OF_PART = 5;
 
 // The most listened artists or tracks of each part of the day, by the
 // user's plays or minutes setting
@@ -694,6 +693,7 @@ export const getBestOfPartOfDay = async (
   start: Date,
   end: Date,
   type: "artists" | "tracks",
+  nb: number,
 ) => {
   const timezone = getTimezone(user.settings.timezone);
   const hour = { $hour: { date: "$played_at", timezone } };
@@ -733,7 +733,7 @@ export const getBestOfPartOfDay = async (
         items: { $push: { id: "$_id.item", total: "$total" } },
       },
     },
-    { $project: { total: 1, items: { $slice: ["$items", NB_BEST_OF_PART] } } },
+    { $project: { total: 1, items: { $slice: ["$items", nb] } } },
   ]);
 
   const ids = parts.flatMap((part) => part.items.map((item) => item.id));

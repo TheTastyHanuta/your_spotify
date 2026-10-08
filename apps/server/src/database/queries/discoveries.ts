@@ -14,7 +14,6 @@ import { getTracks } from "./track";
 // Only aggregation features of MongoDB 4.4 are used here, some instances
 // cannot run a newer MongoDB.
 
-const NB_LIST = 20;
 const NB_STUCK = 20;
 // Back after a break: known before (at least this many plays), then not
 // played for this long
@@ -71,6 +70,7 @@ export const getDiscoveryOverview = async (
   user: User,
   start: Date,
   end: Date,
+  nb: number,
 ) => {
   const now = new Date();
   const [tracks, artists]: [
@@ -185,7 +185,7 @@ export const getDiscoveryOverview = async (
         a.firstIn.getTime() - a.lastBefore.getTime() >= BREAK_DAYS * DAY_MS,
     )
     .sort((a, b) => b.plays - a.plays || a._id.localeCompare(b._id))
-    .slice(0, NB_LIST);
+    .slice(0, nb);
 
   const counted = discovered.filter((a) => a.total >= STICK_MIN_PLAYS);
   const stuck = counted
@@ -197,7 +197,7 @@ export const getDiscoveryOverview = async (
       a.first.getTime() + FADED_DAYS * DAY_MS > now.getTime(),
   );
 
-  const shownTracks = knownArtistTracks.slice(0, NB_LIST);
+  const shownTracks = knownArtistTracks.slice(0, nb);
   const shownStuck = stuck.slice(0, NB_STUCK);
   const [trackDocs, artistDocs] = await Promise.all([
     findTracks(shownTracks.map((t) => t._id)),
@@ -243,7 +243,12 @@ export const getDiscoveryOverview = async (
 };
 
 // Songs with the most plays inside any REPEAT_DAYS days of the period
-export const getOnRepeat = async (user: User, start: Date, end: Date) => {
+export const getOnRepeat = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
   const timezone = getTimezone(user.settings.timezone);
   const rows: { _id: string; days: { day: string; plays: number }[] }[] =
     await InfosModel.aggregate([
@@ -274,7 +279,7 @@ export const getOnRepeat = async (user: User, start: Date, end: Date) => {
         a.from.localeCompare(b.from) ||
         a.id.localeCompare(b.id),
     )
-    .slice(0, NB_LIST);
+    .slice(0, nb);
 
   const docs = await findTracks(best.map((row) => row.id));
   return keepOrder(

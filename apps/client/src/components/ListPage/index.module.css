@@ -1,0 +1,9 @@
+/* One column of rows reads badly across a wide screen */
+.list {
+  max-width: 960px;
+}
+
+.separator {
+  margin-left: 8px;
+  color: var(--muted);
+}

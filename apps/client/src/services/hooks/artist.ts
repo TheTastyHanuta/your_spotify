@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 
 import { api } from "../apis/api";
 
+// The ids go into the URL, which the server refuses above 16 KB: 100 ids
+// (about 2.3 KB) per request
+const IDS_PER_REQUEST = 100;
+
 // Loads the items of `ids` once per distinct list. `loaded` turns true when
 // the request is done, even when some ids were not found.
 export function useLoadByIds<T extends { id: string }>(
@@ -19,12 +23,21 @@ export function useLoadByIds<T extends { id: string }>(
       return;
     }
     let current = true;
-    fetch(key.split(","))
-      .then(({ data }) => {
+    const all = key.split(",");
+    const chunks = Array.from(
+      { length: Math.ceil(all.length / IDS_PER_REQUEST) },
+      (_, i) => all.slice(i * IDS_PER_REQUEST, (i + 1) * IDS_PER_REQUEST),
+    );
+    Promise.all(chunks.map((chunk) => fetch(chunk)))
+      .then((results) => {
         if (current) {
           setState({
             key,
-            items: Object.fromEntries(data.map((item) => [item.id, item])),
+            items: Object.fromEntries(
+              results
+                .flatMap(({ data }) => data)
+                .map((item) => [item.id, item]),
+            ),
           });
         }
       })

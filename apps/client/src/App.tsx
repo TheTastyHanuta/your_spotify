@@ -25,18 +25,23 @@ import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
 import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
 import Discoveries from "./scenes/Discoveries";
+import DiscoveryList from "./scenes/Discoveries/DiscoveryList";
 import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
 import NotFound from "./scenes/Error/NotFound";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
 import Habits from "./scenes/Habits";
+import HabitsList from "./scenes/Habits/HabitsList";
 import HistoryPage from "./scenes/History";
 import Home from "./scenes/Home";
 import Logout from "./scenes/Logout";
 import OnThisDayPage from "./scenes/OnThisDay";
 import Recap from "./scenes/Recap";
+import RecapDiscoveries from "./scenes/Recap/RecapDiscoveries";
 import Settings from "./scenes/Settings";
 import Story from "./scenes/Story";
+import StoryList from "./scenes/Story/StoryList";
 import Taste from "./scenes/Taste";
+import TasteList from "./scenes/Taste/TasteList";
 import Albums from "./scenes/Tops/Albums";
 import Artists from "./scenes/Tops/Artists";
 import Songs from "./scenes/Tops/Songs";
@@ -111,10 +116,26 @@ function App() {
                   }
                 />
                 <Route
+                  path="/taste/:list"
+                  element={
+                    <PrivateRoute>
+                      <TasteList />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
                   path="/habits"
                   element={
                     <PrivateRoute>
                       <Habits />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/habits/:list"
+                  element={
+                    <PrivateRoute>
+                      <HabitsList />
                     </PrivateRoute>
                   }
                 />
@@ -127,6 +148,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/discoveries/:list"
+                  element={
+                    <PrivateRoute>
+                      <DiscoveryList />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
                   path="/story"
                   element={
                     <PrivateRoute>
@@ -135,10 +164,26 @@ function App() {
                   }
                 />
                 <Route
+                  path="/story/:list"
+                  element={
+                    <PrivateRoute>
+                      <StoryList />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
                   path="/recap"
                   element={
                     <PrivateRoute>
                       <Recap />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/recap/discoveries"
+                  element={
+                    <PrivateRoute>
+                      <RecapDiscoveries />
                     </PrivateRoute>
                   }
                 />

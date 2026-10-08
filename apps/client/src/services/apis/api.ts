@@ -250,6 +250,14 @@ export type BestOfPartOfDayResponse<T> = {
   items: { total: number; item: T }[];
 }[];
 
+export type LongestSessionsResponse = {
+  // From the first play's start to the end of the last one, in ms
+  sessionLength: number;
+  plays: TrackInfo[];
+  full_tracks: Record<string, Track>;
+  full_albums: Record<string, Album>;
+}[];
+
 export type DiscoveriesResponse = {
   plays: number;
   // First listen ever, and the song it was
@@ -373,14 +381,16 @@ export const api = {
       end,
       timeSplit,
     }),
+  // nb: items per part of the day
   getBestOfPartOfDay: <T extends "artists" | "tracks">(
     start: Date,
     end: Date,
     type: T,
+    nb: number,
   ) =>
     get<
       BestOfPartOfDayResponse<T extends "artists" ? ShortArtist : ShortTrack>
-    >("/spotify/top/part-of-day", { start, end, type }),
+    >("/spotify/top/part-of-day", { start, end, type, nb }),
   getDecadesPerYear: () =>
     get<DecadesPerYearResponse>("/spotify/taste/decades"),
   getGenres: (start: Date, end: Date, nb: number) =>
@@ -393,23 +403,26 @@ export const api = {
       end,
       nb,
     }),
-  getDiscoveryOverview: (start: Date, end: Date) =>
+  // nb: rows of knownArtistTracks and comebacks
+  getDiscoveryOverview: (start: Date, end: Date, nb: number) =>
     get<DiscoveryOverviewResponse>("/spotify/discoveries/overview", {
       start,
       end,
+      nb,
     }),
-  getOnRepeat: (start: Date, end: Date) =>
-    get<OnRepeatResponse>("/spotify/discoveries/on-repeat", { start, end }),
+  getOnRepeat: (start: Date, end: Date, nb: number) =>
+    get<OnRepeatResponse>("/spotify/discoveries/on-repeat", { start, end, nb }),
   getNewPlaysPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<NewPlaysPerResponse>("/spotify/discoveries/per", {
       start,
       end,
       timeSplit,
     }),
-  getForgotten: (days: number) =>
-    get<ForgottenResponse>("/spotify/story/forgotten", { days }),
+  // nb: songs and artists each
+  getForgotten: (days: number, nb: number) =>
+    get<ForgottenResponse>("/spotify/story/forgotten", { days, nb }),
   getEras: () => get<ErasResponse>("/spotify/story/eras"),
-  getLoyal: () => get<LoyalResponse>("/spotify/story/loyal"),
+  getLoyal: (nb: number) => get<LoyalResponse>("/spotify/story/loyal", { nb }),
   getOnThisDay: () => get<OnThisDayResponse>("/spotify/on-this-day"),
   getTimeline: (type: "artist" | "album" | "track", id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
@@ -532,16 +545,8 @@ export const api = {
   blacklistArtist: (artistId: string) => post(`/artist/blacklist/${artistId}`),
   unblacklistArtist: (artistId: string) =>
     post(`/artist/unblacklist/${artistId}`),
-  getLongestSessions: (start: Date, end: Date) =>
-    get<
-      {
-        // From the first play's start to the end of the last one, in ms
-        sessionLength: number;
-        plays: TrackInfo[];
-        full_tracks: Record<string, Track>;
-        full_albums: Record<string, Album>;
-      }[]
-    >("/spotify/top/sessions", { start, end }),
+  getLongestSessions: (start: Date, end: Date, nb: number) =>
+    get<LongestSessionsResponse>("/spotify/top/sessions", { start, end, nb }),
 };
 
 export const DEFAULT_ITEMS_TO_LOAD = 20;

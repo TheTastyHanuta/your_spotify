@@ -114,6 +114,10 @@ const interval = z.object({
   ),
 });
 
+// How many rows a list returns; the "See all" pages ask for up to 500
+const nbRows = (fallback: number, max = 500) =>
+  z.preprocess(toNumber, z.number().int().min(1).max(max).default(fallback));
+
 const intervalPerSchema = z.object({
   start: z.preprocess(toDate, z.date()),
   end: z.preprocess(
@@ -301,14 +305,18 @@ router.get(
   },
 );
 
+// Each session carries all its plays, so fewer of them
+const sessionsSchema = interval.extend({ nb: nbRows(5, 50) });
+
 router.get("/top/sessions", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end } = validate(req.query, interval);
+  const { start, end, nb } = validate(req.query, sessionsSchema);
 
   const result = await getLongestListeningSession(
     user._id.toString(),
     start,
     end,
+    nb,
   );
   res.status(200).send(result);
 });
@@ -482,17 +490,16 @@ router.get("/taste/release_years_per", isLoggedOrGuest, async (req, res) => {
 
 const partOfDaySchema = interval.extend({
   type: z.enum(["artists", "tracks"]),
+  nb: nbRows(5),
 });
 
 router.get("/top/part-of-day", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end, type } = validate(req.query, partOfDaySchema);
-  res.status(200).send(await getBestOfPartOfDay(user, start, end, type));
+  const { start, end, type, nb } = validate(req.query, partOfDaySchema);
+  res.status(200).send(await getBestOfPartOfDay(user, start, end, type, nb));
 });
 
-const genresSchema = interval.extend({
-  nb: z.preprocess(toNumber, z.number().int().min(1).max(50).default(20)),
-});
+const genresSchema = interval.extend({ nb: nbRows(20) });
 
 router.get("/genres", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
@@ -500,9 +507,9 @@ router.get("/genres", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(await getGenres(user, start, end, nb));
 });
 
-const discoveriesSchema = interval.extend({
-  nb: z.preprocess(toNumber, z.number().int().min(1).max(20).default(5)),
-});
+const discoveriesSchema = interval.extend({ nb: nbRows(5) });
+
+const listSchema = interval.extend({ nb: nbRows(20) });
 
 router.get("/discoveries", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
@@ -518,14 +525,14 @@ router.get("/discoveries/songs", isLoggedOrGuest, async (req, res) => {
 
 router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end } = validate(req.query, interval);
-  res.status(200).send(await getDiscoveryOverview(user, start, end));
+  const { start, end, nb } = validate(req.query, listSchema);
+  res.status(200).send(await getDiscoveryOverview(user, start, end, nb));
 });
 
 router.get("/discoveries/on-repeat", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end } = validate(req.query, interval);
-  res.status(200).send(await getOnRepeat(user, start, end));
+  const { start, end, nb } = validate(req.query, listSchema);
+  res.status(200).send(await getOnRepeat(user, start, end, nb));
 });
 
 router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {
@@ -540,12 +547,13 @@ const forgottenSchema = z.object({
     toNumber,
     z.union([z.literal(91), z.literal(182), z.literal(365)]),
   ),
+  nb: nbRows(20),
 });
 
 router.get("/story/forgotten", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { days } = validate(req.query, forgottenSchema);
-  res.status(200).send(await getForgotten(user, days));
+  const { days, nb } = validate(req.query, forgottenSchema);
+  res.status(200).send(await getForgotten(user, days, nb));
 });
 
 router.get("/on-this-day", isLoggedOrGuest, async (req, res) => {
@@ -555,7 +563,8 @@ router.get("/on-this-day", isLoggedOrGuest, async (req, res) => {
 
 router.get("/story/loyal", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  res.status(200).send(await getLoyal(user));
+  const { nb } = validate(req.query, z.object({ nb: nbRows(20) }));
+  res.status(200).send(await getLoyal(user, nb));
 });
 
 router.get("/story/eras", isLoggedOrGuest, async (req, res) => {

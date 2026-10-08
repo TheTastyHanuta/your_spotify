@@ -1,9 +1,9 @@
-import { Button, MenuItem, Select } from "@mui/material";
+import { Button } from "@mui/material";
 import clsx from "clsx";
-import { endOfMonth, startOfMonth, subYears } from "date-fns";
-import { ReactNode, useMemo, useState } from "react";
+import { endOfMonth, startOfMonth } from "date-fns";
+import { ReactNode, useState } from "react";
 import { useSelector } from "react-redux";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -18,6 +18,7 @@ import InlineAlbum from "../../components/InlineAlbum";
 import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section, { ChartSkeleton } from "../../components/Section";
 import StatStrip, { formatDelta } from "../../components/StatStrip";
@@ -34,56 +35,34 @@ import { formatHours, getPercentMore } from "../../services/stats";
 import { medianYear, musicalAge } from "../../services/taste";
 import { getAtLeastImage, plural } from "../../services/tools";
 import { listeningTraits } from "../../services/traits";
-import { Artist, SpotifyImage, Timesplit } from "../../services/types";
+import { SpotifyImage, Timesplit } from "../../services/types";
 import { compareTops, Move, TOP } from "./movers";
 import { renderRecapImage, shareRecapImage } from "./recapImage";
+import {
+  artistDiscoveryRow,
+  Count,
+  DISCOVERY_TABS,
+  discoveryInfo,
+  songDiscoveryRow,
+} from "./rows";
+import { useRecapYear, YearSelect } from "./year";
 
 import s from "./index.module.css";
 
 // Top lists compared with the previous year
 const NB_TOP = 30;
-const NB_SHOWN = 5;
-const NB_DISCOVERIES = 10;
-const DISCOVERY_TABS = [
-  { value: "artists", label: "Artists" },
-  { value: "songs", label: "Songs" },
-];
+// Top 5 shown, the rest in the Charts pages
+const NB_TOP_SHOWN = 5;
 
 export default function Recap() {
   const user = useSelector(selectUser);
-  const [params, setParams] = useSearchParams();
   const openPeriod = useOpenPeriod();
   const dispatch = useAppDispatch();
   const [sharing, setSharing] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState("artists");
 
-  const currentYear = new Date().getFullYear();
-  // Not set before the first listen
-  const firstYear =
-    new Date(user?.firstListenedAt ?? NaN).getFullYear() || currentYear;
-  // In January and February, the year that just ended is more interesting
-  const defaultYear =
-    new Date().getMonth() < 2 && currentYear > firstYear
-      ? currentYear - 1
-      : currentYear;
-  const asked = Number(params.get("year"));
-  const year =
-    Number.isInteger(asked) && asked >= firstYear && asked <= currentYear
-      ? asked
-      : defaultYear;
-
-  // The current year is compared with the same days of the previous year
-  const range = useMemo(() => {
-    const now = new Date();
-    const soFar = year === now.getFullYear();
-    return {
-      soFar,
-      start: new Date(year, 0, 1),
-      end: soFar ? now : new Date(year + 1, 0, 1),
-      previousStart: new Date(year - 1, 0, 1),
-      previousEnd: soFar ? subYears(now, 1) : new Date(year, 0, 1),
-    };
-  }, [year]);
+  const yearState = useRecapYear();
+  const { year, range } = yearState;
   const { start, end, previousStart, previousEnd } = range;
 
   const overview = useAPI(api.getOverview, start, end);
@@ -106,12 +85,12 @@ export default function Recap() {
   );
   const albums = useAPI(api.getBestAlbums, start, end, 1, 0);
   const months = useAPI(api.timePer, start, end, Timesplit.month);
-  const discoveries = useAPI(api.getDiscoveries, start, end, NB_DISCOVERIES);
+  const discoveries = useAPI(api.getDiscoveries, start, end, NB_SHOWN + 1);
   const songDiscoveries = useAPI(
     api.getSongDiscoveries,
     start,
     end,
-    NB_DISCOVERIES,
+    NB_SHOWN + 1,
   );
   const taste = useAPI(api.getTaste, start, end);
   const genres = useAPI(api.getGenres, start, end, 1);
@@ -155,7 +134,7 @@ export default function Recap() {
           image: imageOf(topArtist.images, 240),
         },
         topSongs: songs
-          .slice(0, NB_SHOWN)
+          .slice(0, NB_TOP_SHOWN)
           .map((song) => ({
             name: song.track.name,
             artist: song.track_artists.map((a) => a.name).join(", "),
@@ -221,25 +200,7 @@ export default function Recap() {
               Share image
             </Button>
           )}
-          <Select
-            variant="standard"
-            value={year}
-            aria-label="Year"
-            sx={{ color: "inherit" }}
-            onChange={(event) =>
-              setParams((query) => {
-                query.set("year", String(event.target.value));
-                return query;
-              })
-            }>
-            {Array.from(Array(currentYear - firstYear + 1).keys()).map(
-              (index) => (
-                <MenuItem key={index} value={currentYear - index}>
-                  {currentYear - index}
-                </MenuItem>
-              ),
-            )}
-          </Select>
+          <YearSelect {...yearState} />
         </div>
       }
     />
@@ -321,10 +282,16 @@ export default function Recap() {
         ]}
       />
       <div className={clsx("ruled-columns", s.work)}>
-        <Section title="Top songs">
+        <Section
+          title="Top songs"
+          link={{
+            to: "/top/songs",
+            label: "See all",
+            onClick: () => openPeriod(start, end, "/top/songs"),
+          }}>
           {songs ? (
             songs
-              .slice(0, NB_SHOWN)
+              .slice(0, NB_TOP_SHOWN)
               .map((item, index) => (
                 <ItemRow
                   key={item.track.id}
@@ -340,10 +307,16 @@ export default function Recap() {
           )}
         </Section>
         <div>
-          <Section title="Top artists">
+          <Section
+            title="Top artists"
+            link={{
+              to: "/top/artists",
+              label: "See all",
+              onClick: () => openPeriod(start, end, "/top/artists"),
+            }}>
             {artists ? (
               artists
-                .slice(0, NB_SHOWN)
+                .slice(0, NB_TOP_SHOWN)
                 .map((item, index) => (
                   <ItemRow
                     key={item.artist.id}
@@ -480,32 +453,18 @@ export default function Recap() {
         <div className={clsx("ruled-columns", s.work)}>
           <Section
             title="Best discoveries"
-            info={
-              discoveryTab === "songs"
-                ? "Songs you heard for the first time this year and still played a month later, most played first, with the day of the first listen and the number of months you played them in"
-                : "Artists you heard for the first time this year, most played first"
-            }
+            info={discoveryInfo(discoveryTab)}
             tabs={DISCOVERY_TABS}
             tab={discoveryTab}
-            onTab={setDiscoveryTab}>
+            onTab={setDiscoveryTab}
+            link={seeAll(
+              discoveryTab === "songs" ? songDiscoveries : discoveries,
+              `/recap/discoveries?year=${year}&tab=${discoveryTab}`,
+            )}>
             {discoveryTab === "songs" ? (
               songDiscoveries ? (
                 songDiscoveries.length > 0 ? (
-                  songDiscoveries.map((item, index) => (
-                    <ItemRow
-                      key={item.track.id}
-                      rank={index + 1}
-                      image={item.track.full_album.images}
-                      title={<InlineTrack track={item.track} size="normal" />}
-                      subtitle={
-                        <ArtistNames
-                          artists={item.track.full_artists}
-                          prefix={`Since ${DateFormatter.toDayMonth(new Date(item.first))} · ${plural(item.months, "month")} · `}
-                        />
-                      }
-                      right={<Count n={item.plays} />}
-                    />
-                  ))
+                  songDiscoveries.slice(0, NB_SHOWN).map(songDiscoveryRow)
                 ) : (
                   <Text size="normal" greyed>
                     No new song stayed with you this year.
@@ -516,22 +475,7 @@ export default function Recap() {
               )
             ) : discoveries ? (
               discoveries.length > 0 ? (
-                discoveries.map((item, index) => (
-                  <ItemRow
-                    key={item.artist.id}
-                    rank={index + 1}
-                    image={item.artist.images}
-                    round
-                    title={
-                      <InlineArtist
-                        artist={item.artist as Artist}
-                        size="normal"
-                      />
-                    }
-                    subtitle={`First heard on ${DateFormatter.toDayMonthYear(new Date(item.first))}`}
-                    right={<Count n={item.plays} />}
-                  />
-                ))
+                discoveries.slice(0, NB_SHOWN).map(artistDiscoveryRow)
               ) : (
                 <Text size="normal" greyed>
                   No new artists this year.
@@ -613,10 +557,6 @@ export default function Recap() {
 }
 
 // A count in a row's right column
-function Count({ n }: { n: number }) {
-  return <span className="num">{n.toLocaleString()}</span>;
-}
-
 const imageOf = (images: SpotifyImage[], size: number) =>
   images.length > 0 ? getAtLeastImage(images, size) : undefined;
 

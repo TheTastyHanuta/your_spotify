@@ -26,6 +26,7 @@ import { plural } from "../../services/tools";
 import { PARTS_OF_DAY, listeningTraits } from "../../services/traits";
 import Calendar from "./Calendar";
 import LongestSessions from "./LongestSessions";
+import { formatMeasure, NB_HABITS_SHOWN } from "./measure";
 import PartsOfDay from "./PartsOfDay";
 import Variety from "./Variety";
 import Week from "./Week";
@@ -54,6 +55,7 @@ export default function Habits() {
     interval.start,
     interval.end,
     "artists",
+    NB_HABITS_SHOWN + 1,
   );
 
   if (!user) {
@@ -63,10 +65,7 @@ export default function Habits() {
   // Follows the "stat measurement" setting, like the other stats
   const value = (counts: Counts) =>
     measurement === "number" ? counts.plays : counts.durationMs;
-  const format = (v: number) =>
-    measurement === "number"
-      ? plural(v, "play")
-      : `${msToMinutes(v).toLocaleString()} min`;
+  const format = formatMeasure(measurement);
   const openDay = (date: Date) =>
     openPeriod(date, endOfDay(date), "/top/songs");
 

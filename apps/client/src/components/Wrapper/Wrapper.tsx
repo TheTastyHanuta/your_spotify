@@ -51,6 +51,12 @@ export default function Wrapper() {
   // Links and navigate() drop the query string, so this also runs on every
   // path change.
   useEffect(() => {
+    // A navigation is on its way (useOpenPeriod sets the period, then opens a
+    // page): writing the query now would replace it with the old path. This
+    // runs again once the new path renders.
+    if (pathname !== window.location.pathname) {
+      return;
+    }
     setQuery(
       (prev) => {
         // Read once by the effects above on the first render

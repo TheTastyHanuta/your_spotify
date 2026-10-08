@@ -1,1 +1,1 @@
-export { default, ChartSkeleton } from "./Section";
+export { default, ChartSkeleton, SectionTabs } from "./Section";
