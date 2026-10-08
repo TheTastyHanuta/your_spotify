@@ -5,7 +5,7 @@
   <img width="100%" src="docs/screenshots/overview-dark.png" alt="Redesigned Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
 </p>
 <p align="center">
-  <sub>Fictional sample data · <a href="#screenshots">More screenshots</a></sub>
+  <sub>Overview <a href="#screenshots">More screenshots</a></sub>
 </p>
 
 # Your Spotify
@@ -76,10 +76,10 @@ Page headers also show guest access, Spotify reauthorization requests, ongoing i
 
 ## Screenshots
 
-The screenshots show the redesigned app with fictional listening data, artist and song names, account details and artwork. No personal listening history or public access tokens are included. Click an image to view it at full size.
+The screenshots show the redesigned app with fictional listening data, artist and song names, account details and artwork. Click an image to view it at full size.
 
-| Habits · light theme | Song charts · dark theme |
-| --- | --- |
+| Habits · light theme                                                                                                                                                            | Song charts · dark theme                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [![Habits in light mode with a listening calendar, weekday and hour heatmap, and artists by time of day](docs/screenshots/habits-light.png)](docs/screenshots/habits-light.png) | [![Song rankings in dark mode with play counts, listening time and album details](docs/screenshots/charts-dark.png)](docs/screenshots/charts-dark.png) |
 
 The Overview above brings together period comparisons, listening charts and your top songs and artists. On phones, the same dashboard adapts to a single column with navigation along the bottom:
@@ -257,25 +257,25 @@ See [`apps/server/ISRC_DEDUPLICATION.md`](apps/server/ISRC_DEDUPLICATION.md) for
 
 ### Environment variables
 
-| Key                   | Default value (if any)             | Description                                                                                                                                                       |
-| :-------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLIENT_ENDPOINT       | REQUIRED                           | The endpoint of your web application                                                                                                                              |
-| API_ENDPOINT          | REQUIRED                           | The endpoint of your server                                                                                                                                       |
-| SPOTIFY_PUBLIC        | REQUIRED                           | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
-| SPOTIFY_SECRET        | REQUIRED                           | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                             |
-| TIMEZONE              | Europe/Paris                       | The timezone of your stats, only affects read requests since data is saved with UTC time                                                                          |
-| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file                                                               |
-| PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](apps/server/README.md#prometheus))                                                                                     |
-| PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                    |
-| LOG_LEVEL             | info                               | The log level, debug is useful if you encounter any bugs                                                                                                          |
-| CORS                  | _not defined_                      | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                |
+| Key                   | Default value (if any)             | Description                                                                                                                                                                                                                                           |
+| :-------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLIENT_ENDPOINT       | REQUIRED                           | The endpoint of your web application                                                                                                                                                                                                                  |
+| API_ENDPOINT          | REQUIRED                           | The endpoint of your server                                                                                                                                                                                                                           |
+| SPOTIFY_PUBLIC        | REQUIRED                           | The public key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                                                                                                                 |
+| SPOTIFY_SECRET        | REQUIRED                           | The secret key of your Spotify application (cf [Creating the Spotify Application](#creating-the-spotify-application))                                                                                                                                 |
+| TIMEZONE              | Europe/Paris                       | The timezone of your stats, only affects read requests since data is saved with UTC time                                                                                                                                                              |
+| MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The endpoint of the Mongo database, where **mongo** is the name of your service in the compose file                                                                                                                                                   |
+| PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](apps/server/README.md#prometheus))                                                                                                                                                                         |
+| PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                                                                                                        |
+| LOG_LEVEL             | info                               | The log level, debug is useful if you encounter any bugs                                                                                                                                                                                              |
+| CORS                  | _not defined_                      | List of comma-separated origin allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                                                                                                    |
 | COOKIE_VALIDITY_MS    | 30d                                | Validity time of the authentication cookie, following [this pattern](https://github.com/vercel/ms). It is renewed once half of it has passed, so it only runs out when the device is not used for that long. Logging in again needs Spotify to answer |
-| MAX_IMPORT_CACHE_SIZE | 100000                             | The maximum number of cached items per user during an import. A larger cache reduces Spotify requests and can make imports faster                                 |
-| MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                  |
-| PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                  |
-| FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website) |
-| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each Spotify request (imports, polling, login). Helps avoid being rate limited by Spotify when importing data               |
-| DISABLE_POLLING       | false                              | Stop fetching recently played tracks from Spotify every few minutes, for example when only imports are used. Imports and the Spotify login still work             |
+| MAX_IMPORT_CACHE_SIZE | 100000                             | The maximum number of cached items per user during an import. A larger cache reduces Spotify requests and can make imports faster                                                                                                                     |
+| MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin right on the Mongo database                                                                                                                                                                                                      |
+| PORT                  | 8080                               | The port of the server, **do not** modify if you're using docker                                                                                                                                                                                      |
+| FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website)                                                                                     |
+| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between each Spotify request (imports, polling, login). Helps avoid being rate limited by Spotify when importing data                                                                                                   |
+| DISABLE_POLLING       | false                              | Stop fetching recently played tracks from Spotify every few minutes, for example when only imports are used. Imports and the Spotify login still work                                                                                                 |
 
 ### Advanced CORS settings
 
