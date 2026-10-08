@@ -301,9 +301,16 @@ server (`MONGO_ENDPOINT`, `SPOTIFY_PUBLIC`, `SPOTIFY_SECRET`, `API_ENDPOINT`,
 `CLIENT_ENDPOINT`). `MONGO_ENDPOINT` defaults to
 `mongodb://mongo:27017/your_spotify`, which only resolves inside Docker.
 
+With the `apps/server/.env` file from the [local installation guide](../../LOCAL_INSTALL.md#hosting-backend), run these commands from the repository root:
+
 ```bash
 cd apps/server
 pnpm build
-pnpm run merge-tracks-by-isrc -- --report=/tmp/isrc-dry-run-report.md
-pnpm run merge-tracks-by-isrc -- --apply --report=/tmp/isrc-merge-report.md
+node --env-file=.env build/index.js --merge-tracks-by-isrc --report=/tmp/isrc-dry-run-report.md
+```
+
+Review the dry-run report and follow the backup steps above before applying:
+
+```bash
+node --env-file=.env build/index.js --merge-tracks-by-isrc --apply --report=/tmp/isrc-merge-report.md
 ```
