@@ -90,16 +90,20 @@ router.post("/delete-public-token", logged, async (req, res) => {
   res.status(200).end();
 });
 
-router.get("/accounts", isLoggedOrGuest, async (_, res) => {
-  const users = await getAllUsers(false);
+// Share-link guests only see the account that was shared with them. The
+// client still needs that one entry: pages wait for the accounts list, and
+// "All time" starts at its firstListenedAt.
+router.get("/accounts", isLoggedOrGuest, async (req, res) => {
+  const { user, isGuest } = req as LoggedRequest;
+  const users = isGuest ? [user] : await getAllUsers(false);
   res
     .status(200)
     .send(
-      users.map((user) => ({
-        id: user._id.toString(),
-        username: user.username,
-        admin: user.admin,
-        firstListenedAt: user.firstListenedAt,
+      users.map((account) => ({
+        id: account._id.toString(),
+        username: account.username,
+        admin: account.admin,
+        firstListenedAt: account.firstListenedAt,
       })),
     );
 });

@@ -88,7 +88,6 @@ if (LogLevelAccepts("info")) {
 }
 app.use(cookieParser());
 app.use("/static", express.static(path.join(import.meta.dirname, "public")));
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.use("/", indexRouter);

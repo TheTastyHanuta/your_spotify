@@ -9,7 +9,7 @@ import { getUserFromField, getGlobalPreferences } from "../database";
 import { getUserImporterState } from "../database/queries/importer";
 import { getPrivateData } from "../database/queries/privateData";
 import { SpotifyAPI } from "./apis/spotifyApi";
-import { getWithDefault } from "./env";
+import { get, getWithDefault } from "./env";
 import { YourSpotifyError } from "./errors/error";
 import { logger } from "./logger";
 import { Metrics } from "./metrics";
@@ -60,6 +60,11 @@ export const validate = <
   }
 };
 
+// Behind an HTTPS reverse proxy req.secure is false (no "trust proxy"), so the
+// public API URL decides whether cookies need the Secure flag.
+export const needsSecureCookies = (req: Request) =>
+  req.secure || new URL(get("API_ENDPOINT")).protocol === "https:";
+
 // The cookie gets an expiry date matching the token. Without one the browser
 // drops it when it closes, which sent everyone back through Spotify, and
 // during a Spotify ban locked them out of stats that only need the database.
@@ -76,7 +81,7 @@ export function storeSessionCookie(
   res.cookie("token", token, {
     sameSite: "strict",
     httpOnly: true,
-    secure: req.secure,
+    secure: needsSecureCookies(req),
     expires: new Date(exp * 1000),
   });
 }
@@ -91,6 +96,7 @@ const baselogged = async (
   if (useQueryToken && queryToken && typeof queryToken === "string") {
     const user = await getUserFromField("publicToken", queryToken, false);
     if (user) {
+      (req as LoggedRequest).isGuest = true;
       return user;
     }
   }

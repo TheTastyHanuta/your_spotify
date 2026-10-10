@@ -15,6 +15,7 @@ import { logger } from "../tools/logger";
 import {
   logged,
   storeSessionCookie,
+  needsSecureCookies,
   validate,
   withGlobalPreferences,
   withHttpClient,
@@ -45,7 +46,7 @@ router.get("/spotify", async (req, res) => {
   res.cookie(OAUTH_COOKIE_NAME, oauthCookie, {
     sameSite: "lax",
     httpOnly: true,
-    secure: req.secure,
+    secure: needsSecureCookies(req),
   });
 
   res.redirect(url);

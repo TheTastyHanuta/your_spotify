@@ -10,6 +10,8 @@ export interface GlobalPreferencesRequest extends Request {
 
 export interface LoggedRequest extends Request {
   user: User;
+  // Set when the user comes from a share link (public token), not a login
+  isGuest?: boolean;
 }
 
 export interface OptionalLoggedRequest extends Request {
