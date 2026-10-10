@@ -3,6 +3,7 @@ import { TouchEvent, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 
+import { cache, cacheKeys, FRESH_MS, sentAt, store } from "../apiCache";
 import { detailIntervalToQuery } from "../intervals";
 import {
   selectIntervalDetail,
@@ -11,31 +12,52 @@ import {
 import { UnboxPromise } from "../types";
 import { useNavigate } from "./useNavigate";
 
+const callIds = new WeakMap<object, number>();
+let nextCallId = 0;
+
 export function useAPI<Fn extends (...ags: any[]) => Promise<{ data: D }>, D>(
   call: Fn,
   ...args: Parameters<Fn>
 ): null | UnboxPromise<ReturnType<Fn>>["data"] {
-  // Allows for instant nullify of request in case of deps change
+  const user = useSelector(selectUser);
+  // The settings the server's answers depend on
+  const userKey = JSON.stringify([
+    user?._id,
+    user?.settings.timezone,
+    user?.settings.metricUsed,
+    user?.settings.nbElements,
+    user?.settings.blacklistedArtists,
+  ]);
   const [value, setValue] = useState<
     UnboxPromise<ReturnType<Fn>>["data"] | null
   >(null);
   useEffect(() => {
     // A slower answer to older arguments must not replace a newer one
     let stale = false;
+    if (!callIds.has(call)) {
+      callIds.set(call, nextCallId++);
+    }
+    const { exact, key } = cacheKeys(`${callIds.get(call)} ${userKey}`, args);
+    const hit = cache.get(key);
+
     async function fetch() {
+      const at = sentAt();
       const result = await call(...args);
+      store(key, { exact, data: result.data, at });
       if (!stale) {
         setValue(result.data);
       }
     }
 
-    setValue(null);
-    fetch().catch(console.error);
+    setValue((hit?.data ?? null) as typeof value);
+    if (!(hit?.exact === exact && Date.now() - hit.at < FRESH_MS)) {
+      fetch().catch(console.error);
+    }
     return () => {
       stale = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...args, call]);
+  }, [...args, call, userKey]);
 
   return value;
 }
