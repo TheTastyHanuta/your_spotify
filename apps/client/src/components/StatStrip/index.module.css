@@ -15,10 +15,11 @@
   border-left: none;
 }
 
+/* A long value ("12,804h 32m") breaks at its space instead of running into
+   the next cell */
 .value {
   font-size: 24px;
   margin-top: 4px;
-  white-space: nowrap;
 }
 
 .sub {

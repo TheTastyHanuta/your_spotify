@@ -21,7 +21,7 @@ import {
   subHours,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { WeekStart } from "../../../services/date";
 import { MenuItem } from "../../ui/MenuItem/MenuItem";
@@ -205,13 +205,15 @@ export default function RangePicker({ value, onChange }: RangePickerProps) {
     return onChange([date, first]);
   };
 
+  // A new object on every hover would rebuild the date adapter each time
+  const weekStartsOn = WeekStart.get();
+  const locale = useMemo(
+    () => ({ ...enUS, options: { ...enUS.options, weekStartsOn } }),
+    [weekStartsOn],
+  );
+
   return (
-    <LocalizationProvider
-      dateAdapter={AdapterDateFns}
-      adapterLocale={{
-        ...enUS,
-        options: { ...enUS.options, weekStartsOn: WeekStart.get() },
-      }}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale}>
       <div className={s.panel}>
         <div className={s.presets}>
           {presets.map((preset) => (
