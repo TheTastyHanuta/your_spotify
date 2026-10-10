@@ -51,6 +51,7 @@ export const createUser = (
       nbElements: 10,
       metricUsed: "number",
       dateFormat: "default",
+      weekStartsOn: 1,
     },
   });
 

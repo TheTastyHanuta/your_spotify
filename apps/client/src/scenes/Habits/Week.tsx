@@ -5,7 +5,11 @@ import { useState } from "react";
 import Section from "../../components/Section";
 import Text from "../../components/Text";
 import { OverviewResponse } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
+import {
+  DateFormatter,
+  orderedIsoWeekdays,
+  weekdayIndex,
+} from "../../services/date";
 import { EMPTY, heat } from "../../services/heatmap";
 import type { Trait } from "../../services/traits";
 import type { Counts } from "./Habits";
@@ -16,7 +20,6 @@ import s from "./index.module.css";
 type Heatmap = OverviewResponse["heatmap"];
 type View = "period" | "usual";
 
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
 const VIEWS = [
   { value: "period", label: "This period" },
   { value: "usual", label: "Compared with usual" },
@@ -154,15 +157,15 @@ function WeekGrid({ cell }: WeekGridProps) {
           {DateFormatter.fromNumberToHour(hour)}
         </span>
       ))}
-      {WEEKDAYS.map((weekday) => (
+      {orderedIsoWeekdays().map((weekday) => (
         <span
           key={weekday}
           className={s.label}
-          style={{ gridRow: weekday + 1, gridColumn: 1 }}>
+          style={{ gridRow: weekdayIndex(weekday) + 2, gridColumn: 1 }}>
           {DateFormatter.fromIsoWeekday(weekday)}
         </span>
       ))}
-      {WEEKDAYS.flatMap((weekday) =>
+      {orderedIsoWeekdays().flatMap((weekday) =>
         HOURS.map((hour) => {
           const { color, title } = cell(weekday, hour);
           return (
@@ -175,7 +178,7 @@ function WeekGrid({ cell }: WeekGridProps) {
                 role="img"
                 aria-label={title}
                 style={{
-                  gridRow: weekday + 1,
+                  gridRow: weekdayIndex(weekday) + 2,
                   gridColumn: hour + 2,
                   backgroundColor: color,
                 }}

@@ -1,5 +1,6 @@
 import { api } from "../../../apis/api";
-import { DateFormatter } from "../../../date";
+import { DateFormatter, WeekStart } from "../../../date";
+import { resetPresetDates } from "../../../intervals";
 import { myAsyncThunk } from "../../tools";
 import { alertMessage } from "../message/reducer";
 import { selectIsPublic } from "./selector";
@@ -16,6 +17,8 @@ export const checkLogged = myAsyncThunk<User | null, void>(
         } else {
           DateFormatter.setCurrentUsedDateFormat(data.user.settings.dateFormat);
         }
+        WeekStart.set(data.user.settings.weekStartsOn);
+        resetPresetDates();
         return data.user;
       } else {
         return null;

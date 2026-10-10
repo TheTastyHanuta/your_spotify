@@ -1,3 +1,5 @@
+import type { Day } from "date-fns";
+
 import { Timesplit } from "./types";
 
 export function getAppropriateTimesplitFromRange(start: Date, end: Date) {
@@ -16,6 +18,24 @@ export function getAppropriateTimesplitFromRange(start: Date, end: Date) {
 }
 
 let currentUsedDateFormat: string | undefined = "en-US";
+
+// The user's first day of the week, 0 is Sunday like date-fns' weekStartsOn
+let weekStartsOn: Day = 1;
+
+export const WeekStart = {
+  get: () => weekStartsOn,
+  set(day: number | undefined) {
+    weekStartsOn = (day ?? 1) as Day;
+  },
+};
+
+// ISO weekdays (1 is Monday) in the order of the user's week
+export const orderedIsoWeekdays = () =>
+  Array.from(Array(7).keys()).map((i) => ((weekStartsOn + i + 6) % 7) + 1);
+
+// Position of an ISO weekday in the user's week, 0 is the first day
+export const weekdayIndex = (isoWeekday: number) =>
+  (isoWeekday - weekStartsOn + 7) % 7;
 
 export const DateFormatter = {
   setCurrentUsedDateFormat(format: string) {

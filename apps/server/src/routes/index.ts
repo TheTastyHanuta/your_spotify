@@ -56,6 +56,9 @@ const settingsSchema = z.object({
     .nullable()
     .transform((e) => e ?? undefined)
     .optional(),
+  weekStartsOn: z
+    .preprocess(toNumber, z.number().int().min(0).max(6))
+    .optional(),
 });
 
 router.post("/settings", logged, async (req, res) => {

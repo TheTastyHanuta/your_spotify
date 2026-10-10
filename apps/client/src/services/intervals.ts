@@ -2,7 +2,7 @@ import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "date-fns";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 
-import { getAppropriateTimesplitFromRange } from "./date";
+import { getAppropriateTimesplitFromRange, WeekStart } from "./date";
 import { selectAccounts } from "./redux/modules/admin/selector";
 import { selectUser } from "./redux/modules/user/selector";
 import { getMinOfArray } from "./tools";
@@ -14,13 +14,22 @@ function computePresetDates() {
   return {
     now,
     today: { timesplit: Timesplit.hour, start: startOfDay(now), end: now },
-    thisWeek: { timesplit: Timesplit.day, start: startOfWeek(now), end: now },
+    thisWeek: {
+      timesplit: Timesplit.day,
+      start: startOfWeek(now, { weekStartsOn: WeekStart.get() }),
+      end: now,
+    },
     thisMonth: { timesplit: Timesplit.day, start: startOfMonth(now), end: now },
     thisYear: { timesplit: Timesplit.month, start: startOfYear(now), end: now },
   };
 }
 
 let presetDates = computePresetDates();
+
+// Called when the user's first day of the week changes
+export function resetPresetDates() {
+  presetDates = computePresetDates();
+}
 
 // Preset ranges end now, so they are recomputed once they are a minute old
 // and a page left open picks up new listens and day changes. In between the

@@ -15,7 +15,7 @@ import {
 } from "recharts";
 
 import { api, TimelineCounts } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
+import { DateFormatter, orderedIsoWeekdays } from "../../services/date";
 import { useConditionalAPI } from "../../services/hooks/hooks";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { selectStatMeasurement } from "../../services/redux/modules/user/selector";
@@ -44,7 +44,6 @@ const topsPage: Record<ItemType, { path: string; name: string }> = {
   track: { path: "/top/songs", name: "top songs" },
 };
 const USUAL_LABEL = "All your listening";
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
 const HOURS = Array.from(Array(24).keys());
 
 const monthKey = (date: DateId) => `${date.year}-${date.month}`;
@@ -212,7 +211,11 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
     {
       key: "weekdays",
       title: "Day of the week",
-      data: compare(WEEKDAYS, timeline.weekdays, timeline.overall.weekdays),
+      data: compare(
+        orderedIsoWeekdays(),
+        timeline.weekdays,
+        timeline.overall.weekdays,
+      ),
       format: DateFormatter.fromIsoWeekday,
     },
     {

@@ -12,7 +12,13 @@ import { useState } from "react";
 
 import Section from "../../components/Section";
 import { CalendarResponse } from "../../services/apis/api";
-import { DateFormatter, fromDay, toDay } from "../../services/date";
+import {
+  DateFormatter,
+  fromDay,
+  orderedIsoWeekdays,
+  toDay,
+  weekdayIndex,
+} from "../../services/date";
 import { EMPTY } from "../../services/heatmap";
 
 import s from "./index.module.css";
@@ -25,7 +31,8 @@ const LEVELS = [30, 55, 80, 100].map(
   (share) => `color-mix(in oklab, var(--tint) ${share}%, var(--bg))`,
 );
 const MONTHS = Array.from(Array(12).keys());
-const WEEKDAY_LABELS = [1, 3, 5];
+// Rows labelled: the 1st, 3rd and 5th day of the week
+const LABELLED_ROWS = [0, 2, 4];
 
 interface CalendarProps {
   days: CalendarResponse | null;
@@ -67,11 +74,12 @@ export default function Calendar({
   const firstDay = startOfDay(start);
   const byDay = new Map(days.map((day) => [day.date, day]));
   const firstDate = new Date(year, 0, 1);
-  // Each month has its own week columns, weeks start on Monday. A narrow
-  // empty column separates the months, like GitHub's calendar.
+  // Each month has its own week columns, weeks start on the user's first
+  // day of the week. A narrow empty column separates the months, like
+  // GitHub's calendar.
   const months = MONTHS.map((month) => {
     const first = new Date(year, month, 1);
-    const offset = getISODay(first) - 1;
+    const offset = weekdayIndex(getISODay(first));
     return {
       first,
       offset,
@@ -167,17 +175,17 @@ export default function Calendar({
               {DateFormatter.toMonthString(month.first).slice(0, 3)}
             </span>
           ))}
-          {WEEKDAY_LABELS.map((weekday) => (
+          {LABELLED_ROWS.map((row) => (
             <span
-              key={weekday}
+              key={row}
               className={s.label}
-              style={{ gridRow: weekday + 1, gridColumn: 1 }}>
-              {DateFormatter.fromIsoWeekday(weekday)}
+              style={{ gridRow: row + 2, gridColumn: 1 }}>
+              {DateFormatter.fromIsoWeekday(orderedIsoWeekdays()[row]!)}
             </span>
           ))}
           {dates.map((date, index) => {
             const style = {
-              gridRow: getISODay(date) + 1,
+              gridRow: weekdayIndex(getISODay(date)) + 2,
               gridColumn: columnOf(date),
             };
             if (date < firstDay || date > end) {

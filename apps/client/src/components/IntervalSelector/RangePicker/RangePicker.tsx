@@ -20,8 +20,10 @@ import {
   endOfYear,
   subHours,
 } from "date-fns";
+import { enUS } from "date-fns/locale";
 import { useState } from "react";
 
+import { WeekStart } from "../../../services/date";
 import { MenuItem } from "../../ui/MenuItem/MenuItem";
 
 import s from "./index.module.css";
@@ -141,8 +143,9 @@ const presets: Array<{
   {
     label: "Previous week",
     create: () => {
-      const startOfLastWeek = startOfWeek(subWeeks(new Date(), 1));
-      return [startOfLastWeek, endOfWeek(startOfLastWeek)];
+      const options = { weekStartsOn: WeekStart.get() };
+      const startOfLastWeek = startOfWeek(subWeeks(new Date(), 1), options);
+      return [startOfLastWeek, endOfWeek(startOfLastWeek, options)];
     },
   },
   {
@@ -203,7 +206,12 @@ export default function RangePicker({ value, onChange }: RangePickerProps) {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider
+      dateAdapter={AdapterDateFns}
+      adapterLocale={{
+        ...enUS,
+        options: { ...enUS.options, weekStartsOn: WeekStart.get() },
+      }}>
       <div className={s.panel}>
         <div className={s.presets}>
           {presets.map((preset) => (

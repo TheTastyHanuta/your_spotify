@@ -21,6 +21,8 @@ export interface User {
     darkMode: DarkModeType;
     timezone: string | undefined;
     dateFormat: string;
+    // 0 is Sunday, 1 is Monday
+    weekStartsOn: number;
     blacklistedArtists: string[];
   };
   lastImport: string | null;
@@ -56,6 +58,7 @@ export const UserSchema = new Schema<User>(
       blacklistedArtists: [{ type: String }],
       timezone: { type: String, default: undefined, required: false },
       dateFormat: { type: String, required: true },
+      weekStartsOn: { type: Number, min: 0, max: 6, default: 1 },
     },
     lastImport: { type: String, default: null },
     publicToken: { type: String, default: null, index: true },

@@ -143,6 +143,31 @@ export const changeDateFormat = myAsyncThunk<
   }
 });
 
+export const changeWeekStartsOn = myAsyncThunk<void, number>(
+  "@settings/change-week-starts-on",
+  async (weekStartsOn, tapi) => {
+    try {
+      await api.setSetting("weekStartsOn", weekStartsOn);
+      await tapi.dispatch(checkLogged());
+      tapi.dispatch(
+        alertMessage({
+          level: "success",
+          message: "Updated the first day of the week",
+        }),
+      );
+    } catch (e) {
+      console.error(e);
+      tapi.dispatch(
+        alertMessage({
+          level: "error",
+          message: "Could not update the first day of the week",
+        }),
+      );
+      throw e;
+    }
+  },
+);
+
 export const changeStatUnit = myAsyncThunk<
   void,
   User["settings"]["metricUsed"]

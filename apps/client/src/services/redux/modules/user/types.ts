@@ -22,6 +22,8 @@ export interface User {
     darkMode: DarkModeType;
     timezone: string | null | undefined;
     dateFormat: string;
+    // 0 is Sunday, 1 is Monday. Missing on accounts that never changed it
+    weekStartsOn?: number;
     blacklistedArtists: string[] | undefined;
   };
   publicToken: string | null;
