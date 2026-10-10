@@ -18,6 +18,7 @@ import { useAPI } from "../../services/hooks/hooks";
 import {
   buildFromDateId,
   formatHours,
+  msToMinutes,
   msToDuration,
 } from "../../services/stats";
 import TrackRank from "./TrackRank";
@@ -75,6 +76,10 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
           {
             label: "Time listened",
             value: totalMs === undefined ? "—" : formatHours(totalMs),
+            note:
+              totalMs === undefined
+                ? undefined
+                : `${msToMinutes(totalMs).toLocaleString()} minutes`,
           },
           {
             label: "First play",

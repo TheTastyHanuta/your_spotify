@@ -17,7 +17,11 @@ import { api, ArtistStatsResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectBlacklistedArtist } from "../../services/redux/modules/user/selector";
-import { buildFromDateId, formatHours } from "../../services/stats";
+import {
+  buildFromDateId,
+  formatHours,
+  msToMinutes,
+} from "../../services/stats";
 import ArtistContextMenu from "./ArtistContextMenu";
 import ArtistRank from "./ArtistRank/ArtistRank";
 import { MostListenedTracksContextMenuButton } from "./mostListenedTracksContextMenuButton/mostListenedTracksContextMenuButton";
@@ -81,6 +85,10 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
           {
             label: "Time listened",
             value: totalMs === undefined ? "—" : formatHours(totalMs),
+            note:
+              totalMs === undefined
+                ? undefined
+                : `${msToMinutes(totalMs).toLocaleString()} minutes`,
           },
           {
             label: "First play",

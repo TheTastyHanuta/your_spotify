@@ -18,6 +18,7 @@ import { useAPI } from "../../services/hooks/hooks";
 import {
   buildFromDateId,
   formatHours,
+  msToMinutes,
   msToDuration,
 } from "../../services/stats";
 import AlbumRank from "./AlbumRank";
@@ -81,6 +82,10 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
           {
             label: "Time listened",
             value: totalMs === undefined ? "—" : formatHours(totalMs),
+            note:
+              totalMs === undefined
+                ? undefined
+                : `${msToMinutes(totalMs).toLocaleString()} minutes`,
           },
           {
             label: "First play",
