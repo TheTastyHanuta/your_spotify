@@ -6,7 +6,7 @@ import { User } from "../schemas/user";
 import { longestSessions } from "./sessions";
 import {
   basicMatch,
-  getGroupByDateProjection,
+  getDateParts,
   getGroupingByTimeSplit,
   getTrackSortType,
   getTrackSumType,
@@ -33,12 +33,15 @@ export const getMostListenedSongs = async (
   const res = await InfosModel.aggregate([
     ...basicMatch(user._id, start, end),
     {
-      $project: { ...getGroupByDateProjection(user.settings.timezone), id: 1 },
+      $project: {
+        parts: getDateParts(user.settings.timezone, timeSplit),
+        id: 1,
+      },
     },
 
     {
       $group: {
-        _id: { ...getGroupingByTimeSplit(timeSplit), track: "$id" },
+        _id: { ...getGroupingByTimeSplit(timeSplit, "parts"), track: "$id" },
         count: { $sum: 1 },
       },
     },
@@ -98,14 +101,14 @@ export const getSongsPer = async (
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
+        parts: getDateParts(user.settings.timezone, timeSplit),
         id: 1,
         primaryArtistId: 1,
       },
     },
     {
       $group: {
-        _id: getGroupingByTimeSplit(timeSplit),
+        _id: getGroupingByTimeSplit(timeSplit, "parts"),
         count: { $sum: 1 },
         songs: { $addToSet: "$id" },
         artists: { $addToSet: "$primaryArtistId" },
@@ -133,14 +136,14 @@ export const getTimePer = async (
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
+        parts: getDateParts(user.settings.timezone, timeSplit),
         durationMs: 1,
         id: 1,
       },
     },
     {
       $group: {
-        _id: getGroupingByTimeSplit(timeSplit),
+        _id: getGroupingByTimeSplit(timeSplit, "parts"),
         count: { $sum: "$durationMs" },
       },
     },
@@ -154,14 +157,14 @@ export const getDayRepartition = async (user: User, start: Date, end: Date) => {
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
+        parts: getDateParts(user.settings.timezone, Timesplit.hour),
         durationMs: 1,
         id: 1,
       },
     },
     {
       $group: {
-        _id: "$hour",
+        _id: "$parts.hour",
         count: { $sum: getTrackSumType(user, "$durationMs") },
       },
     },
@@ -182,14 +185,17 @@ export const getBestArtistsPer = async (
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
+        parts: getDateParts(user.settings.timezone, timeSplit),
         primaryArtistId: 1,
         durationMs: 1,
       },
     },
     {
       $group: {
-        _id: { ...getGroupingByTimeSplit(timeSplit), art: "$primaryArtistId" },
+        _id: {
+          ...getGroupingByTimeSplit(timeSplit, "parts"),
+          art: "$primaryArtistId",
+        },
         count: { $sum: getTrackSumType(user, "$durationMs") },
       },
     },

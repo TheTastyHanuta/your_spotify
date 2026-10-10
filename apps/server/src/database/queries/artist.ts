@@ -78,7 +78,7 @@ export const getMostListenedSongOfArtist = async (
     // Non sense to compute blacklist here
     { $match: matchArtistListens(user, artistId) },
     { $group: { _id: "$id", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
+    { $sort: { count: -1, _id: 1 } },
     { $limit: count },
     {
       $lookup: {
@@ -142,7 +142,7 @@ export const getMostListenedAlbumOfArtist = async (
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
     { $group: { _id: "$albumId", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
+    { $sort: { count: -1, _id: 1 } },
     {
       $lookup: {
         from: "albums",

@@ -5,7 +5,7 @@ import { User } from "../schemas/user";
 import { matchArtistListens } from "./artist";
 import {
   basicMatch,
-  getGroupByDateProjection,
+  getDateParts,
   getGroupingByTimeSplit,
   getTimezone,
   getTrackSumType,
@@ -454,7 +454,7 @@ export const getGenres = async (
           durationMs: { $sum: "$durationMs" },
         },
       },
-      { $sort: { plays: -1 } },
+      { $sort: { plays: -1, _id: 1 } },
     ]);
   const artists = await ArtistModel.find(
     { id: { $in: perArtist.map((row) => row._id) } },
@@ -494,7 +494,7 @@ export const getGenres = async (
     totalPlays,
     coveredPlays,
     genres: [...genres.entries()]
-      .sort(([, a], [, b]) => b.plays - a.plays)
+      .sort(([ga, a], [gb, b]) => b.plays - a.plays || ga.localeCompare(gb))
       .slice(0, nb)
       .map(([genre, entry]) => ({
         genre,
@@ -614,14 +614,14 @@ export const getArtistShares = async (
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        ...getGroupByDateProjection(user.settings.timezone),
+        parts: getDateParts(user.settings.timezone, timeSplit),
         primaryArtistId: 1,
       },
     },
     {
       $group: {
         _id: {
-          ...getGroupingByTimeSplit(timeSplit),
+          ...getGroupingByTimeSplit(timeSplit, "parts"),
           artist: "$primaryArtistId",
         },
         plays: { $sum: 1 },
@@ -771,13 +771,16 @@ export const getReleaseYearsPer = async (
       ...basicMatch(user._id, start, end),
       {
         $project: {
-          ...getGroupByDateProjection(user.settings.timezone),
+          parts: getDateParts(user.settings.timezone, timeSplit),
           albumId: 1,
         },
       },
       {
         $group: {
-          _id: { ...getGroupingByTimeSplit(timeSplit), album: "$albumId" },
+          _id: {
+            ...getGroupingByTimeSplit(timeSplit, "parts"),
+            album: "$albumId",
+          },
           plays: { $sum: 1 },
         },
       },

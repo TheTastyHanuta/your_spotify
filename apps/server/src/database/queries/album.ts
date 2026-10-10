@@ -45,7 +45,7 @@ export const getAlbumSongs = async (user: User, albumId: string) => {
   const res = await InfosModel.aggregate([
     { $match: { owner: user._id, albumId: albumId } },
     { $group: { _id: "$id", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
+    { $sort: { count: -1, _id: 1 } },
     {
       $lookup: {
         from: "tracks",

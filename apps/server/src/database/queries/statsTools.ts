@@ -106,18 +106,23 @@ export const sortByTimeSplit = (
 export const getTimezone = (userTimezone: string | undefined) =>
   userTimezone ?? getWithDefault("TIMEZONE", "Europe/Paris");
 
-export const getGroupByDateProjection = (
+// Project it into a field and group with getGroupingByTimeSplit(timeSplit,
+// field). One $dateToParts converts the timezone once; separate $year, $month,
+// ... each convert again, which was most of the time over long periods. It has
+// no $week (Sunday weeks), so weeks keep $year and $week.
+export const getDateParts = (
   userTimezone: string | undefined,
+  timeSplit: Timesplit,
   date = "$played_at",
 ) => {
   const timezone = getTimezone(userTimezone);
-  return {
-    year: { $year: { date, timezone } },
-    month: { $month: { date, timezone } },
-    day: { $dayOfMonth: { date, timezone } },
-    week: { $week: { date, timezone } },
-    hour: { $hour: { date, timezone } },
-  };
+  if (timeSplit === Timesplit.week) {
+    return {
+      year: { $year: { date, timezone } },
+      week: { $week: { date, timezone } },
+    };
+  }
+  return { $dateToParts: { date, timezone } };
 };
 
 export const getTrackSumType = (user: User, idField = "$track.duration_ms") => {

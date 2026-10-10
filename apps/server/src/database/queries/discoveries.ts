@@ -4,7 +4,7 @@ import { User } from "../schemas/user";
 import { dayNumber, dayString, DAY_MS } from "./insights";
 import {
   basicMatch,
-  getGroupByDateProjection,
+  getDateParts,
   getGroupingByTimeSplit,
   getTimezone,
   sortByTimeSplit,
@@ -398,14 +398,14 @@ export const getNewPlaysPer = async (
     { $match: { dates: { $ne: null } } },
     {
       $project: {
-        ...getGroupByDateProjection(timezone, "$dates"),
-        firstStep: getGroupByDateProjection(timezone, "$first"),
+        parts: getDateParts(timezone, timeSplit, "$dates"),
+        firstStep: getDateParts(timezone, timeSplit, "$first"),
         newInPeriod: { $gt: ["$first", start] },
       },
     },
     {
       $group: {
-        _id: getGroupingByTimeSplit(timeSplit),
+        _id: getGroupingByTimeSplit(timeSplit, "parts"),
         count: { $sum: 1 },
         newCount: {
           $sum: {
@@ -415,7 +415,7 @@ export const getNewPlaysPer = async (
                   "$newInPeriod",
                   {
                     $eq: [
-                      getGroupingByTimeSplit(timeSplit),
+                      getGroupingByTimeSplit(timeSplit, "parts"),
                       getGroupingByTimeSplit(timeSplit, "firstStep"),
                     ],
                   },

@@ -89,6 +89,7 @@ const getCollaborativeRankingStages = async (
       $sort: {
         [mode === CollaborativeMode.AVERAGE ? "average_percents" : "minima"]:
           -1,
+        _id: 1,
       },
     },
     { $limit: limit },
