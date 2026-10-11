@@ -1,6 +1,6 @@
 {
   "name": "@your_spotify/server",
-  "version": "1.20.1-fork.2",
+  "version": "1.20.1-fork.3",
   "private": true,
   "scripts": {
     "build": "rsbuild build",
