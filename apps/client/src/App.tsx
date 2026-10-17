@@ -1,6 +1,6 @@
 import { useMediaQuery } from "@mui/material";
 import { ThemeProvider } from "@mui/system";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
   BrowserRouter,
@@ -8,6 +8,7 @@ import {
   Routes,
   Route,
   useLocation,
+  useNavigationType,
 } from "react-router-dom";
 
 import Layout from "./components/Layout";
@@ -76,6 +77,7 @@ function App() {
       <ThemeProvider theme={theme}>
         <div className="app">
           <BrowserRouter>
+            <ScrollToTop />
             <Wrapper />
             <Message />
             <PlaylistDialog />
@@ -359,4 +361,20 @@ export default App;
 function HabitsRedirect() {
   const { search } = useLocation();
   return <Navigate to={`/habits${search}`} replace />;
+}
+
+// BrowserRouter never resets the scroll, so a new page would open at the
+// previous page's offset. Back/forward is left to the browser's own restore.
+// Only a pathname change counts: Wrapper rewrites the query with REPLACE right
+// after a back navigation, which must not reset it either.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+  const lastPathname = useRef(pathname);
+  useLayoutEffect(() => {
+    if (lastPathname.current === pathname) return;
+    lastPathname.current = pathname;
+    if (navigationType !== "POP") window.scrollTo(0, 0);
+  }, [pathname, navigationType]);
+  return null;
 }
