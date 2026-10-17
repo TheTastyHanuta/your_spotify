@@ -2,6 +2,7 @@ import { CircularProgress } from "@mui/material";
 import { useParams } from "react-router-dom";
 
 import FullscreenCentered from "../../components/FullscreenCentered";
+import { NB_SHOWN } from "../../components/ListPage";
 import Text from "../../components/Text";
 import { api } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
@@ -9,7 +10,8 @@ import ArtistStats from "./ArtistStats";
 
 export default function ArtistStatsWrapper() {
   const params = useParams();
-  const stats = useAPI(api.getArtistStats, params.id || "");
+  // One row more than the page shows, so it knows to link to the full lists
+  const stats = useAPI(api.getArtistStats, params.id || "", NB_SHOWN + 1);
 
   if (stats === null) {
     return (

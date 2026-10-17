@@ -149,13 +149,12 @@ export default function Habits() {
           {
             label: "Busiest day",
             value: busiest
-              ? DateFormatter.toDayLongMonth(fromDay(busiest.date))
+              ? DateFormatter.toDayMonthYear(fromDay(busiest.date))
               : "—",
             note: busiest && (
               <>
                 {DateFormatter.fromIsoWeekday(getISODay(fromDay(busiest.date)))}{" "}
-                {fromDay(busiest.date).getFullYear()} ·{" "}
-                {msToMinutes(busiest.durationMs).toLocaleString()} min ·{" "}
+                · {msToMinutes(busiest.durationMs).toLocaleString()} min ·{" "}
                 <MuiLink
                   component="button"
                   color="inherit"

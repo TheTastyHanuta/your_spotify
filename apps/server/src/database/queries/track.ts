@@ -37,7 +37,8 @@ export const getTrackFirstAndLastListened = async (
 export const getTrackRecentHistory = async (user: User, trackId: string) =>
   InfosModel.find()
     .where({ owner: user._id, id: trackId })
-    .limit(10)
+    // One more than the page shows, so it knows to link to the full history
+    .limit(11)
     .sort({ played_at: -1 });
 
 export const getTrackListenedAlbums = async (user: User, trackId: string) => {

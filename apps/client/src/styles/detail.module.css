@@ -3,8 +3,9 @@
   border-bottom: 1px solid var(--line);
 }
 
-.rank {
-  border-bottom: 1px solid var(--line);
+/* A second row of columns shares the first one's bottom rule */
+.columns + .columns {
+  border-top: none;
 }
 
 /* A second section in the same column */

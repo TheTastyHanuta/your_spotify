@@ -138,6 +138,7 @@ export const getTotalListeningOfArtist = async (
 export const getMostListenedAlbumOfArtist = async (
   user: User,
   artistId: string,
+  count: number,
 ) => {
   const res = await InfosModel.aggregate([
     { $match: matchArtistListens(user, artistId) },
@@ -152,7 +153,7 @@ export const getMostListenedAlbumOfArtist = async (
       },
     },
     { $unwind: "$album" },
-    { $limit: 10 },
+    { $limit: count },
   ]);
   return res;
 };

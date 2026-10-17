@@ -60,6 +60,14 @@ const delet = <T>(
 ): Promise<{ data: T }> =>
   axios.delete(url, { params: { ...params, token: api.publicToken } });
 
+export type ItemType = "artist" | "album" | "track";
+// Where each kind of item's page lives
+export const itemPath: Record<ItemType, string> = {
+  artist: "/artist",
+  album: "/album",
+  track: "/song",
+};
+
 export type ArtistStatsResponse = {
   artist: Artist;
   firstLast: {
@@ -320,12 +328,26 @@ export const api = {
   setGlobalPreferences: (preferences: Partial<GlobalPreferences>) =>
     post<GlobalPreferences>("/global/preferences", preferences),
   play: (id: string) => axios.post("/spotify/play", { id }),
-  getTracks: (start: Date, end: Date, number: number, offset: number) =>
+  // No start and end: all listens. type and id: only the listens of one
+  // artist, album or song; month ("2024-03") keeps that month in the stats
+  // timezone, like the timeline
+  getTracks: (
+    start: Date | undefined,
+    end: Date | undefined,
+    number: number,
+    offset: number,
+    type?: ItemType,
+    id?: string,
+    month?: string,
+  ) =>
     get<TrackInfoWithFullArtistAlbum[]>("/spotify/gethistory", {
       number,
       offset,
       start,
       end,
+      type,
+      id,
+      month,
     }),
   mostListened: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ tracks: TrackWithAlbum[]; counts: number[] }[]>(
@@ -424,14 +446,16 @@ export const api = {
   getEras: () => get<ErasResponse>("/spotify/story/eras"),
   getLoyal: (nb: number) => get<LoyalResponse>("/spotify/story/loyal", { nb }),
   getOnThisDay: () => get<OnThisDayResponse>("/spotify/on-this-day"),
-  getTimeline: (type: "artist" | "album" | "track", id: string) =>
+  getTimeline: (type: ItemType, id: string) =>
     get<TimelineResponse | { code: "NEVER_LISTENED" }>("/spotify/timeline", {
       type,
       id,
     }),
-  getArtistStats: (id: string) =>
+  // nb: rows of the songs and albums lists
+  getArtistStats: (id: string, nb?: number) =>
     get<ArtistStatsResponse | { code: "NEVER_LISTENED" }>(
       `/artist/${id}/stats`,
+      { nb },
     ),
   getArtistRank: (id: string) => get<RankResponse>(`/artist/${id}/rank`),
   search: (str: string) =>

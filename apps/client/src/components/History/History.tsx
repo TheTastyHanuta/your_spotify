@@ -2,7 +2,7 @@ import { useState } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useSelector } from "react-redux";
 
-import { api } from "../../services/apis/api";
+import { api, ItemType } from "../../services/apis/api";
 import { useInfiniteScroll } from "../../services/hooks/scrolling";
 import { useSelectTracks } from "../../services/hooks/useSelectTrack";
 import {
@@ -22,13 +22,38 @@ import Track from "./Track";
 import TrackHeader from "./Track/TrackHeader";
 import { TrackSelectionPopup } from "./Track/TrackSelectionPopup";
 
-export default function History() {
+interface HistoryProps {
+  // Only one artist's, album's or song's listens, of all time or of one
+  // month ("2024-03"), without the period checkbox
+  item?: { type: ItemType; id: string; month?: string };
+  title?: string;
+  link?: { to: string; label: string };
+}
+
+export default function History({
+  item,
+  title = "Listens",
+  link,
+}: HistoryProps) {
   const { interval } = useSelector(selectRawIntervalDetail);
   const { interval: allInterval } = useSelector(selectRawAllInterval);
   const [followInterval, setFollowInterval] = useState(true);
   const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
-    followInterval ? interval : allInterval,
-    api.getTracks,
+    item || !followInterval ? allInterval : interval,
+    // An item's listens are not cut to a range: firstListenedAt, where the
+    // all-time range starts, is not included by the server
+    item
+      ? (_start, _end, nb, offset) =>
+          api.getTracks(
+            undefined,
+            undefined,
+            nb,
+            offset,
+            item.type,
+            item.id,
+            item.month,
+          )
+      : api.getTracks,
   );
 
   const handleSetFollowInterval = (value: boolean) => {
@@ -41,13 +66,16 @@ export default function History() {
   return (
     <>
       <Section
-        title="Listens"
+        title={title}
+        link={link}
         right={
-          <CheckboxWithText
-            checked={followInterval}
-            onChecked={handleSetFollowInterval}
-            text="Only this period"
-          />
+          !item && (
+            <CheckboxWithText
+              checked={followInterval}
+              onChecked={handleSetFollowInterval}
+              text="Only this period"
+            />
+          )
         }>
         <SelectableContextProvider
           selected={selectedTracks}
@@ -60,14 +88,14 @@ export default function History() {
             loader={<Loader />}>
             <GridWrapper>
               <TrackHeader />
-              {items.map((item, index) => (
-                <Selectable key={item.played_at} index={index}>
+              {items.map((listen, index) => (
+                <Selectable key={listen.played_at} index={index}>
                   <RightClickable index={index} onRightClick={setAnchor}>
                     <Track
-                      listenedAt={new Date(item.played_at)}
-                      artists={item.track.full_artists}
-                      album={item.track.full_album}
-                      track={item.track}
+                      listenedAt={new Date(listen.played_at)}
+                      artists={listen.track.full_artists}
+                      album={listen.track.full_album}
+                      track={listen.track}
                     />
                   </RightClickable>
                 </Selectable>

@@ -3,16 +3,14 @@ import clsx from "clsx";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
-import InlineAlbum from "../../components/InlineAlbum";
-import InlineTrack from "../../components/InlineTrack";
-import ItemRow from "../../components/ItemRow";
+import { RowsSkeleton } from "../../components/ItemRow";
 import ItemTimeline, {
   useTimelineSummary,
 } from "../../components/ItemTimeline";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section from "../../components/Section";
 import StatStrip from "../../components/StatStrip";
-import Text from "../../components/Text";
 import { api, ArtistStatsResponse } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
@@ -25,6 +23,7 @@ import {
 import ArtistContextMenu from "./ArtistContextMenu";
 import ArtistRank from "./ArtistRank/ArtistRank";
 import { MostListenedTracksContextMenuButton } from "./mostListenedTracksContextMenuButton/mostListenedTracksContextMenuButton";
+import { artistAlbumRow, artistSongRow, playRow } from "./rows";
 
 import s from "../../styles/detail.module.css";
 
@@ -39,6 +38,15 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
   // Fetched here once: the strip sums its months, the chart draws them
   const timeline = useAPI(api.getTimeline, "artist", artistId);
   const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
+  const recent = useAPI(
+    api.getTracks,
+    undefined,
+    undefined,
+    NB_SHOWN + 1,
+    0,
+    "artist",
+    artistId,
+  );
 
   if (!stats) {
     return <CircularProgress />;
@@ -92,14 +100,16 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
           },
           {
             label: "First play",
-            // Like Best month: month and year, then the day and the song
-            value: DateFormatter.toShortMonthYear(new Date(first.played_at)),
-            note: `${DateFormatter.toDayLongMonth(new Date(first.played_at))} · ${first.track.name}`,
+            // A numeric date fits the cell on one line; the note adds the song
+            value: DateFormatter.toNumericDate(new Date(first.played_at)),
+            note: (
+              <Link to={`/song/${first.track.id}`}>{first.track.name}</Link>
+            ),
           },
           {
             label: "Last play",
-            value: DateFormatter.toShortMonthYear(new Date(last.played_at)),
-            note: `${DateFormatter.toDayLongMonth(new Date(last.played_at))} · ${last.track.name}`,
+            value: DateFormatter.toNumericDate(new Date(last.played_at)),
+            note: <Link to={`/song/${last.track.id}`}>{last.track.name}</Link>,
           },
           {
             label: "Best month",
@@ -114,42 +124,29 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
       <div className={clsx("ruled-columns", s.columns)}>
         <Section
           title="Most played songs"
+          link={seeAll(stats.mostListened, `/artist/${artistId}/top`)}
           right={<MostListenedTracksContextMenuButton artistId={artistId} />}>
-          {stats.mostListened.map((ml, index) => (
-            <ItemRow
-              key={ml.track.id}
-              rank={index + 1}
-              image={ml.track.album.images}
-              title={<InlineTrack track={ml.track} size="normal" />}
-              subtitle={<InlineAlbum album={ml.track.album} size="normal" />}
-              right={
-                <Text size="normal" greyed className="num">
-                  {ml.count}
-                </Text>
-              }
-            />
-          ))}
+          {stats.mostListened.slice(0, NB_SHOWN).map(artistSongRow)}
         </Section>
-        <Section title="Albums">
-          {stats.albumMostListened.map((ml, index) => (
-            <ItemRow
-              key={ml.album.id}
-              rank={index + 1}
-              image={ml.album.images}
-              title={<InlineAlbum album={ml.album} size="normal" />}
-              subtitle={ml.album.release_date?.slice(0, 4)}
-              right={
-                <Text size="normal" greyed className="num">
-                  {ml.count}
-                </Text>
-              }
-            />
-          ))}
+        <Section
+          title="Albums"
+          link={seeAll(
+            stats.albumMostListened,
+            `/artist/${artistId}/top?tab=albums`,
+          )}>
+          {stats.albumMostListened.slice(0, NB_SHOWN).map(artistAlbumRow)}
         </Section>
       </div>
-      <Section title="Around it in your top artists" className={s.rank}>
-        <ArtistRank artistId={artistId} rank={rank} />
-      </Section>
+      <div className={clsx("ruled-columns", s.columns)}>
+        <Section
+          title="Recent plays"
+          link={seeAll(recent, `/artist/${artistId}/history`)}>
+          {recent ? recent.slice(0, NB_SHOWN).map(playRow) : <RowsSkeleton />}
+        </Section>
+        <Section title="Around it in your top artists">
+          <ArtistRank artistId={artistId} rank={rank} />
+        </Section>
+      </div>
     </div>
   );
 }

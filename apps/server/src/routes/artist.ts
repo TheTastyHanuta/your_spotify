@@ -17,6 +17,7 @@ import {
 } from "../database";
 import { isLoggedOrGuest, logged, validate } from "../tools/middleware";
 import { LoggedRequest } from "../tools/types";
+import { toNumber } from "../tools/zod";
 
 export const router = Router();
 
@@ -33,10 +34,15 @@ router.get("/:ids", isLoggedOrGuest, async (req, res) => {
 });
 
 const getArtistStats = z.object({ id: z.string() });
+// Rows of the songs and albums lists; their "See all" page asks for up to 500
+const artistStatsQuery = z.object({
+  nb: z.preprocess(toNumber, z.number().int().min(1).max(500).default(10)),
+});
 
 router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { id } = validate(req.params, getArtistStats);
+  const { nb } = validate(req.query, artistStatsQuery);
 
   const [artist] = await getArtists([id]);
   if (!artist) {
@@ -45,8 +51,8 @@ router.get("/:id/stats", isLoggedOrGuest, async (req, res) => {
   }
   const promises = [
     getFirstAndLastListened(user, id),
-    getMostListenedSongOfArtist(user, id, 10),
-    getMostListenedAlbumOfArtist(user, id),
+    getMostListenedSongOfArtist(user, id, nb),
+    getMostListenedAlbumOfArtist(user, id, nb),
     getTotalListeningOfArtist(user, id),
   ];
   const [firstLast, mostListened, albumMostListened, total] =

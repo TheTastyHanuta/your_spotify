@@ -60,6 +60,17 @@
   white-space: nowrap;
 }
 
+/* Like the links in the hero's meta line */
+.note a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.note a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 @media screen and (max-width: 900px) {
   .root {
     grid-template-columns: 1fr 1fr;

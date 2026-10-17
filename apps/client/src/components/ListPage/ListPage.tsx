@@ -44,6 +44,18 @@ export function useParamTab<V extends string>(
   return [value, set] as const;
 }
 
+// "Discoveries /" in front of a sub-page's title
+export function Crumb({ to, label }: { to: string; label: string }) {
+  return (
+    <>
+      <Link to={to}>{label}</Link>
+      <span className={s.separator} aria-hidden>
+        /
+      </span>
+    </>
+  );
+}
+
 interface Lead {
   images?: SpotifyImage[] | null;
   round?: boolean;
@@ -103,14 +115,7 @@ export default function ListPage<T>({
     <div>
       <PageHero
         title={title}
-        crumb={
-          <>
-            <Link to={back.to}>{back.label}</Link>
-            <span className={s.separator} aria-hidden>
-              /
-            </span>
-          </>
-        }
+        crumb={<Crumb {...back} />}
         hideInterval={hideInterval}
         actions={actions}
         images={hero?.images}

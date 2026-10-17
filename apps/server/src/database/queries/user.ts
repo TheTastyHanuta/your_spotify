@@ -210,6 +210,14 @@ export const getSongs = async (
   offset: number,
   number: number,
   inter?: { start: Date; end: Date },
+  // Only one artist's, album's or song's listens. Like their detail pages,
+  // these keep blacklisted listens. month: only that month, split in the stats
+  // timezone like the item's timeline.
+  item?: {
+    field: "id" | "albumId" | "artistIds";
+    id: string;
+    month?: { year: number; month: number; timezone: string };
+  },
 ) =>
   InfosModel.aggregate([
     {
@@ -218,7 +226,37 @@ export const getSongs = async (
         ...(inter
           ? { played_at: { $gt: inter.start, $lt: inter.end } }
           : undefined),
-        blacklistedBy: { $exists: 0 },
+        ...(item
+          ? { [item.field]: item.id }
+          : { blacklistedBy: { $exists: 0 } }),
+        ...(item?.month && {
+          $expr: {
+            $and: [
+              {
+                $eq: [
+                  {
+                    $year: {
+                      date: "$played_at",
+                      timezone: item.month.timezone,
+                    },
+                  },
+                  item.month.year,
+                ],
+              },
+              {
+                $eq: [
+                  {
+                    $month: {
+                      date: "$played_at",
+                      timezone: item.month.timezone,
+                    },
+                  },
+                  item.month.month,
+                ],
+              },
+            ],
+          },
+        }),
       },
     },
     { $sort: { played_at: -1 } },

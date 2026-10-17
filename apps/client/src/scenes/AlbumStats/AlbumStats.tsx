@@ -3,15 +3,14 @@ import { Fragment } from "react";
 import { Link } from "react-router-dom";
 
 import InlineArtist from "../../components/InlineArtist";
-import InlineTrack from "../../components/InlineTrack";
-import ItemRow from "../../components/ItemRow";
+import ItemRow, { RowsSkeleton } from "../../components/ItemRow";
 import ItemTimeline, {
   useTimelineSummary,
 } from "../../components/ItemTimeline";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section from "../../components/Section";
 import StatStrip from "../../components/StatStrip";
-import Text from "../../components/Text";
 import { AlbumStatsResponse, api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
@@ -19,9 +18,10 @@ import {
   buildFromDateId,
   formatHours,
   msToMinutes,
-  msToDuration,
 } from "../../services/stats";
+import { playRow } from "../ArtistStats/rows";
 import AlbumRank from "./AlbumRank";
+import { albumSongRow } from "./rows";
 
 // Same layout as the artist page
 import s from "../../styles/detail.module.css";
@@ -37,6 +37,15 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
   const timeline = useAPI(api.getTimeline, "album", albumId);
 
   const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
+  const recent = useAPI(
+    api.getTracks,
+    undefined,
+    undefined,
+    NB_SHOWN + 1,
+    0,
+    "album",
+    albumId,
+  );
   const plays = stats.tracks.reduce((sum, { count }) => sum + count, 0);
   const first = stats.firstLast.first;
   const last = stats.firstLast.last;
@@ -89,14 +98,16 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
           },
           {
             label: "First play",
-            // Like Best month: month and year, then the day and the song
-            value: DateFormatter.toShortMonthYear(new Date(first.played_at)),
-            note: `${DateFormatter.toDayLongMonth(new Date(first.played_at))} · ${first.track.name}`,
+            // A numeric date fits the cell on one line; the note adds the song
+            value: DateFormatter.toNumericDate(new Date(first.played_at)),
+            note: (
+              <Link to={`/song/${first.track.id}`}>{first.track.name}</Link>
+            ),
           },
           {
             label: "Last play",
-            value: DateFormatter.toShortMonthYear(new Date(last.played_at)),
-            note: `${DateFormatter.toDayLongMonth(new Date(last.played_at))} · ${last.track.name}`,
+            value: DateFormatter.toNumericDate(new Date(last.played_at)),
+            note: <Link to={`/song/${last.track.id}`}>{last.track.name}</Link>,
           },
           {
             label: "Best month",
@@ -109,25 +120,12 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
       />
       <ItemTimeline type="album" id={albumId} data={timeline} />
       <div className={clsx("ruled-columns", s.columns)}>
-        <Section title="Most played songs">
-          {stats.tracks.map(({ track, count }, index) => (
-            <ItemRow
-              key={track.id}
-              rank={index + 1}
-              image={stats.album.images}
-              title={<InlineTrack track={track} size="normal" />}
-              subtitle={
-                <Text size="normal" greyed className="num">
-                  {msToDuration(track.duration_ms)}
-                </Text>
-              }
-              right={
-                <Text size="normal" greyed className="num">
-                  {count.toLocaleString()}
-                </Text>
-              }
-            />
-          ))}
+        <Section
+          title="Most played songs"
+          link={seeAll(stats.tracks, `/album/${albumId}/songs`)}>
+          {stats.tracks
+            .slice(0, NB_SHOWN)
+            .map(albumSongRow(stats.album.images))}
         </Section>
         <div>
           <Section title={stats.artists.length === 1 ? "Artist" : "Artists"}>
@@ -139,6 +137,12 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
                 title={<InlineArtist artist={artist} size="normal" />}
               />
             ))}
+          </Section>
+          <Section
+            title="Recent plays"
+            className={s.stacked}
+            link={seeAll(recent, `/album/${albumId}/history`)}>
+            {recent ? recent.slice(0, NB_SHOWN).map(playRow) : <RowsSkeleton />}
           </Section>
           <Section title="Around it in your top albums" className={s.stacked}>
             <AlbumRank albumId={albumId} rank={rank} />

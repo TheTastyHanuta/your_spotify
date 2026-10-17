@@ -39,6 +39,7 @@ import {
   getTaste,
   getTimeline,
 } from "../database/queries/insights";
+import { getTimezone } from "../database/queries/statsTools";
 import {
   getEras,
   getForgotten,
@@ -91,17 +92,44 @@ const gethistorySchema = z.object({
   offset: z.preprocess(toNumber, z.number()),
   start: z.preprocess(toDate, z.date().optional()),
   end: z.preprocess(toDate, z.date().optional()),
+  // The listens of one artist, album or song, optionally of one month
+  type: z.enum(["artist", "album", "track"]).optional(),
+  id: z.string().optional(),
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+    .optional(),
 });
+
+const historyItemField = {
+  artist: "artistIds",
+  album: "albumId",
+  track: "id",
+} as const;
 
 router.get("/gethistory", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { number, offset, start, end } = validate(req.query, gethistorySchema);
+  const { number, offset, start, end, type, id, month } = validate(
+    req.query,
+    gethistorySchema,
+  );
+  // "2024-03" is split in the stats timezone, like the item's timeline
+  const inMonth = month
+    ? {
+        year: Number(month.slice(0, 4)),
+        month: Number(month.slice(5)),
+        timezone: getTimezone(user.settings.timezone),
+      }
+    : undefined;
 
   const tracks = await getSongs(
     user._id.toString(),
     offset,
     number,
     start && end ? { start, end } : undefined,
+    type && id
+      ? { field: historyItemField[type], id, month: inMonth }
+      : undefined,
   );
   res.status(200).send(tracks);
 });

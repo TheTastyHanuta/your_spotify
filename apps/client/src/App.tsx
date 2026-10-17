@@ -18,7 +18,9 @@ import SpotifyAuthRefreshDialog from "./components/SpotifyAuthRefreshDialog";
 import Wrapper from "./components/Wrapper";
 import Login from "./scenes/Account/Login";
 import AlbumStats from "./scenes/AlbumStats";
+import AlbumSongs from "./scenes/AlbumStats/AlbumSongs";
 import ArtistStats from "./scenes/ArtistStats";
+import ArtistTops from "./scenes/ArtistStats/ArtistTops";
 import Benchmarks from "./scenes/Benchmarks";
 import Affinity from "./scenes/Collaborative/Affinity";
 import CollaborativeAlbums from "./scenes/Collaborative/Affinity/Albums";
@@ -33,6 +35,7 @@ import Habits from "./scenes/Habits";
 import HabitsList from "./scenes/Habits/HabitsList";
 import HistoryPage from "./scenes/History";
 import Home from "./scenes/Home";
+import ItemHistory from "./scenes/ItemHistory";
 import Logout from "./scenes/Logout";
 import OnThisDayPage from "./scenes/OnThisDay";
 import Recap from "./scenes/Recap";
@@ -274,6 +277,46 @@ function App() {
                   element={
                     <PrivateRoute>
                       <TrackStats />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/artist/:id/top"
+                  element={
+                    <PrivateRoute>
+                      <ArtistTops />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/artist/:id/history"
+                  element={
+                    <PrivateRoute>
+                      <ItemHistory type="artist" />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/album/:id/songs"
+                  element={
+                    <PrivateRoute>
+                      <AlbumSongs />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/album/:id/history"
+                  element={
+                    <PrivateRoute>
+                      <ItemHistory type="album" />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/song/:id/history"
+                  element={
+                    <PrivateRoute>
+                      <ItemHistory type="track" />
                     </PrivateRoute>
                   }
                 />

@@ -1,5 +1,5 @@
 import { Skeleton } from "@mui/material";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { CSSProperties, useState } from "react";
 import { useSelector } from "react-redux";
 import {
@@ -14,10 +14,15 @@ import {
   YAxis,
 } from "recharts";
 
-import { api, TimelineCounts } from "../../services/apis/api";
+import {
+  api,
+  ItemType,
+  itemPath,
+  TimelineCounts,
+} from "../../services/apis/api";
 import { DateFormatter, orderedIsoWeekdays } from "../../services/date";
 import { useConditionalAPI } from "../../services/hooks/hooks";
-import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
+import { useNavigate } from "../../services/hooks/useNavigate";
 import { selectStatMeasurement } from "../../services/redux/modules/user/selector";
 import {
   buildFromDateId,
@@ -30,18 +35,12 @@ import Tooltip from "../Tooltip";
 
 import s from "./index.module.css";
 
-type ItemType = "artist" | "album" | "track";
 type Row = { plays: number; durationMs: number };
 
 const itemLabel: Record<ItemType, string> = {
   artist: "This artist",
   album: "This album",
   track: "This song",
-};
-const topsPage: Record<ItemType, { path: string; name: string }> = {
-  artist: { path: "/top/artists", name: "top artists" },
-  album: { path: "/top/albums", name: "top albums" },
-  track: { path: "/top/songs", name: "top songs" },
 };
 const USUAL_LABEL = "All your listening";
 const HOURS = Array.from(Array(24).keys());
@@ -99,7 +98,7 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
   const timeline = data === undefined ? fetched : data;
   const [tab, setTab] = useState("months");
   const measurement = useSelector(selectStatMeasurement);
-  const openPeriod = useOpenPeriod();
+  const navigate = useNavigate();
   const { best } = useTimelineSummary(timeline);
 
   if (timeline && ("code" in timeline || timeline.months.length === 0)) {
@@ -172,7 +171,9 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
   const peakDate = peak >= 0 ? months[peak]!.dateWithPrecision.date : undefined;
 
   const openMonth = (date: Date) =>
-    openPeriod(startOfMonth(date), endOfMonth(date), topsPage[type].path);
+    navigate(
+      `${itemPath[type]}/${id}/history?month=${format(date, "yyyy-MM")}`,
+    );
 
   const monthTooltipValue = (payload: { x: number }, value: number) => {
     const date = dateOf(payload.x);
@@ -192,9 +193,7 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
           </>
         )}
         <br />
-        <span className={s.hint}>
-          Click to see your {topsPage[type].name} of that month
-        </span>
+        <span className={s.hint}>Click to see your plays of that month</span>
       </div>
     );
   };

@@ -69,6 +69,21 @@ export const DateFormatter = {
       year: "numeric",
     }).format(date);
   },
+  // "08/29/2019", "29.08.2019"
+  toNumericDate(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  },
+  toWeekdayTime(date: Date) {
+    return new Intl.DateTimeFormat(currentUsedDateFormat, {
+      weekday: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  },
   toWeekdayDayMonthYear(date: Date) {
     return new Intl.DateTimeFormat(currentUsedDateFormat, {
       weekday: "short",

@@ -8,6 +8,7 @@ import ItemRow from "../../components/ItemRow";
 import ItemTimeline, {
   useTimelineSummary,
 } from "../../components/ItemTimeline";
+import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section from "../../components/Section";
 import StatStrip from "../../components/StatStrip";
@@ -83,14 +84,15 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
           },
           {
             label: "First play",
-            // Like Best month: month and year, then the day
-            value: DateFormatter.toShortMonthYear(first),
-            note: DateFormatter.toWeekdayDayMonthYear(first),
+            // A numeric date fits the cell on one line; the note adds the
+            // weekday and time
+            value: DateFormatter.toNumericDate(first),
+            note: DateFormatter.toWeekdayTime(first),
           },
           {
             label: "Last play",
-            value: DateFormatter.toShortMonthYear(last),
-            note: DateFormatter.toWeekdayDayMonthYear(last),
+            value: DateFormatter.toNumericDate(last),
+            note: DateFormatter.toWeekdayTime(last),
           },
           {
             label: "Best month",
@@ -103,8 +105,10 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
       />
       <ItemTimeline type="track" id={trackId} data={timeline} />
       <div className={clsx("ruled-columns", s.columns)}>
-        <Section title="Recent plays">
-          {stats.recentHistory.map((info) => {
+        <Section
+          title="Recent plays"
+          link={seeAll(stats.recentHistory, `/song/${trackId}/history`)}>
+          {stats.recentHistory.slice(0, NB_SHOWN).map((info) => {
             const album = albumById[info.albumId] ?? stats.album;
             return (
               <ItemRow
