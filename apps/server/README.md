@@ -37,6 +37,8 @@ You can access various prometheus metrics through `/metrics`:
 - **ingested_albums_total**: Total number of ingested albums from Spotify API
 - **ingested_artists_total**: Total number of ingested artists from Spotify API
 
+The two HTTP metrics carry `method`, `status` and `endpoint` labels. `endpoint` is the route pattern, for example `/artist/:id`, or `unmatched` for unknown paths, so the number of series stays bounded.
+
 You will need to define to environment variable in the server:
 
 - **PROMETHEUS_USERNAME**: the basic auth username expected by the server to authorize the request

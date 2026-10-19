@@ -7,7 +7,7 @@ You will need:
 - A clone of this repository: `git clone https://github.com/TheTastyHanuta/your_spotify.git`
 - A running MongoDB database
 - Node.js (the repository's Docker images use Node 24; with nvm, run `nvm install 24` and `nvm use 24`)
-- pnpm available in your selected Node installation
+- pnpm 10 available in your selected Node installation (the exact version is `packageManager` in the root `package.json`)
 
 From the repository root, install the workspace dependencies once:
 
@@ -62,7 +62,7 @@ In `build/variables.js`, replace `__API_ENDPOINT__` with your backend's URL. In 
 
 Serve the entire `apps/client/build` directory, including its font files. The redesign bundles fonts locally, so no external font service or `data:` font permission is needed.
 
-Configure your web server to serve `index.html` for application routes such as `/history` and `/habits`, while serving existing assets normally. The client handles unknown application routes with a **Page not found** page. An `.htaccess` file is included for Apache.
+Configure your web server to serve `index.html` for application routes such as `/history` and `/habits`, while serving existing assets normally. The client handles unknown application routes with a **Page not found** page. An `.htaccess` file is included for Apache. For Nginx, copy the `map` and `server` blocks from [apps/client/scripts/run/nginx.conf](apps/client/scripts/run/nginx.conf), which the Docker image uses, and change `root` to your `build` directory.
 
 ### Using systemd user unit
 

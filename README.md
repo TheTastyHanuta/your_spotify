@@ -1,5 +1,6 @@
 ![Nightly build](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/nightly.yml/badge.svg)
 ![Release](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/release.yml/badge.svg)
+![Checks](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/checks.yml/badge.svg)
 
 <p align='center'>
   <img width="100%" src="docs/screenshots/overview-dark.png" alt="Redesigned Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
@@ -25,7 +26,8 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks them up on [MusicBrainz](https://musicbrainz.org) in the background. Genres Spotify returned before are kept
 > - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports and logins tell you until when instead of hanging and your stats stay usable
 > - **Better Spotify auth handling** - when Spotify revokes your access, the app asks you to log in again instead of silently stopping to record
-> - **More reliable imports** - imports no longer drop listens and resume from the right place after a failure
+> - **More reliable imports** - imports no longer drop listens, resume from the right place after a failure and keep their uploaded files across updates, so a failed import can still be retried
+> - **Smaller, safer Docker images** - both containers run without root rights, the web app is served by Nginx with long-term browser caching and the server image ships Node.js without npm or build tools
 > - Many smaller fixes, for example to infinite scroll, the album page and search
 >
 > This is a personal fork, not affiliated with or supported by the upstream project. It comes with **no warranty**: back up your database before upgrading and use it at your own risk.
@@ -123,7 +125,7 @@ For Nginx, [docs/nginx-example.conf](docs/nginx-example.conf) is a complete exam
 Things to keep in mind for the proxy:
 
 - Both addresses must be under the same domain, as in the example. The login cookie is not sent between unrelated domains, so you would be logged out on every request.
-- History imports upload files of up to 20 MB. Some proxies limit uploads by default (Nginx to 1 MB, raise it with `client_max_body_size`).
+- A history import uploads up to 50 files of 20 MB each in one request. Some proxies limit uploads by default (Nginx to 1 MB, raise it with `client_max_body_size`, for example to `1024m`).
 
 ### 2. Create the Spotify application
 
@@ -219,7 +221,7 @@ An import can fail if the server restarts, if a Spotify request fails 10 times i
 
 To retry a failed import, open **Settings → Account → Import data**, then the menu next to the import in **Import history** and choose **Retry**. **Clean up** deletes the import and its uploaded files, so only use it if you do not want to retry.
 
-The uploaded files are kept inside the server container. A restart keeps them, but an update replaces the container, so a failed import then needs its files uploaded again.
+The uploaded files are kept in the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose), so a failed import can still be retried after a restart or an update. Without that volume, an update replaces the container and a failed import needs its files uploaded again.
 
 ## Updating
 
@@ -231,6 +233,8 @@ docker compose up -d
 ```
 
 Database changes are applied automatically when the server starts.
+
+New options sometimes appear in the [example compose file](#3-start-yourspotify-with-docker-compose), for example `init: true` (the server then stops in about a second instead of after Docker's 10-second timeout) and the `imports` volume. Compare it with your own file when you update.
 
 ## Switching from the original YourSpotify
 
