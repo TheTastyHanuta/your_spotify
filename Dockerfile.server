@@ -4,10 +4,11 @@ WORKDIR /app
 
 ENV MONGO_ENDPOINT=mongodb://mongo:27017/your_spotify
 
-RUN npm install -g pnpm nodemon
+COPY package.json package.json
+# The pnpm version comes from packageManager in package.json
+RUN npm install -g --ignore-scripts nodemon pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")
 
 COPY pnpm-lock.yaml pnpm-lock.yaml
-COPY package.json package.json
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
 
 COPY apps/dev/package.json apps/dev/package.json
@@ -16,7 +17,7 @@ COPY apps/dev/tsconfig.json apps/dev/tsconfig.json
 COPY apps/server/package.json apps/server/package.json
 COPY apps/server/tsconfig.json apps/server/tsconfig.json
 
-RUN CI=true pnpm install --frozen-lockfile --dangerously-allow-all-builds
+RUN CI=true pnpm install --frozen-lockfile
 
 COPY apps/server/rsbuild.config.ts apps/server/rsbuild.config.ts
 

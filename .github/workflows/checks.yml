@@ -1,0 +1,46 @@
+---
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Uses the version from packageManager in package.json
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Server
+        working-directory: apps/server
+        run: |
+          pnpm lint
+          pnpm typecheck
+          node scripts/sessions.check.mjs
+
+      - name: Client
+        working-directory: apps/client
+        run: |
+          pnpm lint
+          pnpm typecheck
+          node scripts/coverColor.check.mjs
+          node scripts/apiCache.check.mjs

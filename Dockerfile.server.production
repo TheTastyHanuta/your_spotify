@@ -1,11 +1,14 @@
-FROM node:24-alpine AS builder
+# The build runs natively on the machine building the image, its output is
+# plain JavaScript that works on every platform
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+COPY package.json package.json
+# The pnpm version comes from packageManager in package.json
+RUN npm install -g --ignore-scripts pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")
 
 COPY pnpm-lock.yaml pnpm-lock.yaml
-COPY package.json package.json
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
 
 COPY apps/dev/package.json apps/dev/package.json
@@ -14,7 +17,7 @@ COPY apps/dev/tsconfig.json apps/dev/tsconfig.json
 COPY apps/server/package.json apps/server/package.json
 COPY apps/server/tsconfig.json apps/server/tsconfig.json
 
-RUN CI=true pnpm install --frozen-lockfile --dangerously-allow-all-builds
+RUN CI=true pnpm install --frozen-lockfile
 
 COPY apps/server/src apps/server/src
 COPY apps/server/scripts apps/server/scripts
@@ -25,10 +28,14 @@ WORKDIR /app/apps/server
 RUN pnpm typecheck
 RUN pnpm build
 
-ARG NODE_ENV
-ENV NODE_ENV=${NODE_ENV:-production}
+# Only the node binary of the official image, without npm, yarn and corepack.
+# The Alpine version has to match the one that node image is built on.
+FROM alpine:3.24
 
-FROM node:24-alpine
+RUN apk add --no-cache libstdc++ \
+  && addgroup -g 1000 node \
+  && adduser -u 1000 -G node -s /bin/sh -D node
+COPY --from=node:24-alpine3.24 /usr/local/bin/node /usr/local/bin/node
 
 ARG NODE_ENV
 ENV NODE_ENV=${NODE_ENV:-production}
@@ -38,5 +45,7 @@ WORKDIR /app
 COPY LICENSE /app/LICENSE
 COPY --from=builder /app/apps/server/scripts/ apps/server/scripts/
 COPY --from=builder /app/apps/server/build/ apps/server/build/
+
+USER node
 
 ENTRYPOINT [ "sh", "/app/apps/server/scripts/run/run.sh" ]

@@ -38,7 +38,7 @@ fi
 sed -i "s#connect-src \(.*\);#connect-src 'self' $CSP_CONNECT_SRC;#g" "$VAR_PATH/index.html"
 
 # Handling frame-ancestors preferences
-SERVE_CONFIG_PATH="/app/apps/client/scripts/run/serve.json"
+SERVE_CONFIG_PATH="/app/apps/client/scripts/run/nginx.conf"
 
 if [[ -z "$FRAME_ANCESTORS" ]]
 then
@@ -50,4 +50,4 @@ else
     FRAME_ANCESTORS=${FRAME_ANCESTORS//,/ }
 fi
 
-sed -i "s#frame-ancestors \(.*\);#frame-ancestors $FRAME_ANCESTORS;#g" "$SERVE_CONFIG_PATH"
+sed -i "s#frame-ancestors [^;]*;#frame-ancestors $FRAME_ANCESTORS;#g" "$SERVE_CONFIG_PATH"

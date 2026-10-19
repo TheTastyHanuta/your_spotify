@@ -1,11 +1,14 @@
-FROM node:24-alpine AS builder
+# The build runs natively on the machine building the image, its output is
+# plain JavaScript that works on every platform
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+COPY package.json package.json
+# The pnpm version comes from packageManager in package.json
+RUN npm install -g --ignore-scripts pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")
 
 COPY pnpm-lock.yaml pnpm-lock.yaml
-COPY package.json package.json
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
 
 COPY apps/dev/package.json apps/dev/package.json
@@ -15,7 +18,7 @@ COPY apps/client/package.json apps/client/package.json
 COPY apps/client/tsconfig.json apps/client/tsconfig.json
 COPY apps/client/rsbuild.config.ts apps/client/rsbuild.config.ts
 
-RUN CI=true pnpm install --frozen-lockfile --dangerously-allow-all-builds
+RUN CI=true pnpm install --frozen-lockfile
 
 COPY apps/client/public apps/client/public
 COPY apps/client/src apps/client/src
@@ -26,17 +29,15 @@ WORKDIR /app/apps/client
 RUN pnpm typecheck
 RUN pnpm build
 
-ARG NODE_ENV
-ENV NODE_ENV=${NODE_ENV:-production}
-
-FROM node:24-alpine
+FROM nginx:1.30-alpine
 
 WORKDIR /app
 
-RUN npm install -g serve
-
 COPY LICENSE /app/LICENSE
-COPY --from=builder /app/apps/client/scripts/ apps/client/scripts/
-COPY --from=builder /app/apps/client/build/ apps/client/build/
+# variables.sh rewrites files in both folders when the container starts
+COPY --from=builder --chown=nginx:nginx /app/apps/client/scripts/ apps/client/scripts/
+COPY --from=builder --chown=nginx:nginx /app/apps/client/build/ apps/client/build/
+
+USER nginx
 
 ENTRYPOINT [ "sh", "/app/apps/client/scripts/run/run.sh" ]

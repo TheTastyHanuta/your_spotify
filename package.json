@@ -3,5 +3,6 @@
   "version": "1.20.1-fork.3",
   "repository": "git@github.com:TheTastyHanuta/your_spotify.git",
   "author": "Timothee <timothee.boussus@gmail.com>",
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@10.33.0"
 }
