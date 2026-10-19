@@ -118,6 +118,8 @@ web:
 
 Spotify redirect URI: `https://api.yourspotify.example.com/oauth/spotify/callback`, which is your `API_ENDPOINT` followed by `/oauth/spotify/callback`.
 
+For Nginx, [docs/nginx-example.conf](docs/nginx-example.conf) is a complete example with both addresses, including notes for Cloudflare Tunnel.
+
 Things to keep in mind for the proxy:
 
 - Both addresses must be under the same domain, as in the example. The login cookie is not sent between unrelated domains, so you would be logged out on every request.
