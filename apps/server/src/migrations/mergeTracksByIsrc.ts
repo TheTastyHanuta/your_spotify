@@ -1,7 +1,6 @@
 import { appendFile, mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 
-import Axios from "axios";
 import mongoose, { HydratedDocument, Types } from "mongoose";
 
 import { InfosModel, TrackModel } from "../database/Models";
@@ -134,20 +133,23 @@ async function getPlayCounts(trackIds: string[]) {
 }
 
 async function getSpotifyCatalogAccessToken() {
-  const { data } = await Axios.post(
-    "https://accounts.spotify.com/api/token",
-    null,
-    {
-      params: { grant_type: "client_credentials" },
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(
-          `${credentials.spotify.public}:${credentials.spotify.secret}`,
-        ).toString("base64")}`,
-      },
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    body: new URLSearchParams({ grant_type: "client_credentials" }),
+    headers: {
+      Authorization: `Basic ${Buffer.from(
+        `${credentials.spotify.public}:${credentials.spotify.secret}`,
+      ).toString("base64")}`,
     },
-  );
+    signal: AbortSignal.timeout(30 * 1000),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Spotify token request failed: ${response.status} ${await response.text()}`,
+    );
+  }
 
+  const data = await response.json();
   return data.access_token as string;
 }
 

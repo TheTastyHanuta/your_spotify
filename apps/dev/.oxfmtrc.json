@@ -1,9 +1,5 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [
-    "../client/build/**",
-    "../server/build/**"
-  ],
   "arrowParens": "always",
   "bracketSameLine": true,
   "bracketSpacing": true,

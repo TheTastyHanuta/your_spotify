@@ -104,7 +104,9 @@ dist
 docker-compose-personal.yml
 client/public/index.html
 client/public/variables.js
-db_data
+db_data*
+# Database dumps
+*.gz
 
 # ISRC merge report files
 isrc-merge-report.md

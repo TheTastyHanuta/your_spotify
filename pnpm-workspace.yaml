@@ -10,7 +10,7 @@ catalog:
   globals: 17.6.0
   typescript: 6.0.3
   typescript-eslint: 8.59.3
-  oxfmt: 0.55.0
+  oxfmt: 0.74.0
   oxlint: 1.70.0
 
 minimumReleaseAgeExclude:

@@ -30,11 +30,9 @@
     "react-infinite-scroll-component": "^7.2.1",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.2",
-    "recharts": "^3.8.1",
-    "redux": "^5.0.1"
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
-    "@babel/preset-react": "^8.0.1",
     "@rsbuild/core": "catalog:",
     "@rsbuild/plugin-babel": "^2.0.0",
     "@rsbuild/plugin-react": "^2.1.0",

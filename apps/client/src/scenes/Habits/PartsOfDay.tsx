@@ -51,34 +51,30 @@ export const partRows = (
   artists?.map(({ part, total, items }) => ({
     part,
     total,
-    rows: items.map(
-      ({ item, total: plays }): PartRow => ({
-        id: item.id,
-        total: plays,
-        image: item.images,
-        round: true,
-        name: item.name,
-        to: `/artist/${item.id}`,
-        title: <InlineArtist artist={item} size="normal" />,
-        subtitle: undefined,
-      }),
-    ),
+    rows: items.map(({ item, total: plays }): PartRow => ({
+      id: item.id,
+      total: plays,
+      image: item.images,
+      round: true,
+      name: item.name,
+      to: `/artist/${item.id}`,
+      title: <InlineArtist artist={item} size="normal" />,
+      subtitle: undefined,
+    })),
   })) ??
   tracks?.map(({ part, total, items }) => ({
     part,
     total,
-    rows: items.map(
-      ({ item, total: plays }): PartRow => ({
-        id: item.id,
-        total: plays,
-        image: item.full_album.images,
-        round: false,
-        name: item.name,
-        to: `/song/${item.id}`,
-        title: <InlineTrack track={item} size="normal" />,
-        subtitle: <ArtistNames artists={item.full_artists} />,
-      }),
-    ),
+    rows: items.map(({ item, total: plays }): PartRow => ({
+      id: item.id,
+      total: plays,
+      image: item.full_album.images,
+      round: false,
+      name: item.name,
+      to: `/song/${item.id}`,
+      title: <InlineTrack track={item} size="normal" />,
+      subtitle: <ArtistNames artists={item.full_artists} />,
+    })),
   }));
 
 // One decimal, the shares are often small
