@@ -109,7 +109,9 @@ app.use((error: any, req: any, res: any, next: any) => {
   if (error instanceof YourSpotifyError) {
     return res.status(ErrorTypeToHTTPCode[error.type]).send(error);
   }
-  return res.status(500).send(error);
+  // The details stay in the log, they can contain internals such as Spotify
+  // responses or database errors
+  return res.status(500).send({ code: "INTERNAL_ERROR" });
 });
 
 export { app };

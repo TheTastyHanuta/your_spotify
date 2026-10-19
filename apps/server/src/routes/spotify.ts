@@ -46,6 +46,7 @@ import {
   getLoyal,
   getOnThisDay,
 } from "../database/queries/story";
+import { HttpError } from "../tools/apis/queueHttpClient";
 import { DateFormatter, intervalToDisplay } from "../tools/date";
 import { logger } from "../tools/logger";
 import {
@@ -78,9 +79,11 @@ router.post("/play", logged, withHttpClient, async (req, res) => {
     await client.playTrack(track.uri);
     res.status(200).end();
   } catch (e) {
-    if (e.response) {
-      logger.error(e.response.data);
-      res.status(400).send(e.response.data.error);
+    // Spotify explains failed player commands in its answer, for instance
+    // reason NO_ACTIVE_DEVICE when no player is open
+    if (e instanceof HttpError && e.body.startsWith("{")) {
+      logger.error(e.body);
+      res.status(400).send(JSON.parse(e.body).error);
       return;
     }
     throw e;
