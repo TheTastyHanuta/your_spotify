@@ -14,6 +14,11 @@ services:
       - mongo
     ports:
       - "8080:8080"
+    volumes:
+      # Keeps uploaded history files, so a failed import can be retried after
+      # a restart. Use a named volume: the server does not run as root and
+      # could not write to a new folder on the host.
+      - imports:/tmp/imports
     environment:
       LOG_LEVEL: debug
       API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the spotify dashboard
@@ -43,3 +48,6 @@ services:
     environment:
       NODE_ENV: production
       API_ENDPOINT: http://127.0.0.1:8080
+
+volumes:
+  imports:

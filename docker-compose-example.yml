@@ -7,6 +7,11 @@ services:
       - "8080:8080"
     depends_on:
       - mongo
+    volumes:
+      # Keeps uploaded history files, so a failed import can be retried after
+      # a restart. Use a named volume: the server does not run as root and
+      # could not write to a new folder on the host.
+      - imports:/tmp/imports
     environment:
       # Loopback works on this machine or through an SSH tunnel. For an HTTPS
       # reverse-proxy setup, replace all endpoints as described in the README.
@@ -29,3 +34,6 @@ services:
       - "3000:3000"
     environment:
       API_ENDPOINT: http://127.0.0.1:8080
+
+volumes:
+  imports:

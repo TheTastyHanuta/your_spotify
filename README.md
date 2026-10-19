@@ -148,6 +148,11 @@ services:
       - "8080:8080"
     depends_on:
       - mongo
+    volumes:
+      # Keeps uploaded history files, so a failed import can be retried after
+      # a restart. Use a named volume: the server does not run as root and
+      # could not write to a new folder on the host.
+      - imports:/tmp/imports
     environment:
       API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the Spotify dashboard (see above)
       CLIENT_ENDPOINT: http://127.0.0.1:3000
@@ -168,6 +173,9 @@ services:
       - "3000:3000"
     environment:
       API_ENDPOINT: http://127.0.0.1:8080
+
+volumes:
+  imports:
 ```
 
 > **Older CPUs and ARM devices:** MongoDB 5.0 and newer need a CPU with ARMv8.2-A (ARM) or AVX (x86-64). On older hardware, for example a Raspberry Pi 4 or older, or some older x86 servers and virtual machines, the `mongo` container stops right after starting, often with exit code 132 or an "Illegal instruction" error in `docker compose logs mongo`. Use the image `mongo:4.4` instead. It no longer receives updates, so only use it when your hardware requires it.
