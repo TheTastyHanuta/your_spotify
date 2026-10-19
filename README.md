@@ -3,7 +3,7 @@
 ![Checks](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/checks.yml/badge.svg)
 
 <p align='center'>
-  <img width="100%" src="docs/screenshots/overview-dark.png" alt="Redesigned Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
+  <img width="100%" src="docs/screenshots/overview-dark.png" alt="Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
 </p>
 <p align="center">
   <sub>Overview <a href="#screenshots">More screenshots</a></sub>
@@ -151,9 +151,6 @@ services:
     depends_on:
       - mongo
     volumes:
-      # Keeps uploaded history files, so a failed import can be retried after
-      # a restart. Use a named volume: the server does not run as root and
-      # could not write to a new folder on the host.
       - imports:/tmp/imports
     environment:
       API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the Spotify dashboard (see above)
@@ -233,8 +230,6 @@ docker compose up -d
 ```
 
 Database changes are applied automatically when the server starts.
-
-New options sometimes appear in the [example compose file](#3-start-yourspotify-with-docker-compose), for example `init: true` (the server then stops in about a second instead of after Docker's 10-second timeout) and the `imports` volume. Compare it with your own file when you update.
 
 ## Switching from the original YourSpotify
 
