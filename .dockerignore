@@ -1,0 +1,4 @@
+# The build context is the repository root, the Dockerfiles copy what they need
+**/node_modules
+**/build
+.git

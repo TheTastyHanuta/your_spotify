@@ -22,6 +22,7 @@ export const connect = async () => {
   for (let i = 0; i < TRIES; i += 1) {
     try {
       client = await connectToDb(endpoint, { connectTimeoutMS: 3000 });
+      break;
     } catch (e) {
       lastError = e;
       logger.error(`Failed to connect to database, try ${i + 1}/${TRIES}`);

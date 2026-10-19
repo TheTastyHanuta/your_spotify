@@ -1,5 +1,6 @@
 services:
   app:
+    init: true
     container_name: server
     restart: always
     build:
@@ -26,9 +27,10 @@ services:
     volumes:
       - ./db_data:/data/db
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
 
   web:
+    init: true
     container_name: web
     restart: always
     build:

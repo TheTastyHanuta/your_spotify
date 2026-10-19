@@ -67,6 +67,9 @@ const MAX_RETRY_AFTER_MS = 30 * 1000;
 // Used when Spotify reports an exhausted quota without a longer Retry-After,
 // so the queue does not ask again every second.
 const MIN_QUOTA_EXCEEDED_BLOCK_MS = 60 * 1000;
+// Every request waits behind the one being sent, so a hanging connection
+// would hold up polling, logins and imports alike.
+const REQUEST_TIMEOUT_MS = 30 * 1000;
 
 // Spotify answers an exhausted development mode quota with a 429 whose body
 // carries reason QUOTA_EXCEEDED, other 429s are short rate limits.
@@ -216,6 +219,7 @@ export class QueuedHttpClient {
         ? JSON.stringify(queueItem.config.data)
         : undefined,
       credentials: "include",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     };
 
     const response = await fetch(url, payload);

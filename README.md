@@ -140,6 +140,7 @@ Create a `compose.yaml` file like the one below (also available as [docker-compo
 services:
   server:
     image: ghcr.io/thetastyhanuta/your_spotify_server:latest
+    init: true
     restart: always
     ports:
       - "8080:8080"
@@ -159,6 +160,7 @@ services:
 
   web:
     image: ghcr.io/thetastyhanuta/your_spotify_client:latest
+    init: true
     restart: always
     ports:
       - "3000:3000"

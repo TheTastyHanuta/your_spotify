@@ -120,8 +120,6 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
 router.get("/spotify/me", logged, withHttpClient, async (req, res) => {
   const { client } = req as SpotifyRequest;
 
-  console.log("WYTFUDGZJDGHZAKJHDKJZHZDKJHAZJKDHZAJKDHJKAHZ");
-
   try {
     const me = await client.me();
     res.status(200).send(me);

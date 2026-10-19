@@ -261,9 +261,12 @@ export const measureRequestDuration = (
   if (!MEASURE_METHODS.includes(req.method)) {
     return next();
   }
-  const endpoint = req.path;
   const start = hrtime.bigint();
   res.on("finish", () => {
+    // The route pattern, not the path: every id in a path would become its
+    // own series, kept in memory forever. Errors thrown in a sub-router lose
+    // its mount path here, which still keeps the labels bounded.
+    const endpoint = req.route ? req.baseUrl + req.route.path : "unmatched";
     const duration = Number(hrtime.bigint() - start);
     Metrics.httpRequestDurationNanoseconds
       .labels(req.method, endpoint, res.statusCode.toString())

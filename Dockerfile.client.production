@@ -1,10 +1,7 @@
-FROM node:25-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-ENV MONGO_ENDPOINT=mongodb://mongo:27017/your_spotify
-
-RUN apk add python3 gcc g++ make cmake
 RUN npm install -g pnpm
 
 COPY pnpm-lock.yaml pnpm-lock.yaml
@@ -32,7 +29,7 @@ RUN pnpm build
 ARG NODE_ENV
 ENV NODE_ENV=${NODE_ENV:-production}
 
-FROM node:25-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

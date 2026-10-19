@@ -6,7 +6,7 @@ You will need:
 
 - A clone of this repository: `git clone https://github.com/TheTastyHanuta/your_spotify.git`
 - A running MongoDB database
-- Node.js (the repository's Docker images use Node 25; with nvm, run `nvm install 25` and `nvm use 25`)
+- Node.js (the repository's Docker images use Node 24; with nvm, run `nvm install 24` and `nvm use 24`)
 - pnpm available in your selected Node installation
 
 From the repository root, install the workspace dependencies once:
