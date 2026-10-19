@@ -79,11 +79,18 @@ router.post("/play", logged, withHttpClient, async (req, res) => {
     await client.playTrack(track.uri);
     res.status(200).end();
   } catch (e) {
-    // Spotify explains failed player commands in its answer, for instance
-    // reason NO_ACTIVE_DEVICE when no player is open
-    if (e instanceof HttpError && e.body.startsWith("{")) {
+    // Spotify explains failed player commands with an error object, reason
+    // NO_ACTIVE_DEVICE when no player is open for instance. A failed token
+    // refresh has a plain string there and stays a server error.
+    let spotifyError: unknown;
+    try {
+      spotifyError = e instanceof HttpError && JSON.parse(e.body).error;
+    } catch {
+      // Not JSON, a rate limit for instance
+    }
+    if (typeof spotifyError === "object" && spotifyError !== null) {
       logger.error(e.body);
-      res.status(400).send(JSON.parse(e.body).error);
+      res.status(400).send(spotifyError);
       return;
     }
     throw e;

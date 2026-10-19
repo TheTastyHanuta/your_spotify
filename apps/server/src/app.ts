@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
+import multer from "multer";
 
 import { router as indexRouter } from "./routes";
 import { router as albumRouter } from "./routes/album";
@@ -108,6 +109,14 @@ app.use((error: any, req: any, res: any, next: any) => {
   logger.error(error);
   if (error instanceof YourSpotifyError) {
     return res.status(ErrorTypeToHTTPCode[error.type]).send(error);
+  }
+  // Upload limits, a file over 20 MB or too many files for instance
+  if (error instanceof multer.MulterError) {
+    return res.status(400).send({ code: error.code });
+  }
+  // Malformed or too large request bodies, from express.json
+  if (error.expose && error.status < 500) {
+    return res.status(error.status).send({ code: "BAD_REQUEST" });
   }
   // The details stay in the log, they can contain internals such as Spotify
   // responses or database errors

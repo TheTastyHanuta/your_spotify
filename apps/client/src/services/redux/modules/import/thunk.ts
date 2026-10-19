@@ -15,6 +15,20 @@ export const getImports = myAsyncThunk<
   return imports;
 });
 
+// The codes the server answers a failed import start with. LIMIT_* come from
+// the upload limits: 50 files of 20 MB.
+const importErrors: Record<string, string> = {
+  ALREADY_IMPORTING: "An import is already running on this account",
+  IMPORT_INIT_FAILED:
+    "The initialization failed, maybe your files are wrongly formatted",
+  LIMIT_FILE_SIZE: "A file is larger than 20 MB",
+  LIMIT_FILE_COUNT: "Too many files, upload at most 50",
+  LIMIT_UNEXPECTED_FILE: "Too many files, upload at most 50",
+};
+
+const importErrorMessage = (e: any) =>
+  importErrors[e?.response?.data?.code] ?? "Could not start the import";
+
 export const startImportPrivacy = myAsyncThunk<
   void,
   { files?: FileList; id?: string }
@@ -39,22 +53,9 @@ export const startImportPrivacy = myAsyncThunk<
       }),
     );
   } catch (e: any) {
-    if (e?.response?.data?.code === "ALREADY_IMPORTING") {
-      tapi.dispatch(
-        alertMessage({
-          level: "error",
-          message: "An import is already running on this account",
-        }),
-      );
-    } else if (e?.response?.data?.code === "IMPORT_INIT_FAILED") {
-      tapi.dispatch(
-        alertMessage({
-          level: "error",
-          message:
-            "The initialization failed, maybe your files are wrongly formatted",
-        }),
-      );
-    }
+    tapi.dispatch(
+      alertMessage({ level: "error", message: importErrorMessage(e) }),
+    );
     console.error(e);
   }
 });
@@ -83,22 +84,9 @@ export const startImportFullPrivacy = myAsyncThunk<
       }),
     );
   } catch (e: any) {
-    if (e?.response?.data?.code === "ALREADY_IMPORTING") {
-      tapi.dispatch(
-        alertMessage({
-          level: "error",
-          message: "An import is already running on this account",
-        }),
-      );
-    } else if (e?.response?.data?.code === "IMPORT_INIT_FAILED") {
-      tapi.dispatch(
-        alertMessage({
-          level: "error",
-          message:
-            "The initialization failed, maybe your files are wrongly formatted",
-        }),
-      );
-    }
+    tapi.dispatch(
+      alertMessage({ level: "error", message: importErrorMessage(e) }),
+    );
     console.error(e);
   }
 });
