@@ -2,3 +2,9 @@
 **/node_modules
 **/build
 .git
+# Local data and secrets, never needed by a build
+db_data*
+your_spotify_db
+*.gz
+.env*
+docker-compose-personal.yml

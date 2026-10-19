@@ -32,7 +32,7 @@ RUN pnpm build
 # The Alpine version has to match the one that node image is built on.
 FROM alpine:3.24
 
-RUN apk add --no-cache libstdc++ \
+RUN apk add --no-cache libatomic libstdc++ \
   && addgroup -g 1000 node \
   && adduser -u 1000 -G node -s /bin/sh -D node
 COPY --from=node:24-alpine3.24 /usr/local/bin/node /usr/local/bin/node
