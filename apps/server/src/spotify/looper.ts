@@ -90,7 +90,7 @@ const loop = async (user: User) => {
     infos,
   );
   logger.info(
-    `[${user.username}]: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists`,
+    `[${user.username}]: ${infos.length} new plays (${items.length} fetched); new in catalogue: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists`,
   );
 };
 

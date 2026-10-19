@@ -34,7 +34,12 @@ export const getImporterState = <T extends ImporterStateType>(id: string) =>
 export const setImporterStateMetadata = <T extends ImporterState["metadata"]>(
   id: string,
   metadata: T,
-) => ImporterStateModel.findByIdAndUpdate(id, { metadata }, { new: true });
+) =>
+  ImporterStateModel.findByIdAndUpdate(
+    id,
+    { metadata },
+    { returnDocument: "after" },
+  );
 
 export const setImporterStateCurrent = (id: string, current: number) =>
   ImporterStateModel.findByIdAndUpdate(id, { current });

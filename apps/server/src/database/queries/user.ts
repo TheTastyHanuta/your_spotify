@@ -59,7 +59,10 @@ export const storeInUser = <F extends keyof User>(
   field: F,
   value: User[F],
   infos: Partial<User>,
-) => UserModel.findOneAndUpdate({ [field]: value }, infos, { new: true });
+) =>
+  UserModel.findOneAndUpdate({ [field]: value }, infos, {
+    returnDocument: "after",
+  });
 
 export const storeFirstListenedAtIfLess = async (
   userId: string,
@@ -94,7 +97,7 @@ export const changeSetting = <F extends keyof User>(
   return UserModel.findOneAndUpdate(
     { [field]: value },
     { $set: toSet, $unset: toUnset },
-    { new: true },
+    { returnDocument: "after" },
   );
 };
 

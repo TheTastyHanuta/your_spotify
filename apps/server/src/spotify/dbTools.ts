@@ -355,9 +355,6 @@ export const getTracksAlbumsArtists = async (
         missingTrackIds,
       )
     : { tracks: [], fetched: [], artists: [], albums: [] };
-  if (missingTrackIds.length === 0) {
-    logger.info("No missing tracks, passing...");
-  }
   const sourceRelated = getSourceAlbumArtistIds(spotifyTracks);
   const allRelatedAlbums = [
     ...new Set([...relatedAlbums, ...sourceRelated.albums]),
