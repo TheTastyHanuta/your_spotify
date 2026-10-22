@@ -23,6 +23,7 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **Track deduplication by ISRC** - different releases of the same song (single, album, remaster) count as one song with a combined listen history
 > - **Multi-artist support** - every credited artist is shown and artists you only heard as a featured artist get their own page and appear in search
 > - **Listened album context** - track and history views show which album version you actually played a song from
+> - **Remove wrong listens** - take a listen out of your statistics, for example a song Spotify recorded although you skipped it right away, with Undo and a list in the settings to restore it later
 > - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks them up on [MusicBrainz](https://musicbrainz.org) in the background. Genres Spotify returned before are kept
 > - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports and logins tell you until when instead of hanging and your stats stay usable
 > - **Better Spotify auth handling** - when Spotify revokes your access, the app asks you to log in again instead of silently stopping to record
@@ -293,7 +294,8 @@ Then change the two images back to `yooooomi/your_spotify_server` and `yooooomi/
 ## Using the dashboard
 
 - Choose a preset or custom date range in the page header. The period is part of the page address, so a bookmark opens the same range. **Your story** always covers your whole history, **On this day** looks at today's date in earlier years and **Recap** has its own year picker.
-- **Settings**, **Share this page** and **Log out** are in the account menu at the bottom of the sidebar, or under **More** on phones. Settings holds your theme, timezone, date format, artist blacklist, imports and the choice between play counts and listening time. Administrators also manage accounts and registrations there.
+- **Settings**, **Share this page** and **Log out** are in the account menu at the bottom of the sidebar, or under **More** on phones. Settings holds your theme, timezone, date format, artist blacklist, removed listens, imports and the choice between play counts and listening time. Administrators also manage accounts and registrations there.
+- To remove a listen that should not count, right-click it on the **History** page (or on an artist's, album's or song's list of listens), use its ⋮ menu, or long-press it on a phone, then choose **Remove listen**. Select several rows first (Shift or Ctrl, Cmd on a Mac) to remove them together. Removed listens count nowhere; restore them under **Settings → Statistics → Removed listens**.
 - To share your statistics, create a public token in **Settings → Account → Public token**, then use **Share this page**. **Anyone with the link can browse all your statistics**, not only the page you shared, until you delete or regenerate the token.
 
 ## Advanced setup

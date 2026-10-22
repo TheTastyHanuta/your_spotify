@@ -265,14 +265,53 @@ Get user's listening history.
 
 **Query Parameters:**
 
-- `number`: number - Maximum number of items to return (max 20)
-- `offset`: number - Number of items to skip
+- `number`: number - Maximum number of items to return (1 to 20)
+- `offset`: number - Number of items to skip (0 or more)
 - `start`: date (optional) - Start date
 - `end`: date (optional) - End date
+- `type`: `"artist"` | `"album"` | `"track"` (optional) - Only the listens of one artist, album or song
+- `id`: string (optional, with `type`) - Spotify ID of that artist, album or song
+- `month`: `"YYYY-MM"` (optional, with `type`) - Only that month, split in the user's timezone
+
+Without `type`, listens of blacklisted artists are left out. Listens the user removed are always left out.
 
 **Response:**
 
 - `200`: Array of listening history items
+
+#### `POST /spotify/listens/remove`
+
+Remove listens from the statistics, for example a song Spotify recorded although it was barely played. The listens stay stored, so the poller and imports don't record them again, but they count nowhere until they are restored. Not allowed for guests (public token).
+
+**Body:**
+
+```json
+{
+  "ids": string[] // _id of each listen, 1 to 2000
+}
+```
+
+**Response:**
+
+- `204`: Removed (ids of other users' listens are ignored)
+- `400`: Invalid ids
+
+#### `POST /spotify/listens/restore`
+
+Put removed listens back into the statistics. Same body and responses as `POST /spotify/listens/remove`.
+
+#### `GET /spotify/removed-listens`
+
+Get the listens the user removed, newest first. Not allowed for guests.
+
+**Query Parameters:**
+
+- `number`: number - Maximum number of items to return (1 to 20)
+- `offset`: number - Number of items to skip (0 or more)
+
+**Response:**
+
+- `200`: Array of listening history items, like `GET /spotify/gethistory`
 
 #### `GET /spotify/listened_to`
 
