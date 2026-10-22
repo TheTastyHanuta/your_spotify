@@ -25,6 +25,7 @@ import EnableAffinity from "./EnableAffinity";
 import Importer from "./Importer";
 import PublicToken from "./PublicToken";
 import RelogToSpotify from "./RelogToSpotify";
+import RemovedListens from "./RemovedListens";
 import SetAdmin from "./SetAdmin";
 import SpotifyAccountInfos from "./SpotifyAccountInfos";
 import { StatMeasurement } from "./StatMeasurement";
@@ -125,6 +126,7 @@ export default function Settings() {
             element={
               <div className={clsx("ruled-columns", s.panels)}>
                 {!isPublic && <BlacklistArtist />}
+                {!isPublic && <RemovedListens />}
                 {!isPublic && <Timezone />}
                 {!isPublic && <DateFormat />}
                 {!isPublic && <StatMeasurement />}

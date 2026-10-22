@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 
 import { Timesplit } from "../../tools/types";
 import { AlbumModel, InfosModel, TrackModel } from "../Models";
+import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 import { longestSessions } from "./sessions";
 import {
@@ -385,7 +386,7 @@ export const getRankOf = async (
   itemId: string,
 ) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id } },
+    { $match: { owner: user._id, ...notRemoved } },
     { $group: { _id: itemType.field, count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     { $group: { _id: 1, array: { $push: { id: "$_id", count: "$count" } } } },

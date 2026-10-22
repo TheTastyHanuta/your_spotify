@@ -14,6 +14,8 @@ import {
   ItemType,
   getMostListenedSongOfArtist,
   getArtists,
+  removeListens,
+  restoreListens,
 } from "../database";
 import {
   CollaborativeMode,
@@ -98,8 +100,8 @@ router.post("/play", logged, withHttpClient, async (req, res) => {
 });
 
 const gethistorySchema = z.object({
-  number: z.preprocess(toNumber, z.number().max(20)),
-  offset: z.preprocess(toNumber, z.number()),
+  number: z.preprocess(toNumber, z.number().int().min(1).max(20)),
+  offset: z.preprocess(toNumber, z.number().int().min(0)),
   start: z.preprocess(toDate, z.date().optional()),
   end: z.preprocess(toDate, z.date().optional()),
   // The listens of one artist, album or song, optionally of one month
@@ -142,6 +144,49 @@ router.get("/gethistory", isLoggedOrGuest, async (req, res) => {
       : undefined,
   );
   res.status(200).send(tracks);
+});
+
+const removedHistorySchema = gethistorySchema.pick({
+  number: true,
+  offset: true,
+});
+
+router.get("/removed-listens", logged, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { number, offset } = validate(req.query, removedHistorySchema);
+
+  const tracks = await getSongs(
+    user._id.toString(),
+    offset,
+    number,
+    undefined,
+    undefined,
+    true,
+  );
+  res.status(200).send(tracks);
+});
+
+const listenIdsSchema = z.object({
+  ids: z
+    .array(z.string().regex(/^[0-9a-f]{24}$/))
+    .min(1)
+    .max(2000),
+});
+
+router.post("/listens/remove", logged, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { ids } = validate(req.body, listenIdsSchema);
+
+  await removeListens(user._id.toString(), ids);
+  res.status(204).end();
+});
+
+router.post("/listens/restore", logged, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { ids } = validate(req.body, listenIdsSchema);
+
+  await restoreListens(user._id.toString(), ids);
+  res.status(204).end();
 });
 
 const interval = z.object({

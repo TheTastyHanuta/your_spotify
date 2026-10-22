@@ -27,3 +27,7 @@
 .selected {
   background: color-mix(in srgb, var(--text) 12%, transparent);
 }
+
+.destructive {
+  color: var(--down);
+}

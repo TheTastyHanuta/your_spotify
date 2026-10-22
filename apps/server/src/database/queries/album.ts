@@ -1,5 +1,6 @@
 import { escapeRegExp } from "../../tools/misc";
 import { AlbumModel, InfosModel } from "../Models";
+import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 
 export const getAlbums = (albumsId: string[]) =>
@@ -15,7 +16,7 @@ export const getFirstAndLastListenedAlbum = async (
   albumId: string,
 ) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, albumId: albumId } },
+    { $match: { owner: user._id, albumId: albumId, ...notRemoved } },
     { $sort: { played_at: 1 } },
     {
       $group: {
@@ -43,7 +44,7 @@ export const getFirstAndLastListenedAlbum = async (
 
 export const getAlbumSongs = async (user: User, albumId: string) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, albumId: albumId } },
+    { $match: { owner: user._id, albumId: albumId, ...notRemoved } },
     { $group: { _id: "$id", count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     {

@@ -131,7 +131,20 @@ export function useInfiniteScroll<T>(
     return () => clearTimeout(timeout);
   }, [autoFillCycle, hasMore, failedFetches]);
 
+  // For rows removed from (shift < 0) or put back into the server's list: the
+  // next page starts that many rows earlier or later
+  const updateItems = (update: (items: T[]) => T[], shift: number) => {
+    fetchedCountRef.current += shift;
+    setItems(update);
+  };
+
   // dataLength is only a reset key for InfiniteScroll, never a rendered count,
   // so counting failures in it is what lets a retry happen after an error.
-  return { items, hasMore, onNext, dataLength: items.length + failedFetches };
+  return {
+    items,
+    hasMore,
+    onNext,
+    updateItems,
+    dataLength: items.length + failedFetches,
+  };
 }

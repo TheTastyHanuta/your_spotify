@@ -1,5 +1,6 @@
 import Axios from "axios";
 
+import { cache } from "../apiCache";
 import { AdminAccount } from "../redux/modules/admin/reducer";
 import { ImporterState } from "../redux/modules/import/types";
 import { Playlist, PlaylistContext } from "../redux/modules/playlist/types";
@@ -349,6 +350,16 @@ export const api = {
       id,
       month,
     }),
+  getRemovedListens: (number: number, offset: number) =>
+    get<TrackInfoWithFullArtistAlbum[]>("/spotify/removed-listens", {
+      number,
+      offset,
+    }),
+  // Every stat can change, so no cached answer is shown again
+  removeListens: (ids: string[]) =>
+    post("/spotify/listens/remove", { ids }).finally(() => cache.clear()),
+  restoreListens: (ids: string[]) =>
+    post("/spotify/listens/restore", { ids }).finally(() => cache.clear()),
   mostListened: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<{ tracks: TrackWithAlbum[]; counts: number[] }[]>(
       "/spotify/most_listened",

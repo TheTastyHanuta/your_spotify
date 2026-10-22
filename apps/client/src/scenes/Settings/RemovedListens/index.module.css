@@ -1,0 +1,8 @@
+.intro {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.none {
+  color: var(--muted);
+}

@@ -8,11 +8,14 @@ import { MenuItem } from "../ui/MenuItem/MenuItem";
 interface TrackOptionsContentProps {
   onClose: () => void;
   track: Track;
+  // On a listen of the history: removes it from the stats
+  onRemove?: () => void;
 }
 
 export default function TrackOptionsContent({
   onClose,
   track,
+  onRemove,
 }: TrackOptionsContentProps) {
   const dispatch = useAppDispatch();
   const [isMobile] = useMobile();
@@ -30,6 +33,16 @@ export default function TrackOptionsContent({
     <>
       {isMobile && <MenuItem onClick={play}>Play</MenuItem>}
       <MenuItem onClick={add}>Add to playlist</MenuItem>
+      {onRemove && (
+        <MenuItem
+          destructive
+          onClick={() => {
+            onClose();
+            onRemove();
+          }}>
+          Remove listen
+        </MenuItem>
+      )}
     </>
   );
 }

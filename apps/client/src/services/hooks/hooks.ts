@@ -168,15 +168,29 @@ export function useLongPress(callback: () => void, ms = 300) {
     currentTimeout.current = undefined;
   }
 
+  const fired = useRef(false);
+
   function start(event: TouchEvent<HTMLDivElement>) {
     document.addEventListener("scroll", stop);
-    event.preventDefault();
     event.stopPropagation();
     clearTimeout(currentTimeout.current);
-    currentTimeout.current = setTimeout(callback, ms);
+    fired.current = false;
+    currentTimeout.current = setTimeout(() => {
+      fired.current = true;
+      callback();
+    }, ms);
   }
 
-  return { onTouchStart: start, onTouchEnd: stop };
+  // React's touchstart listener is passive, so only touchend can cancel the
+  // click that would otherwise hit the menu opened under the finger
+  function end(event: TouchEvent<HTMLDivElement>) {
+    if (fired.current) {
+      event.preventDefault();
+    }
+    stop();
+  }
+
+  return { onTouchStart: start, onTouchEnd: end };
 }
 
 export function useBooleanState(): [boolean, () => void, () => void] {

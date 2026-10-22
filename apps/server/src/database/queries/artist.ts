@@ -1,5 +1,6 @@
 import { escapeRegExp } from "../../tools/misc";
 import { ArtistModel, InfosModel } from "../Models";
+import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 
 export const getArtists = (artistIds: string[]) =>
@@ -17,6 +18,7 @@ export const searchArtist = async (user: User, str: string) => {
     await InfosModel.distinct("artistIds", {
       owner: user._id,
       artistIds: { $in: artists.map((artist) => artist.id) },
+      ...notRemoved,
     }),
   );
   return artists.filter((artist) => listened.has(artist.id));
@@ -29,6 +31,7 @@ export const searchArtist = async (user: User, str: string) => {
 export const matchArtistListens = (user: User, artistId: string) => ({
   owner: user._id,
   artistIds: artistId,
+  ...notRemoved,
 });
 
 export const getFirstAndLastListened = async (user: User, artistId: string) => {

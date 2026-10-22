@@ -8,7 +8,7 @@ import {
   TrackModel,
   UserModel,
 } from "../Models";
-import { Infos } from "../schemas/info";
+import { Infos, notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 
 export const getUserFromField = async <F extends keyof User>(
@@ -214,13 +214,15 @@ export const getSongs = async (
   number: number,
   inter?: { start: Date; end: Date },
   // Only one artist's, album's or song's listens. Like their detail pages,
-  // these keep blacklisted listens. month: only that month, split in the stats
-  // timezone like the item's timeline.
+  // these keep blacklisted listens, not removed ones. month: only that month,
+  // split in the stats timezone like the item's timeline.
   item?: {
     field: "id" | "albumId" | "artistIds";
     id: string;
     month?: { year: number; month: number; timezone: string };
   },
+  // Only the listens the user removed
+  removed = false,
 ) =>
   InfosModel.aggregate([
     {
@@ -229,9 +231,11 @@ export const getSongs = async (
         ...(inter
           ? { played_at: { $gt: inter.start, $lt: inter.end } }
           : undefined),
-        ...(item
-          ? { [item.field]: item.id }
-          : { blacklistedBy: { $exists: 0 } }),
+        ...(removed
+          ? { blacklistedBy: "listen" }
+          : item
+            ? { [item.field]: item.id, ...notRemoved }
+            : { blacklistedBy: { $exists: 0 } }),
         ...(item?.month && {
           $expr: {
             $and: [
@@ -394,6 +398,29 @@ export const unblacklistArtist = (userId: string, artistId: string) =>
   UserModel.findByIdAndUpdate(userId, {
     $pull: { "settings.blacklistedArtists": artistId },
   });
+
+// Removed listens stay stored, so the poller and the importers still see them
+// as duplicates and do not record them again.
+export const removeListens = (userId: string, infoIds: string[]) =>
+  InfosModel.updateMany(
+    {
+      owner: new Types.ObjectId(userId),
+      _id: { $in: infoIds.map((id) => new Types.ObjectId(id)) },
+    },
+    { $addToSet: { blacklistedBy: "listen" } },
+  );
+
+export const restoreListens = async (userId: string, infoIds: string[]) => {
+  const owned = {
+    owner: new Types.ObjectId(userId),
+    _id: { $in: infoIds.map((id) => new Types.ObjectId(id)) },
+  };
+  await InfosModel.updateMany(owned, { $pull: { blacklistedBy: "listen" } });
+  await InfosModel.updateMany(
+    { ...owned, blacklistedBy: { $size: 0 } },
+    { $unset: { blacklistedBy: 1 } },
+  );
+};
 
 export const deleteInfos = (infoIds: string[]) =>
   InfosModel.deleteMany({

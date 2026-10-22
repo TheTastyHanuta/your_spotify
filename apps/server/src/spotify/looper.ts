@@ -77,7 +77,7 @@ const loop = async (user: User) => {
         primaryArtistId: primaryArtist.id,
         artistIds: item.track.artists.map((e) => e.id),
         id: track.id,
-        ...(isBlacklisted ? { blacklistedBy: "artist" } : {}),
+        ...(isBlacklisted ? { blacklistedBy: ["artist" as const] } : {}),
       });
     }
   }

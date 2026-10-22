@@ -10,6 +10,8 @@ export interface MenuItemProps extends Omit<
   children: ReactNode;
   value?: unknown;
   selected?: boolean;
+  // Removes something, set in --down
+  destructive?: boolean;
 }
 
 export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(
@@ -19,6 +21,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(
       children,
       disabled,
       selected,
+      destructive,
       value: _value,
       type = "button",
       ...props
@@ -30,7 +33,12 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(
         ref={ref}
         type={type}
         disabled={disabled}
-        className={clsx(s.item, selected && s.selected, className)}
+        className={clsx(
+          s.item,
+          selected && s.selected,
+          destructive && s.destructive,
+          className,
+        )}
         {...props}>
         {children}
       </button>

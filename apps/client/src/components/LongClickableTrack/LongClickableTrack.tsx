@@ -8,11 +8,13 @@ import TrackOptionsContent from "../TrackOptionsContent";
 interface LongClickableTrackProps {
   children: ReactElement;
   track: Track;
+  onRemove?: () => void;
 }
 
 export default function LongClickableTrack({
   children,
   track,
+  onRemove,
 }: LongClickableTrackProps) {
   const [isOpen, open, close] = useBooleanState();
   const divProps = useLongPress(open);
@@ -21,7 +23,11 @@ export default function LongClickableTrack({
     <>
       {cloneElement(children, divProps)}
       <Dialog title={track.name} onClose={close} open={isOpen} fullWidth>
-        <TrackOptionsContent track={track} onClose={close} />
+        <TrackOptionsContent
+          track={track}
+          onClose={close}
+          onRemove={onRemove}
+        />
       </Dialog>
     </>
   );

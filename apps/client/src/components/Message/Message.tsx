@@ -6,7 +6,7 @@ import {
   SnackbarCloseReason,
 } from "@mui/material";
 import clsx from "clsx";
-import React, { Ref, useEffect, useState } from "react";
+import React, { ReactNode, Ref, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
 import { AlertMessage } from "../../services/redux/modules/message/reducer";
@@ -20,9 +20,11 @@ interface AlertProps {
   message: string;
   level: AlertMessage["level"];
   onClose: () => void;
+  // A button before the close one, like Undo
+  action?: ReactNode;
 }
 
-function Alert({ message, level, onClose, ref }: AlertProps) {
+export function Alert({ message, level, onClose, ref, action }: AlertProps) {
   return (
     // An overlay like the menus; errors in the notice amber
     <Paper
@@ -31,6 +33,7 @@ function Alert({ message, level, onClose, ref }: AlertProps) {
       role={level === "error" ? "alert" : "status"}
       className={clsx(s.alert, { [s.error]: level === "error" })}>
       <Text size="normal">{message}</Text>
+      {action}
       <IconButton size="small" onClick={onClose} aria-label="Close">
         <Close className={s.icon} fontSize="small" />
       </IconButton>

@@ -1,5 +1,6 @@
 import { escapeRegExp } from "../../tools/misc";
 import { InfosModel, TrackModel } from "../Models";
+import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 
 export const getTracks = (tracksId: string[]) =>
@@ -14,14 +15,18 @@ export const searchTrack = (str: string) =>
     .populate("full_artists");
 
 export const getTrackListenedCount = (user: User, trackId: string) =>
-  InfosModel.where({ owner: user._id, id: trackId }).countDocuments();
+  InfosModel.where({
+    owner: user._id,
+    id: trackId,
+    ...notRemoved,
+  }).countDocuments();
 
 export const getTrackFirstAndLastListened = async (
   user: User,
   trackId: string,
 ) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, id: trackId } },
+    { $match: { owner: user._id, id: trackId, ...notRemoved } },
     { $sort: { played_at: 1 } },
     {
       $group: {
@@ -36,14 +41,14 @@ export const getTrackFirstAndLastListened = async (
 
 export const getTrackRecentHistory = async (user: User, trackId: string) =>
   InfosModel.find()
-    .where({ owner: user._id, id: trackId })
+    .where({ owner: user._id, id: trackId, ...notRemoved })
     // One more than the page shows, so it knows to link to the full history
     .limit(11)
     .sort({ played_at: -1 });
 
 export const getTrackListenedAlbums = async (user: User, trackId: string) => {
   const res = await InfosModel.aggregate([
-    { $match: { owner: user._id, id: trackId } },
+    { $match: { owner: user._id, id: trackId, ...notRemoved } },
     { $group: { _id: "$albumId", count: { $sum: 1 } } },
     { $sort: { count: -1, _id: 1 } },
     {

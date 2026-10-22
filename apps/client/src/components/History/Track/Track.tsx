@@ -22,6 +22,8 @@ interface TrackProps {
   track: TrackType;
   artists: Artist[];
   album?: Album;
+  // Offers to remove this listen in the row's menus
+  onRemove?: () => void;
 }
 
 export default function Track({
@@ -29,6 +31,7 @@ export default function Track({
   album,
   artists,
   listenedAt,
+  onRemove,
 }: TrackProps) {
   const [isMobile, isTablet] = useMobile();
 
@@ -80,11 +83,14 @@ export default function Track({
         </Text>
       ),
     },
-    { ...trackGrid.option, node: !isMobile && <TrackOptions track={track} /> },
+    {
+      ...trackGrid.option,
+      node: !isMobile && <TrackOptions track={track} onRemove={onRemove} />,
+    },
   ];
 
   return (
-    <LongClickableTrack track={track}>
+    <LongClickableTrack track={track} onRemove={onRemove}>
       <GridRowWrapper
         className={clsx("play-button-holder", s.row)}
         columns={columns}

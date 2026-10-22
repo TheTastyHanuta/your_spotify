@@ -1,6 +1,7 @@
 import { genresOf } from "../../tools/genres";
 import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
+import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
 import { matchArtistListens } from "./artist";
 import {
@@ -544,7 +545,8 @@ const timelineFacets = (timezone: string) => {
 // Listens of one item over its whole history, and all the user's listens
 // between its first and last listen, to compare the item with the usual
 // listening and give its share of each month. Like the other detail pages,
-// blacklisted listens count, in both, so a share never exceeds 100%.
+// blacklisted listens count, in both, so a share never exceeds 100%. Removed
+// listens count in neither.
 export const getTimeline = async (
   user: User,
   type: TimelineType,
@@ -553,8 +555,8 @@ export const getTimeline = async (
   const timezone = getTimezone(user.settings.timezone);
   const match = {
     artist: matchArtistListens(user, id),
-    album: { owner: user._id, albumId: id },
-    track: { owner: user._id, id },
+    album: { owner: user._id, albumId: id, ...notRemoved },
+    track: { owner: user._id, id, ...notRemoved },
   }[type];
   const [item] = await InfosModel.aggregate<
     TimelineFacets & { range: { first: Date; last: Date }[] }
@@ -584,6 +586,7 @@ export const getTimeline = async (
       $match: {
         owner: user._id,
         played_at: { $gte: range.first, $lte: range.last },
+        ...notRemoved,
       },
     },
     { $facet: timelineFacets(timezone) },

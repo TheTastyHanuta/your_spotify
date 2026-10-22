@@ -11,9 +11,10 @@ import s from "./index.module.css";
 
 interface TrackOptionsProps {
   track: Track;
+  onRemove?: () => void;
 }
 
-export default function TrackOptions({ track }: TrackOptionsProps) {
+export default function TrackOptions({ track, onRemove }: TrackOptionsProps) {
   const ref = useRef(null);
   const [isOpen, open, close] = useBooleanState();
   const isGuest = useIsGuest();
@@ -39,7 +40,11 @@ export default function TrackOptions({ track }: TrackOptionsProps) {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}>
         <MenuTitle>{track.name}</MenuTitle>
-        <TrackOptionsContent onClose={close} track={track} />
+        <TrackOptionsContent
+          onClose={close}
+          track={track}
+          onRemove={onRemove}
+        />
       </Popover>
     </>
   );

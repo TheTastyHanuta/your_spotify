@@ -11,12 +11,15 @@ interface TrackSelectionPopupProps {
   anchor: VirtualElement | undefined;
   onClose: () => void;
   songIds: string[];
+  // Removes the selected listens from the stats
+  onRemove?: () => void;
 }
 
 export function TrackSelectionPopup({
   anchor,
   onClose,
   songIds,
+  onRemove,
 }: TrackSelectionPopupProps) {
   const dispatch = useDispatch();
   const isGuest = useIsGuest();
@@ -26,7 +29,7 @@ export function TrackSelectionPopup({
     dispatch(setPlaylistContext({ type: "specific", songIds }));
   };
 
-  // Its only action needs the owner's Spotify account
+  // Its actions need the owner's account
   if (isGuest) {
     return null;
   }
@@ -39,8 +42,22 @@ export function TrackSelectionPopup({
       // PaperProps={{ className: s.root }}
       transformOrigin={{ horizontal: "left", vertical: "top" }}
       anchorOrigin={{ horizontal: "left", vertical: "bottom" }}>
-      <MenuTitle>{songIds.length} songs selected</MenuTitle>
+      <MenuTitle>
+        {songIds.length} {songIds.length === 1 ? "song" : "songs"} selected
+      </MenuTitle>
       <MenuItem onClick={handlePlaylist}>Add to playlist</MenuItem>
+      {onRemove && (
+        <MenuItem
+          destructive
+          onClick={() => {
+            onClose();
+            onRemove();
+          }}>
+          {songIds.length === 1
+            ? "Remove listen"
+            : `Remove ${songIds.length} listens`}
+        </MenuItem>
+      )}
     </Popover>
   );
 }
