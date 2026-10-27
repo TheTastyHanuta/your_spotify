@@ -85,7 +85,12 @@ export default function Recap() {
   );
   const albums = useAPI(api.getBestAlbums, start, end, 1, 0);
   const months = useAPI(api.timePer, start, end, Timesplit.month);
-  const discoveries = useAPI(api.getDiscoveries, start, end, NB_SHOWN + 1);
+  const discoveries = useAPI(
+    api.getArtistDiscoveries,
+    start,
+    end,
+    NB_SHOWN + 1,
+  );
   const songDiscoveries = useAPI(
     api.getSongDiscoveries,
     start,
@@ -478,7 +483,7 @@ export default function Recap() {
                 discoveries.slice(0, NB_SHOWN).map(artistDiscoveryRow)
               ) : (
                 <Text size="normal" greyed>
-                  No new artists this year.
+                  No new artist stayed with you this year.
                 </Text>
               )
             ) : (

@@ -104,6 +104,10 @@ export default function Benchmarks() {
       request: () => api.getDiscoveries(interval.start, interval.end, 10),
     },
     {
+      title: "Get artist discoveries",
+      request: () => api.getArtistDiscoveries(interval.start, interval.end, 10),
+    },
+    {
       title: "Get song discoveries",
       request: () => api.getSongDiscoveries(interval.start, interval.end, 10),
     },

@@ -24,6 +24,7 @@ import {
   getCollaborativeBestSongs,
 } from "../database/queries/collaborative";
 import {
+  getArtistDiscoveries,
   getDiscoveryOverview,
   getNewPlaysPer,
   getOnRepeat,
@@ -604,6 +605,12 @@ router.get("/discoveries/songs", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, nb } = validate(req.query, discoveriesSchema);
   res.status(200).send(await getSongDiscoveries(user, start, end, nb));
+});
+
+router.get("/discoveries/artists", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, nb } = validate(req.query, discoveriesSchema);
+  res.status(200).send(await getArtistDiscoveries(user, start, end, nb));
 });
 
 router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {

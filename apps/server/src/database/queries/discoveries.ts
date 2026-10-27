@@ -292,12 +292,13 @@ export const getOnRepeat = async (
   );
 };
 
-// Songs first heard in the period that you kept playing: played again at
-// least KEPT_DAYS after the first listen (that play may come after the
-// period). Most played in the period first, with the number of months of the
-// period they were played in.
-export const getSongDiscoveries = async (
+// Songs or artists first heard in the period that you kept playing: played
+// again at least KEPT_DAYS after the first listen (that play may come after
+// the period). Most played in the period first, with the number of months of
+// the period they were played in.
+const getKeptDiscoveries = async (
   user: User,
+  field: "id" | "primaryArtistId",
   start: Date,
   end: Date,
   nb: number,
@@ -312,7 +313,7 @@ export const getSongDiscoveries = async (
     allListens(user),
     {
       $group: {
-        _id: "$id",
+        _id: `$${field}`,
         first: { $min: "$played_at" },
         last: { $max: "$played_at" },
         plays: { $sum: { $cond: [inPeriod(start, end), 1, 0] } },
@@ -342,14 +343,52 @@ export const getSongDiscoveries = async (
     { $sort: { plays: -1, _id: 1 } },
     { $limit: nb },
   ]);
+  return rows.map(({ _id, plays, first, months }) => ({
+    id: _id,
+    plays,
+    first,
+    months: months.filter(Boolean).length,
+  }));
+};
 
-  const docs = await findTracks(rows.map((row) => row._id));
+export const getSongDiscoveries = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const rows = await getKeptDiscoveries(user, "id", start, end, nb);
+  const docs = await findTracks(rows.map((row) => row.id));
   return keepOrder(
-    rows.map((row) => row._id),
+    rows.map((row) => row.id),
     docs,
     (track, index) => {
       const { plays, first, months } = rows[index]!;
-      return { track, plays, first, months: months.filter(Boolean).length };
+      return { track, plays, first, months };
+    },
+  );
+};
+
+export const getArtistDiscoveries = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const rows = await getKeptDiscoveries(
+    user,
+    "primaryArtistId",
+    start,
+    end,
+    nb,
+  );
+  const docs = await findArtists(rows.map((row) => row.id));
+  return keepOrder(
+    rows.map((row) => row.id),
+    docs,
+    (artist, index) => {
+      const { plays, first, months } = rows[index]!;
+      return { artist, plays, first, months };
     },
   );
 };

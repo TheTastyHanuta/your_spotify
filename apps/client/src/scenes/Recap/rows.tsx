@@ -2,7 +2,7 @@ import InlineArtist from "../../components/InlineArtist";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow, { ArtistNames } from "../../components/ItemRow";
 import {
-  DiscoveriesResponse,
+  ArtistDiscoveriesResponse,
   SongDiscoveriesResponse,
 } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
@@ -20,7 +20,7 @@ export const DISCOVERY_TAB_VALUES = ["artists", "songs"] as const;
 export const discoveryInfo = (tab: string) =>
   tab === "songs"
     ? "Songs you heard for the first time this year and still played a month later, most played first, with the day of the first listen and the number of months you played them in"
-    : "Artists you heard for the first time this year, most played first";
+    : "Artists you heard for the first time this year and still played a month later, most played first, with the day of the first listen and the number of months you played them in";
 
 // Plays in a row's right column
 export function Count({ n }: { n: number }) {
@@ -28,11 +28,13 @@ export function Count({ n }: { n: number }) {
 }
 
 // "Since 7 Jan · 12 months"
-export const songSince = (item: SongDiscoveriesResponse[number]) =>
+export const discoveredSince = (
+  item: SongDiscoveriesResponse[number] | ArtistDiscoveriesResponse[number],
+) =>
   `Since ${DateFormatter.toDayMonth(new Date(item.first))} · ${plural(item.months, "month")}`;
 
 export const artistDiscoveryRow = (
-  item: DiscoveriesResponse[number],
+  item: ArtistDiscoveriesResponse[number],
   index: number,
 ) => (
   <ItemRow
@@ -41,7 +43,7 @@ export const artistDiscoveryRow = (
     image={item.artist.images}
     round
     title={<InlineArtist artist={item.artist as Artist} size="normal" />}
-    subtitle={`First heard on ${DateFormatter.toDayMonthYear(new Date(item.first))}`}
+    subtitle={discoveredSince(item)}
     right={<Count n={item.plays} />}
   />
 );
@@ -58,7 +60,7 @@ export const songDiscoveryRow = (
     subtitle={
       <ArtistNames
         artists={item.track.full_artists}
-        prefix={`${songSince(item)} · `}
+        prefix={`${discoveredSince(item)} · `}
       />
     }
     right={<Count n={item.plays} />}

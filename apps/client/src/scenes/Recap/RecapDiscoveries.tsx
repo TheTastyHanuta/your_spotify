@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { api } from "../../services/apis/api";
-import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
 import {
@@ -12,7 +11,7 @@ import {
   DISCOVERY_TABS,
   discoveryInfo,
   songDiscoveryRow,
-  songSince,
+  discoveredSince,
 } from "./rows";
 import { useRecapYear, YearSelect } from "./year";
 
@@ -27,7 +26,12 @@ export default function RecapDiscoveries() {
   const yearState = useRecapYear();
   const { year, range } = yearState;
   const [tab, setTab] = useParamTab("tab", DISCOVERY_TAB_VALUES, "artists");
-  const artists = useAPI(api.getDiscoveries, range.start, range.end, NB_ALL);
+  const artists = useAPI(
+    api.getArtistDiscoveries,
+    range.start,
+    range.end,
+    NB_ALL,
+  );
   const songs = useAPI(api.getSongDiscoveries, range.start, range.end, NB_ALL);
 
   const common = {
@@ -65,7 +69,7 @@ export default function RecapDiscoveries() {
         nameText: item.track.name,
         meta: (
           <>
-            {songSince(item)} · {plays(item.plays)}
+            {discoveredSince(item)} · {plays(item.plays)}
           </>
         ),
       })}
@@ -75,7 +79,7 @@ export default function RecapDiscoveries() {
       {...common}
       items={artists}
       count={(n) => plural(n, "artist")}
-      empty="No new artists this year."
+      empty="No new artist stayed with you this year."
       row={artistDiscoveryRow}
       lead={(item) => ({
         images: item.artist.images,
@@ -84,8 +88,7 @@ export default function RecapDiscoveries() {
         nameText: item.artist.name,
         meta: (
           <>
-            {plays(item.plays)} · first heard{" "}
-            {DateFormatter.toDayMonthYear(new Date(item.first))}
+            {discoveredSince(item)} · {plays(item.plays)}
           </>
         ),
       })}

@@ -275,10 +275,17 @@ export type DiscoveriesResponse = {
   artist: Pick<Artist, "id" | "name" | "images">;
 }[];
 
-// Songs first heard in the period and still played a month later. months:
-// months of the period with plays
+// Songs or artists first heard in the period and still played a month
+// later. months: months of the period with plays
 export type SongDiscoveriesResponse = {
   track: ShortTrack;
+  plays: number;
+  first: string;
+  months: number;
+}[];
+
+export type ArtistDiscoveriesResponse = {
+  artist: Pick<Artist, "id" | "name" | "images">;
   plays: number;
   first: string;
   months: number;
@@ -430,6 +437,12 @@ export const api = {
     get<GenresResponse>("/spotify/genres", { start, end, nb }),
   getDiscoveries: (start: Date, end: Date, nb: number) =>
     get<DiscoveriesResponse>("/spotify/discoveries", { start, end, nb }),
+  getArtistDiscoveries: (start: Date, end: Date, nb: number) =>
+    get<ArtistDiscoveriesResponse>("/spotify/discoveries/artists", {
+      start,
+      end,
+      nb,
+    }),
   getSongDiscoveries: (start: Date, end: Date, nb: number) =>
     get<SongDiscoveriesResponse>("/spotify/discoveries/songs", {
       start,
