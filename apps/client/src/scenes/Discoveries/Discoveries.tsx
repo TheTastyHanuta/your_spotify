@@ -16,7 +16,7 @@ import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { percent } from "../../services/tools";
 import ExploringOverTime from "./ExploringOverTime";
-import OnRepeat from "./OnRepeat";
+import Hooked from "./Hooked";
 import {
   comebackRow,
   NEW_SONG_TABS,
@@ -139,7 +139,7 @@ export default function Discoveries() {
         )}
       </Section>
     ),
-    <OnRepeat key="repeat" />,
+    <Hooked key="hooked" />,
     !wholeHistory && (
       <Section
         key="comebacks"

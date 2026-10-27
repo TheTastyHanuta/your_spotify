@@ -92,7 +92,7 @@ export const getForgotten = async (user: User, days: number, nb: number) => {
 
 // Eras: stretches of months one artist or genre clearly led. A month's
 // leader is found over the months around it, so one wild month is not an
-// era (that is what "on repeat" shows).
+// era (that is what the hooked songs show).
 const ERA_WINDOW = 1; // months on each side
 const ERA_LEAD = 1.2; // times the plays of number two
 const ERA_MIN_SHARE = { artist: 0.03, genre: 0.05 }; // of all plays

@@ -1,5 +1,5 @@
 import { Skeleton } from "@mui/material";
-import { format } from "date-fns";
+import { addDays, eachMonthOfInterval, format } from "date-fns";
 import { CSSProperties, useState } from "react";
 import { useSelector } from "react-redux";
 import {
@@ -16,11 +16,17 @@ import {
 
 import {
   api,
+  Hook,
   ItemType,
   itemPath,
   TimelineCounts,
 } from "../../services/apis/api";
-import { DateFormatter, orderedIsoWeekdays } from "../../services/date";
+import {
+  DateFormatter,
+  fromDay,
+  orderedIsoWeekdays,
+} from "../../services/date";
+import { weeksText } from "../../services/hooked";
 import { useConditionalAPI } from "../../services/hooks/hooks";
 import { useNavigate } from "../../services/hooks/useNavigate";
 import { selectStatMeasurement } from "../../services/redux/modules/user/selector";
@@ -31,6 +37,7 @@ import {
 } from "../../services/stats";
 import { DateId } from "../../services/types";
 import Section from "../Section";
+import Text from "../Text";
 import Tooltip from "../Tooltip";
 
 import s from "./index.module.css";
@@ -86,9 +93,38 @@ interface ItemTimelineProps {
   id: string;
   // Already fetched by the page; fetched here when not given
   data?: Awaited<ReturnType<typeof api.getTimeline>>["data"] | null;
+  // A song's hook, marked on the months
+  hook?: Hook | null;
 }
 
-export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
+// "Hooked on 16 Jul 2024 for 11 weeks, stayed with you until Apr 2025, came
+// back 4 times"
+const hookSentence = (hook: Hook) =>
+  [
+    `Hooked on ${DateFormatter.toDayMonthYear(fromDay(hook.hook))} for ${weeksText(hook.weeks)}`,
+    hook.stayedUntil
+      ? `stayed with you until ${DateFormatter.toShortMonthYear(fromDay(hook.stayedUntil))}`
+      : "still with you",
+    hook.comebacks.length > 0 &&
+      `came back ${hook.comebacks.length === 1 ? "once" : `${hook.comebacks.length} times`}`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+// Months touched by the days from `from` to `to`, as monthKey
+const monthsOf = (from: Date, to: Date) =>
+  to < from
+    ? []
+    : eachMonthOfInterval({ start: from, end: to }).map((date) =>
+        monthKey({ year: date.getFullYear(), month: date.getMonth() + 1 }),
+      );
+
+export default function ItemTimeline({
+  type,
+  id,
+  data,
+  hook,
+}: ItemTimelineProps) {
   const [fetched] = useConditionalAPI(
     data === undefined,
     api.getTimeline,
@@ -170,6 +206,36 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
     : -1;
   const peakDate = peak >= 0 ? months[peak]!.dateWithPrecision.date : undefined;
 
+  // The hooked weeks in the tint, the months it stayed between the tint and
+  // the other bars, a dot over the months it came back
+  const hookStart = hook ? fromDay(hook.hook) : undefined;
+  const heldEnd = hook && addDays(hookStart!, 7 * hook.weeks - 1);
+  const heldMonths = new Set(hook ? monthsOf(hookStart!, heldEnd!) : []);
+  const stayedMonths = new Set(
+    hook
+      ? monthsOf(
+          addDays(heldEnd!, 1),
+          hook.stayedUntil
+            ? addDays(fromDay(hook.stayedUntil), -1)
+            : new Date(),
+        )
+      : [],
+  );
+  const comebackMonths = new Set(
+    hook?.comebacks.map((c) => keyOf(fromDay(c.day))) ?? [],
+  );
+  const barFill = (date: Date, index: number) => {
+    const key = keyOf(date);
+    if (hook) {
+      return heldMonths.has(key)
+        ? "var(--tint)"
+        : stayedMonths.has(key)
+          ? "color-mix(in oklab, var(--tint) 55%, var(--tint-bar))"
+          : "var(--tint-bar)";
+    }
+    return index === peak ? "var(--tint)" : "var(--tint-bar)";
+  };
+
   const openMonth = (date: Date) =>
     navigate(
       `${itemPath[type]}/${id}/history?month=${format(date, "yyyy-MM")}`,
@@ -229,6 +295,12 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
 
   return (
     <Section title="Over time" tabs={TABS} tab={tab} onTab={setTab}>
+      {hook && !comparison && (
+        <Text element="div" size="normal" greyed className={s.hook}>
+          {hookSentence(hook)}
+          {hook.comebacks.length > 0 && " (the dots)"}
+        </Text>
+      )}
       <div className={s.chart}>
         {!comparison ? (
           // At least 10px per month: on phones the chart scrolls sideways
@@ -285,12 +357,25 @@ export default function ItemTimeline({ type, id, data }: ItemTimelineProps) {
                     {months.map((month, index) => (
                       <Cell
                         key={month.x}
-                        fill={
-                          index === peak ? "var(--tint)" : "var(--tint-bar)"
-                        }
+                        fill={barFill(month.dateWithPrecision.date, index)}
                       />
                     ))}
                   </Bar>
+                  {months
+                    .filter((month) =>
+                      comebackMonths.has(keyOf(month.dateWithPrecision.date)),
+                    )
+                    .map((month) => (
+                      <ReferenceDot
+                        key={`comeback-${month.x}`}
+                        x={month.x}
+                        y={month.y}
+                        r={3}
+                        fill="var(--text)"
+                        stroke="none"
+                        ifOverflow="visible"
+                      />
+                    ))}
                   {peakDate && (
                     // Placed by value: the index a LabelList gets does not match
                     // the data index

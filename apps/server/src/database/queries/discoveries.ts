@@ -1,9 +1,8 @@
 import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
-import { dayNumber, dayString, DAY_MS } from "./insights";
+import { DAY_MS } from "./insights";
 import {
-  basicMatch,
   getDateParts,
   getGroupingByTimeSplit,
   getTimezone,
@@ -19,9 +18,6 @@ const NB_STUCK = 20;
 // played for this long
 const BREAK_MIN_PLAYS = 10;
 const BREAK_DAYS = 182;
-// On repeat: the most plays inside any window of this many days
-const REPEAT_DAYS = 7;
-const REPEAT_MIN_PLAYS = 5;
 // Kept listening: played again this many days after the first listen
 const KEPT_DAYS = 30;
 // Did they stick: discovered artists with at least this many plays, stuck
@@ -253,56 +249,6 @@ const trackRows = (
     }),
   );
 
-// Songs with the most plays inside any REPEAT_DAYS days of the period
-export const getOnRepeat = async (
-  user: User,
-  start: Date,
-  end: Date,
-  nb: number,
-) => {
-  const timezone = getTimezone(user.settings.timezone);
-  const rows: { _id: string; days: { day: string; plays: number }[] }[] =
-    await InfosModel.aggregate([
-      ...basicMatch(user._id, start, end),
-      {
-        $group: {
-          _id: { track: "$id", day: dayString(timezone) },
-          plays: { $sum: 1 },
-        },
-      },
-      {
-        $group: {
-          _id: "$_id.track",
-          total: { $sum: "$plays" },
-          days: { $push: { day: "$_id.day", plays: "$plays" } },
-        },
-      },
-      { $match: { total: { $gte: REPEAT_MIN_PLAYS } } },
-    ]);
-
-  // MongoDB 5's window functions would do this in the database
-  const best = rows
-    .map((row) => ({ id: row._id, ...bestWindow(row.days) }))
-    .filter((row) => row.plays >= REPEAT_MIN_PLAYS)
-    .sort(
-      (a, b) =>
-        b.plays - a.plays ||
-        a.from.localeCompare(b.from) ||
-        a.id.localeCompare(b.id),
-    )
-    .slice(0, nb);
-
-  const docs = await findTracks(best.map((row) => row.id));
-  return keepOrder(
-    best.map((row) => row.id),
-    docs,
-    (track, index) => {
-      const { plays, from, to } = best[index]!;
-      return { track, plays, from, to };
-    },
-  );
-};
-
 // Songs or artists first heard in the period that you kept playing: played
 // again at least KEPT_DAYS after the first listen (that play may come after
 // the period). Most played in the period first, with the number of months of
@@ -403,28 +349,6 @@ export const getArtistDiscoveries = async (
     },
   );
 };
-
-// days: "YYYY-MM-DD" with plays. The window of REPEAT_DAYS days with the most
-// plays, from its first to its last day with plays.
-export function bestWindow(days: { day: string; plays: number }[]) {
-  const sorted = days
-    .map((d) => ({ ...d, n: dayNumber(d.day) }))
-    .sort((a, b) => a.n - b.n);
-  let best = { plays: 0, from: "", to: "" };
-  let sum = 0;
-  let first = 0;
-  for (const day of sorted) {
-    sum += day.plays;
-    while (sorted[first]!.n <= day.n - REPEAT_DAYS) {
-      sum -= sorted[first]!.plays;
-      first += 1;
-    }
-    if (sum > best.plays) {
-      best = { plays: sum, from: sorted[first]!.day, to: day.day };
-    }
-  }
-  return best;
-}
 
 // Plays per time step, and the plays of songs heard for the first time in
 // the period and in that same step

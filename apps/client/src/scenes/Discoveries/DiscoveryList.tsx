@@ -5,12 +5,15 @@ import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
+import { hookDay, weeksText } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { plural } from "../../services/tools";
+import { HOOKED_EMPTY, HOOKED_INFO } from "./Hooked";
 import {
   breakLength,
   comebackRow,
+  hookedRow,
   NEW_SONG_TAB_VALUES,
   NEW_SONG_TABS,
   newArtistRow,
@@ -18,8 +21,6 @@ import {
   newSongInfo,
   newSongList,
   newTrackRow,
-  repeatDays,
-  repeatRow,
 } from "./rows";
 
 // The full Discoveries lists behind "See all", at /discoveries/<list>
@@ -44,8 +45,11 @@ export default function DiscoveryList() {
       return <Navigate to="/discoveries/new-songs?tab=known" replace />;
     case "comebacks":
       return <Comebacks />;
+    case "hooked":
+      return <HookedList />;
+    // The list's old address, before hooked songs replaced it
     case "on-repeat":
-      return <OnRepeatList />;
+      return <Navigate to="/discoveries/hooked" replace />;
     default:
       return <Navigate to="/discoveries" replace />;
   }
@@ -166,18 +170,23 @@ function Comebacks() {
   );
 }
 
-function OnRepeatList() {
+function HookedList() {
   const { interval } = useSelector(selectRawIntervalDetail);
-  const items = useAPI(api.getOnRepeat, interval.start, interval.end, NB_ALL);
+  const items = useAPI(
+    api.getHookedSongs,
+    interval.start,
+    interval.end,
+    NB_ALL,
+  );
   return (
     <ListPage
-      title="On repeat"
+      title="Hooked"
       back={back}
       items={items}
-      info="Songs with the most plays inside 7 days of this period, at least 5"
+      info={HOOKED_INFO}
       count={(n) => plural(n, "song")}
-      empty="No song was played 5 times within 7 days in this period."
-      row={repeatRow}
+      empty={HOOKED_EMPTY}
+      row={hookedRow}
       right={
         items &&
         items.length > 0 && (
@@ -195,7 +204,8 @@ function OnRepeatList() {
         nameText: item.track.name,
         meta: (
           <>
-            {plays(item.plays)} in 7 days · {repeatDays(item)}
+            Hooked {hookDay(item.hook)} for {weeksText(item.weeks)} ·{" "}
+            {plays(item.plays)}
           </>
         ),
       })}

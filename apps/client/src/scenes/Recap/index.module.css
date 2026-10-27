@@ -46,3 +46,16 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px 28px;
 }
+
+/* The month a song hooked, the weeks under it */
+.hookWhen {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.hookWhen small {
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--muted);
+}

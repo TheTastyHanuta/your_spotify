@@ -43,6 +43,8 @@ import {
   Count,
   DISCOVERY_TABS,
   discoveryInfo,
+  HOOKED_INFO,
+  hookYearRow,
   songDiscoveryRow,
 } from "./rows";
 import { useRecapYear, YearSelect } from "./year";
@@ -91,6 +93,7 @@ export default function Recap() {
     end,
     NB_SHOWN + 1,
   );
+  const hooked = useAPI(api.getHookedSongs, start, end, NB_SHOWN + 1);
   const songDiscoveries = useAPI(
     api.getSongDiscoveries,
     start,
@@ -490,6 +493,24 @@ export default function Recap() {
               <RowsSkeleton />
             )}
           </Section>
+          <Section
+            title="Hooked this year"
+            info={HOOKED_INFO}
+            link={seeAll(hooked, `/recap/hooked?year=${year}`)}>
+            {hooked ? (
+              hooked.length > 0 ? (
+                hooked.slice(0, NB_SHOWN).map(hookYearRow)
+              ) : (
+                <Text size="normal" greyed>
+                  No song hooked you this year.
+                </Text>
+              )
+            ) : (
+              <RowsSkeleton />
+            )}
+          </Section>
+        </div>
+        <div className={clsx("ruled-columns", s.work)}>
           <Section title="Habits">
             {overview && traits ? (
               <div className={s.facts}>
@@ -531,31 +552,33 @@ export default function Recap() {
               <RowsSkeleton />
             )}
           </Section>
+          <Section title="Taste">
+            {taste && genres ? (
+              <div className={s.taste}>
+                {median !== undefined && (
+                  <Fact title="Musical age">
+                    {plural(musicalAge(median, year), "year")} in {year}: half
+                    of your plays were of music released in {median} or before
+                  </Fact>
+                )}
+                {topGenre && (
+                  <Fact title="Top genre">
+                    {topGenre}:{" "}
+                    {Math.round(
+                      (genres.genres[0]!.plays / genres.totalPlays) * 100,
+                    )}
+                    % of your plays were by artists tagged {topGenre}
+                  </Fact>
+                )}
+                {taste.years.length > 0 && (
+                  <TopReleaseYear years={taste.years} />
+                )}
+              </div>
+            ) : (
+              <RowsSkeleton />
+            )}
+          </Section>
         </div>
-        <Section title="Taste">
-          {taste && genres ? (
-            <div className={s.taste}>
-              {median !== undefined && (
-                <Fact title="Musical age">
-                  {plural(musicalAge(median, year), "year")} in {year}: half of
-                  your plays were of music released in {median} or before
-                </Fact>
-              )}
-              {topGenre && (
-                <Fact title="Top genre">
-                  {topGenre}:{" "}
-                  {Math.round(
-                    (genres.genres[0]!.plays / genres.totalPlays) * 100,
-                  )}
-                  % of your plays were by artists tagged {topGenre}
-                </Fact>
-              )}
-              {taste.years.length > 0 && <TopReleaseYear years={taste.years} />}
-            </div>
-          ) : (
-            <RowsSkeleton />
-          )}
-        </Section>
       </div>
     </div>
   );

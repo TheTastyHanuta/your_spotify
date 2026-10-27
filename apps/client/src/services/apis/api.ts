@@ -175,13 +175,30 @@ export type DiscoveryOverviewResponse = {
     artists: { artist: ShortArtist; late: number }[];
   };
 };
-// The best 7 days of each song, "YYYY-MM-DD"
-export type OnRepeatResponse = {
-  track: ShortTrack;
+// A song's hook, days as "YYYY-MM-DD" in the stats timezone. weeks: hooked
+// for; plays: while hooked; knownDays: from the first listen to the hook;
+// stayedUntil: null while still with you; shape: plays per week from 4 weeks
+// before the hook; yearLater: null until a year and 3 months have passed
+export type Hook = {
+  hook: string;
+  weeks: number;
   plays: number;
-  from: string;
-  to: string;
-}[];
+  peakDay: number;
+  knownDays: number;
+  stayedUntil: string | null;
+  comebacks: { day: string; plays: number }[];
+  shape: number[];
+  yearLater: boolean | null;
+};
+export type HookedSong = Hook & { track: ShortTrack };
+export type HookSummaryResponse = {
+  hooks: number;
+  clickedLate: number;
+  averageWeeks: number | null;
+  yearLater: { kept: number; counted: number };
+  perStep: { _id: DateId; newFinds: number; clickedLate: number }[];
+};
+export type HooksPerYearResponse = { year: number; hooks: HookedSong[] }[];
 // newCount: plays of songs first heard in the period and in that step
 export type NewPlaysPerResponse = {
   _id: DateId | null;
@@ -459,8 +476,16 @@ export const api = {
       end,
       nb,
     }),
-  getOnRepeat: (start: Date, end: Date, nb: number) =>
-    get<OnRepeatResponse>("/spotify/discoveries/on-repeat", { start, end, nb }),
+  // Songs that hooked the listener in the period, strongest first
+  getHookedSongs: (start: Date, end: Date, nb: number) =>
+    get<HookedSong[]>("/spotify/hooks", { start, end, nb }),
+  getHookSummary: (start: Date, end: Date, step: "month" | "year") =>
+    get<HookSummaryResponse>("/spotify/hooks/summary", { start, end, step }),
+  // nb: hooks per year
+  getHooksPerYear: (nb: number) =>
+    get<HooksPerYearResponse>("/spotify/hooks/years", { nb }),
+  getSongHook: (id: string) =>
+    get<{ hook: Hook | null }>("/spotify/hooks/song", { id }),
   getNewPlaysPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<NewPlaysPerResponse>("/spotify/discoveries/per", {
       start,

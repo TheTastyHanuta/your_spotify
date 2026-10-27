@@ -109,3 +109,65 @@
     display: none;
   }
 }
+
+/* Your hooks over the years: a year, then its strongest hooks */
+.hookYear {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.hookYear > :first-child {
+  font-size: 16px;
+  padding-top: 10px;
+}
+
+.hookList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hook {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(96px, 200px);
+  gap: 12px;
+  align-items: center;
+}
+
+.hookCover img {
+  display: block;
+  border-radius: 4px;
+}
+
+.hookText {
+  min-width: 0;
+}
+
+.hookWeeks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hookWeeks > :first-child {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--tint);
+  min-width: 4px;
+}
+
+@media screen and (max-width: 600px) {
+  .hook {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .hookWeeks {
+    grid-column: 2;
+  }
+}

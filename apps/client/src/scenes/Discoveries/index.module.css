@@ -85,3 +85,41 @@
   border-radius: 50%;
   object-fit: cover;
 }
+
+/* A hooked song's weeks, beside its plays */
+.hookRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.shape {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  width: 95px;
+  height: 28px;
+}
+
+.shape > i {
+  flex: 1;
+  background-color: color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+.shape > i.before {
+  background-color: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.shape > i.held {
+  background-color: var(--tint);
+}
+
+.shape > i.stayed {
+  background-color: color-mix(in oklab, var(--tint) 45%, var(--bg));
+}
+
+@media screen and (max-width: 480px) {
+  .shape {
+    display: none;
+  }
+}

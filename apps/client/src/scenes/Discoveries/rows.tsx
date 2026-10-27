@@ -7,9 +7,11 @@ import Text from "../../components/Text";
 import {
   DiscoveriesResponse,
   DiscoveryOverviewResponse,
-  OnRepeatResponse,
+  HookedSong,
 } from "../../services/apis/api";
-import { dayRange, DateFormatter, fromDay } from "../../services/date";
+import { DateFormatter } from "../../services/date";
+import { hookDay, knownText, weeksText } from "../../services/hooked";
+import HookShape from "./HookShape";
 
 import s from "./index.module.css";
 
@@ -38,7 +40,6 @@ export const newSongEmpty = (tab: string) =>
 type NewArtist = DiscoveriesResponse[number];
 type NewTrack = DiscoveryOverviewResponse["knownArtistTracks"][number];
 type Comeback = DiscoveryOverviewResponse["comebacks"][number];
-type Repeat = OnRepeatResponse[number];
 
 // "1 year 3 months", at least "1 month"
 export const breakLength = (from: Date, to: Date) => {
@@ -48,9 +49,6 @@ export const breakLength = (from: Date, to: Date) => {
     "1 month"
   );
 };
-
-export const repeatDays = (item: Repeat) =>
-  dayRange(fromDay(item.from), fromDay(item.to));
 
 // Plays in a row's right column
 export function Plays({ n }: { n: number }) {
@@ -103,18 +101,28 @@ export const comebackRow = (item: Comeback, index: number) => (
   />
 );
 
-export const repeatRow = (item: Repeat, index: number) => (
-  <ItemRow
-    key={item.track.id}
-    rank={index + 1}
-    image={item.track.full_album.images}
-    title={<InlineTrack track={item.track} size="normal" />}
-    subtitle={
-      <ArtistNames
-        artists={item.track.full_artists}
-        prefix={`${repeatDays(item)} · `}
-      />
-    }
-    right={<Plays n={item.plays} />}
-  />
-);
+// "10 Jan · 7 weeks · known 3 months · artists", the weeks drawn beside the
+// plays while hooked. when: the hook day's text.
+export const makeHookedRow =
+  (when: (day: string) => string) => (item: HookedSong, index: number) => (
+    <ItemRow
+      key={item.track.id}
+      rank={index + 1}
+      image={item.track.full_album.images}
+      title={<InlineTrack track={item.track} size="normal" />}
+      subtitle={
+        <ArtistNames
+          artists={item.track.full_artists}
+          prefix={`${when(item.hook)} · ${weeksText(item.weeks)} · ${knownText(item.knownDays)} · `}
+        />
+      }
+      right={
+        <span className={s.hookRight}>
+          <HookShape hook={item} />
+          <Plays n={item.plays} />
+        </span>
+      }
+    />
+  );
+
+export const hookedRow = makeHookedRow(hookDay);

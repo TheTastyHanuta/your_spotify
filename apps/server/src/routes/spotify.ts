@@ -27,9 +27,14 @@ import {
   getArtistDiscoveries,
   getDiscoveryOverview,
   getNewPlaysPer,
-  getOnRepeat,
   getSongDiscoveries,
 } from "../database/queries/discoveries";
+import {
+  getHookedSongs,
+  getHookSummary,
+  getHooksPerYear,
+  getSongHook,
+} from "../database/queries/hooked";
 import {
   getCalendar,
   getDecadesPerYear,
@@ -619,10 +624,35 @@ router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(await getDiscoveryOverview(user, start, end, nb));
 });
 
-router.get("/discoveries/on-repeat", isLoggedOrGuest, async (req, res) => {
+router.get("/hooks", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end, nb } = validate(req.query, listSchema);
-  res.status(200).send(await getOnRepeat(user, start, end, nb));
+  res.status(200).send(await getHookedSongs(user, start, end, nb));
+});
+
+const hookSummarySchema = interval.extend({
+  step: z.enum(["month", "year"]).default("month"),
+});
+
+router.get("/hooks/summary", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, step } = validate(req.query, hookSummarySchema);
+  res.status(200).send(await getHookSummary(user, start, end, step));
+});
+
+router.get("/hooks/years", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { nb } = validate(req.query, z.object({ nb: nbRows(3) }));
+  res.status(200).send(await getHooksPerYear(user, nb));
+});
+
+router.get("/hooks/song", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { id } = validate(
+    req.query,
+    z.object({ id: z.string().min(1).max(64) }),
+  );
+  res.status(200).send({ hook: await getSongHook(user, id) });
 });
 
 router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {

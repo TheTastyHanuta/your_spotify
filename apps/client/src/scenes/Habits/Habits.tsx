@@ -25,6 +25,7 @@ import { msToMinutes } from "../../services/stats";
 import { plural } from "../../services/tools";
 import { PARTS_OF_DAY, listeningTraits } from "../../services/traits";
 import Calendar from "./Calendar";
+import HowYouGetHooked from "./HowYouGetHooked";
 import LongestSessions from "./LongestSessions";
 import { formatMeasure, NB_HABITS_SHOWN } from "./measure";
 import PartsOfDay from "./PartsOfDay";
@@ -226,6 +227,7 @@ export default function Habits() {
         />
         <PartsOfDay format={format} artists={partArtists} />
         <Variety trait={discoveryTrait} />
+        <HowYouGetHooked />
         <LongestSessions />
       </div>
     </div>

@@ -36,6 +36,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
   const rank = useAPI(api.getTrackRank, trackId);
   // Fetched here once: the strip sums its months, the chart draws them
   const timeline = useAPI(api.getTimeline, "track", trackId);
+  const hook = useAPI(api.getSongHook, trackId);
 
   const albumById = Object.fromEntries(
     stats.listenedOn.map((item) => [item.album.id, item.album]),
@@ -103,7 +104,12 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
           },
         ]}
       />
-      <ItemTimeline type="track" id={trackId} data={timeline} />
+      <ItemTimeline
+        type="track"
+        id={trackId}
+        data={timeline}
+        hook={hook?.hook}
+      />
       <div className={clsx("ruled-columns", s.columns)}>
         <Section
           title="Recent plays"

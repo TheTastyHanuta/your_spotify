@@ -40,3 +40,9 @@
   color: var(--muted);
   font-size: 0.9em;
 }
+
+/* The song's hook, above the months it marks */
+.hook {
+  margin-bottom: 8px;
+  max-width: 75ch;
+}

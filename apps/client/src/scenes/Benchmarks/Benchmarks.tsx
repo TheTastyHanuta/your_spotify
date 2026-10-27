@@ -116,9 +116,14 @@ export default function Benchmarks() {
       request: () => api.getDiscoveryOverview(interval.start, interval.end, 20),
     },
     {
-      title: "Get songs on repeat",
-      request: () => api.getOnRepeat(interval.start, interval.end, 20),
+      title: "Get hooked songs",
+      request: () => api.getHookedSongs(interval.start, interval.end, 20),
     },
+    {
+      title: "Get hook summary",
+      request: () => api.getHookSummary(interval.start, interval.end, "month"),
+    },
+    { title: "Get hooks per year", request: () => api.getHooksPerYear(3) },
     {
       title: "Get new plays per",
       request: () =>

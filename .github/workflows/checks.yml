@@ -36,6 +36,7 @@ jobs:
           pnpm lint
           pnpm typecheck
           node scripts/sessions.check.mjs
+          node scripts/hooks.check.mjs
 
       - name: Client
         working-directory: apps/client

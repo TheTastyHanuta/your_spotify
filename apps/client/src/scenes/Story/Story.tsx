@@ -10,6 +10,7 @@ import Text from "../../components/Text";
 import { api } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import Eras, { dates, ongoing, shortMonth } from "./Eras";
+import Hooks from "./Hooks";
 import Loyal from "./Loyal";
 import {
   DEFAULT_SINCE,
@@ -132,6 +133,7 @@ export default function Story() {
           </Section>
         </div>
         <Eras eras={eras} />
+        <Hooks />
         <Loyal />
       </div>
     </div>

@@ -1,11 +1,14 @@
+import { useMemo } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { SectionTabs } from "../../components/Section";
 import { api } from "../../services/apis/api";
+import { hookMonth, weeksText } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
+import { makeHookedRow } from "../Discoveries/rows";
 import {
   DEFAULT_SINCE,
   forgottenArtistRow,
@@ -40,6 +43,8 @@ export default function StoryList() {
       return <Forgotten />;
     case "loyal":
       return <LoyalList />;
+    case "hooks":
+      return <HooksList />;
     default:
       return <Navigate to="/story" replace />;
   }
@@ -147,6 +152,38 @@ function LoyalList() {
         name: <Link to={`/artist/${item.artist.id}`}>{item.artist.name}</Link>,
         nameText: item.artist.name,
         meta: <>Played {loyalSince(item)}</>,
+      })}
+    />
+  );
+}
+
+const hookRow = makeHookedRow(hookMonth);
+
+// Every hook of the whole history, strongest first
+function HooksList() {
+  const [start, end] = useMemo(() => [new Date(0), new Date()], []);
+  const items = useAPI(api.getHookedSongs, start, end, NB_ALL);
+  return (
+    <ListPage
+      title="Your hooks"
+      back={back}
+      items={items}
+      info="Every song that suddenly took over: at least 6 plays in 7 days, four times your usual for it. Strongest first, by plays while hooked"
+      count={(n) => plural(n, "song")}
+      empty="No song has hooked you yet."
+      row={hookRow}
+      hideInterval
+      right={items && playlist(items.map((item) => item.track.id))}
+      lead={(item) => ({
+        images: item.track.full_album.images,
+        name: <Link to={`/song/${item.track.id}`}>{item.track.name}</Link>,
+        nameText: item.track.name,
+        meta: (
+          <>
+            Hooked {hookMonth(item.hook)} for {weeksText(item.weeks)} ·{" "}
+            <span className="num">{item.plays.toLocaleString()}</span> plays
+          </>
+        ),
       })}
     />
   );
