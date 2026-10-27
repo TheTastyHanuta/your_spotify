@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 
@@ -16,13 +17,22 @@ import { selectRawIntervalDetail } from "../../services/redux/modules/user/selec
 import { percent } from "../../services/tools";
 import ExploringOverTime from "./ExploringOverTime";
 import OnRepeat from "./OnRepeat";
-import { comebackRow, knownArtistTrackRow, newArtistRow } from "./rows";
+import {
+  comebackRow,
+  NEW_SONG_TABS,
+  newArtistRow,
+  newSongEmpty,
+  newSongInfo,
+  newSongList,
+  newTrackRow,
+} from "./rows";
 import Stick from "./Stick";
 
 import s from "./index.module.css";
 
 export default function Discoveries() {
   const { interval } = useSelector(selectRawIntervalDetail);
+  const [songTab, setSongTab] = useState<"new" | "known">("new");
   const overview = useAPI(
     api.getDiscoveryOverview,
     interval.start,
@@ -75,6 +85,7 @@ export default function Discoveries() {
   // Every play of the period is of a song new in it: the period starts before
   // the first listen, there is nothing to compare with
   const wholeHistory = overview && overview.newTrackPlays === overview.plays;
+  const newSongs = overview?.[newSongList[songTab]];
 
   const lists = [
     <Section
@@ -94,34 +105,33 @@ export default function Discoveries() {
         <RowsSkeleton />
       )}
     </Section>,
-    <OnRepeat key="repeat" />,
+    // Over the whole history every song is by a new artist, nothing to split
     !wholeHistory && (
       <Section
-        key="known"
-        title="New songs by artists you knew"
-        info="Songs heard for the first time in this period, by artists you had played before it"
-        link={seeAll(overview?.knownArtistTracks, "/discoveries/known-artists")}
+        key="songs"
+        title="New songs"
+        info={newSongInfo(songTab)}
+        tabs={NEW_SONG_TABS}
+        tab={songTab}
+        onTab={(value) => setSongTab(value as typeof songTab)}
+        link={seeAll(newSongs, `/discoveries/new-songs?tab=${songTab}`)}
         right={
-          overview &&
-          overview.knownArtistTracks.length > 0 && (
+          newSongs &&
+          newSongs.length > 0 && (
             <AddToPlaylist
               context={{
                 type: "specific",
-                songIds: overview.knownArtistTracks
-                  .slice(0, NB_SHOWN)
-                  .map((t) => t.track.id),
+                songIds: newSongs.slice(0, NB_SHOWN).map((t) => t.track.id),
               }}
             />
           )
         }>
-        {overview ? (
-          overview.knownArtistTracks.length > 0 ? (
-            overview.knownArtistTracks
-              .slice(0, NB_SHOWN)
-              .map(knownArtistTrackRow)
+        {newSongs ? (
+          newSongs.length > 0 ? (
+            newSongs.slice(0, NB_SHOWN).map(newTrackRow)
           ) : (
             <Text size="normal" greyed>
-              No new songs by artists you knew in this period.
+              {newSongEmpty(songTab)}
             </Text>
           )
         ) : (
@@ -129,6 +139,7 @@ export default function Discoveries() {
         )}
       </Section>
     ),
+    <OnRepeat key="repeat" />,
     !wholeHistory && (
       <Section
         key="comebacks"

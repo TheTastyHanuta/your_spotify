@@ -64,8 +64,9 @@ export const keepOrder = <T extends { id: string }, R>(
   });
 };
 
-// Summary, songs new by artists already known, comebacks and whether the
-// artists discovered in the period stuck
+// Summary, new songs by artists discovered in the period and by artists
+// already known, comebacks and whether the artists discovered in the period
+// stuck
 export const getDiscoveryOverview = async (
   user: User,
   start: Date,
@@ -167,13 +168,15 @@ export const getDiscoveryOverview = async (
   const isNew = (first: Date) => first > start;
 
   const totalPlays = tracks.reduce((sum, t) => sum + t.plays, 0);
-  const newTracks = tracks.filter((t) => isNew(t.first));
-  const knownArtistTracks = newTracks
-    .filter((t) => {
-      const first = artistFirst.get(t.artist);
-      return first !== undefined && !isNew(first);
-    })
+  const newTracks = tracks
+    .filter((t) => isNew(t.first))
     .sort((a, b) => b.plays - a.plays || a._id.localeCompare(b._id));
+  const byKnownArtist = (t: (typeof tracks)[number]) => {
+    const first = artistFirst.get(t.artist);
+    return first !== undefined && !isNew(first);
+  };
+  const knownArtistTracks = newTracks.filter(byKnownArtist);
+  const newArtistTracks = newTracks.filter((t) => !byKnownArtist(t));
 
   const discovered = artists.filter((a) => isNew(a.first));
   const comebacks = artists
@@ -197,10 +200,11 @@ export const getDiscoveryOverview = async (
       a.first.getTime() + FADED_DAYS * DAY_MS > now.getTime(),
   );
 
-  const shownTracks = knownArtistTracks.slice(0, nb);
+  const shownKnown = knownArtistTracks.slice(0, nb);
+  const shownNew = newArtistTracks.slice(0, nb);
   const shownStuck = stuck.slice(0, NB_STUCK);
   const [trackDocs, artistDocs] = await Promise.all([
-    findTracks(shownTracks.map((t) => t._id)),
+    findTracks([...shownKnown, ...shownNew].map((t) => t._id)),
     findArtists([...comebacks, ...shownStuck].map((a) => a._id)),
   ]);
 
@@ -210,15 +214,8 @@ export const getDiscoveryOverview = async (
     newTracks: newTracks.length,
     newTracksByKnownArtists: knownArtistTracks.length,
     newTrackPlays: newTracks.reduce((sum, t) => sum + t.plays, 0),
-    knownArtistTracks: keepOrder(
-      shownTracks.map((t) => t._id),
-      trackDocs,
-      (track, index) => ({
-        track,
-        plays: shownTracks[index]!.plays,
-        first: shownTracks[index]!.first,
-      }),
-    ),
+    knownArtistTracks: trackRows(shownKnown, trackDocs),
+    newArtistTracks: trackRows(shownNew, trackDocs),
     comebacks: keepOrder(
       comebacks.map((a) => a._id),
       artistDocs,
@@ -241,6 +238,20 @@ export const getDiscoveryOverview = async (
     },
   };
 };
+
+const trackRows = (
+  rows: { _id: string; plays: number; first: Date }[],
+  docs: Awaited<ReturnType<typeof findTracks>>,
+) =>
+  keepOrder(
+    rows.map((t) => t._id),
+    docs,
+    (track, index) => ({
+      track,
+      plays: rows[index]!.plays,
+      first: rows[index]!.first,
+    }),
+  );
 
 // Songs with the most plays inside any REPEAT_DAYS days of the period
 export const getOnRepeat = async (

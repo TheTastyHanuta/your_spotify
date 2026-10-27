@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import { Link, Navigate, useParams } from "react-router-dom";
 
 import AddToPlaylist from "../../components/AddToPlaylist";
-import ListPage, { NB_ALL } from "../../components/ListPage";
+import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
@@ -11,8 +11,13 @@ import { plural } from "../../services/tools";
 import {
   breakLength,
   comebackRow,
-  knownArtistTrackRow,
+  NEW_SONG_TAB_VALUES,
+  NEW_SONG_TABS,
   newArtistRow,
+  newSongEmpty,
+  newSongInfo,
+  newSongList,
+  newTrackRow,
   repeatDays,
   repeatRow,
 } from "./rows";
@@ -32,8 +37,11 @@ export default function DiscoveryList() {
   switch (list) {
     case "new-artists":
       return <NewArtists />;
+    case "new-songs":
+      return <NewSongs />;
+    // The list's old address, before it got a tab for new artists
     case "known-artists":
-      return <KnownArtistTracks />;
+      return <Navigate to="/discoveries/new-songs?tab=known" replace />;
     case "comebacks":
       return <Comebacks />;
     case "on-repeat":
@@ -76,24 +84,28 @@ function NewArtists() {
   );
 }
 
-function KnownArtistTracks() {
+function NewSongs() {
   const { interval } = useSelector(selectRawIntervalDetail);
+  const [tab, setTab] = useParamTab("tab", NEW_SONG_TAB_VALUES, "new");
   const overview = useAPI(
     api.getDiscoveryOverview,
     interval.start,
     interval.end,
     NB_ALL,
   );
-  const items = overview?.knownArtistTracks ?? null;
+  const items = overview?.[newSongList[tab]] ?? null;
   return (
     <ListPage
-      title="New songs by artists you knew"
+      title="New songs"
       back={back}
       items={items}
-      info="Songs heard for the first time in this period, by artists you had played before it"
+      info={newSongInfo(tab)}
+      tabs={NEW_SONG_TABS}
+      tab={tab}
+      onTab={setTab}
       count={(n) => plural(n, "song")}
-      empty="No new songs by artists you knew in this period."
-      row={knownArtistTrackRow}
+      empty={newSongEmpty(tab)}
+      row={newTrackRow}
       right={
         items &&
         items.length > 0 && (

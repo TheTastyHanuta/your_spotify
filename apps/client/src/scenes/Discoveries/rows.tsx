@@ -16,8 +16,27 @@ import s from "./index.module.css";
 // The rows of the Discoveries lists, shared by the page's sections and the
 // full lists behind "See all"
 
+// The two lists of the "New songs" section, overview keys by tab
+export const NEW_SONG_TABS = [
+  { value: "new", label: "By new artists" },
+  { value: "known", label: "By known artists" },
+];
+export const NEW_SONG_TAB_VALUES = ["new", "known"] as const;
+export const newSongList = {
+  new: "newArtistTracks",
+  known: "knownArtistTracks",
+} as const;
+export const newSongInfo = (tab: string) =>
+  tab === "known"
+    ? "Songs heard for the first time in this period, by artists you had played before it"
+    : "Songs heard for the first time in this period, by artists also first heard in it";
+export const newSongEmpty = (tab: string) =>
+  tab === "known"
+    ? "No new songs by artists you knew in this period."
+    : "No new songs by new artists in this period.";
+
 type NewArtist = DiscoveriesResponse[number];
-type KnownArtistTrack = DiscoveryOverviewResponse["knownArtistTracks"][number];
+type NewTrack = DiscoveryOverviewResponse["knownArtistTracks"][number];
 type Comeback = DiscoveryOverviewResponse["comebacks"][number];
 type Repeat = OnRepeatResponse[number];
 
@@ -61,7 +80,7 @@ export const newArtistRow = (item: NewArtist, index: number) => (
   />
 );
 
-export const knownArtistTrackRow = (item: KnownArtistTrack, index: number) => (
+export const newTrackRow = (item: NewTrack, index: number) => (
   <ItemRow
     key={item.track.id}
     rank={index + 1}

@@ -147,6 +147,7 @@ export type ShortTrack = Pick<Track, "id" | "name" | "album" | "artists"> & {
   full_album: Pick<Album, "id" | "name" | "images">;
   full_artists: Pick<Artist, "id" | "name">[];
 };
+type NewTrack = { track: ShortTrack; plays: number; first: string };
 export type DiscoveryOverviewResponse = {
   plays: number;
   newArtists: number;
@@ -154,8 +155,10 @@ export type DiscoveryOverviewResponse = {
   newTracksByKnownArtists: number;
   // Plays of the songs new in the period
   newTrackPlays: number;
-  // New songs by artists played before the period, most played first
-  knownArtistTracks: { track: ShortTrack; plays: number; first: string }[];
+  // New songs by artists played before the period, and by artists first
+  // heard in it, most played first
+  knownArtistTracks: NewTrack[];
+  newArtistTracks: NewTrack[];
   // Last play before the break and first play after it
   comebacks: {
     artist: ShortArtist;
