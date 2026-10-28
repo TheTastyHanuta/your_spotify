@@ -3,7 +3,7 @@
 ![Checks](https://github.com/TheTastyHanuta/your_spotify/actions/workflows/checks.yml/badge.svg)
 
 <p align='center'>
-  <img width="100%" src="docs/screenshots/overview-dark.png" alt="Overview in dark mode, showing listening totals, period comparisons, charts and top songs with fictional sample data">
+  <img width="100%" src="docs/screenshots/overview-dark.png" alt="Overview in dark mode for this year, showing listening totals compared with last year, listening over time, top songs and top artists">
 </p>
 <p align="center">
   <sub>Overview <a href="#screenshots">More screenshots</a></sub>
@@ -59,16 +59,24 @@ It consists of a server that regularly asks Spotify what you played and stores i
 
 ## Screenshots
 
-The screenshots use fictional listening data, names and artwork. Click an image to view it at full size.
+The screenshots show a made-up listening history built from real songs and artists. Click an image to view it at full size.
 
-| Habits · light theme                                                                                                                                                           | Song charts · dark theme                                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [![Habits in light mode with a listening calendar, weekday and hour heatmap and artists by time of day](docs/screenshots/habits-light.png)](docs/screenshots/habits-light.png) | [![Song rankings in dark mode with play counts, listening time and album details](docs/screenshots/charts-dark.png)](docs/screenshots/charts-dark.png) |
+| Habits · light theme                                                                                                                                                                      | Taste · dark theme                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![Habits in light mode with streaks, a listening calendar, a weekday and hour heatmap and artists by time of day](docs/screenshots/habits-light.png)](docs/screenshots/habits-light.png) | [![Taste in dark mode with musical age, genres and the most played release years](docs/screenshots/taste-dark.png)](docs/screenshots/taste-dark.png)      |
+| **Discoveries · dark theme**                                                                                                                                                              | **Your story · light theme**                                                                                                                              |
+| [![Discoveries in dark mode with new artists and new songs of this year](docs/screenshots/discoveries-dark.png)](docs/screenshots/discoveries-dark.png)                                   | [![Your story in light mode with forgotten favorite songs and artists](docs/screenshots/story-light.png)](docs/screenshots/story-light.png)               |
+| **Recap · dark theme**                                                                                                                                                                    | **Song page · light theme**                                                                                                                               |
+| [![Recap of 2025 in dark mode with numbers compared with 2024 and the top songs, artists and albums](docs/screenshots/recap-dark.png)](docs/screenshots/recap-dark.png)                   | [![A song page in light mode with plays per month and when the song got you hooked](docs/screenshots/song-light.png)](docs/screenshots/song-light.png)    |
+| **Artist page · dark theme**                                                                                                                                                              | **Song charts · light theme**                                                                                                                             |
+| [![An artist page in dark mode with genres, plays per month and the most played songs and albums](docs/screenshots/artist-dark.png)](docs/screenshots/artist-dark.png)                    | [![Song rankings in light mode with play counts, listening time and album details](docs/screenshots/charts-light.png)](docs/screenshots/charts-light.png) |
 
 On phones, the dashboard switches to a single column with navigation along the bottom:
 
 <p align="center">
-  <a href="docs/screenshots/overview-mobile.png"><img width="280" src="docs/screenshots/overview-mobile.png" alt="Overview on a phone, showing listening statistics, a listening chart and the bottom navigation bar"></a>
+  <a href="docs/screenshots/recap-mobile.png"><img width="280" src="docs/screenshots/recap-mobile.png" alt="Recap on a phone in dark mode, showing the top artist of the year and numbers compared with the year before"></a>
+  &nbsp;
+  <a href="docs/screenshots/artist-mobile.png"><img width="280" src="docs/screenshots/artist-mobile.png" alt="An artist page on a phone in light mode, showing play statistics and plays per month"></a>
 </p>
 
 ## Prerequisites
