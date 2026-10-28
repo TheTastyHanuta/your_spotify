@@ -23,6 +23,7 @@ import DateFormat from "./DateFormat";
 import DeleteUser from "./DeleteUser";
 import EnableAffinity from "./EnableAffinity";
 import Importer from "./Importer";
+import MergeDuplicates from "./MergeDuplicates";
 import PublicToken from "./PublicToken";
 import RelogToSpotify from "./RelogToSpotify";
 import RemovedListens from "./RemovedListens";
@@ -118,6 +119,7 @@ export default function Settings() {
                 {user.admin && !isPublic && (
                   <EnableAffinity settings={settings} />
                 )}
+                {user.admin && !isPublic && <MergeDuplicates />}
               </div>
             }
           />

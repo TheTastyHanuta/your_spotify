@@ -20,7 +20,7 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **New insight pages** - **Taste** (genres, release years and decades, your musical age over time), **Habits** (streaks, a listening calendar, time of day, longest listening sessions), **Discoveries** (new artists and songs, comebacks, songs on repeat), **Your story** (forgotten favorites, eras, evergreen songs) and **On this day**. They replace upstream's "All stats" page
 > - **Recap** - a yearly summary compared with the previous year, with a shareable image
 > - **Playlists from insights** - lists like songs on repeat, forgotten favorites and evergreen songs can be saved as a Spotify playlist
-> - **Track deduplication by ISRC** - different releases of the same song (single, album, remaster) count as one song with a combined listen history
+> - **Track deduplication by ISRC** - different releases of the same song (single, album, remaster) count as one song with a combined listen history. Older history is merged from the admin settings, with a preview first
 > - **Multi-artist support** - every credited artist is shown and artists you only heard as a featured artist get their own page and appear in search
 > - **Listened album context** - track and history views show which album version you actually played a song from
 > - **Remove wrong listens** - take a listen out of your statistics, for example a song Spotify recorded although you skipped it right away, with Undo and a list in the settings to restore it later
@@ -229,14 +229,14 @@ The uploaded files are kept in the `imports` volume from the [example compose fi
 
 ## Updating
 
-Let running imports finish first and back up your database (see [step 1 below](#1-back-up-your-database)). Then run these commands in the directory containing your compose file:
+Back up your database first (see [step 1 below](#1-back-up-your-database)). Then run these commands in the directory containing your compose file:
 
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-Database changes are applied automatically when the server starts.
+Database changes are applied automatically when the server starts. Running and paused imports continue a few minutes after the server is back, and the duplicate song lookup continues where it stopped. Imports need the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose) for that; without it, upload their files again.
 
 ## Switching from the original YourSpotify
 
@@ -283,7 +283,11 @@ The [linuxserver.io image](https://github.com/linuxserver/docker-your_spotify) r
 
 #### 3. Optional: merge duplicate tracks
 
-New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). A one-off script merges them. It starts with a dry run and takes about an hour per 20,000 tracks. See the [ISRC deduplication guide](apps/server/ISRC_DEDUPLICATION.md).
+New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
+
+1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs or Spotify blocks requests, continues after restarts, and nothing changes in your stats meanwhile.
+2. Check the preview: every song with several versions, the version that stays (the one with the most listens) and how many listens move. It fills up while the lookup runs.
+3. **Merge** applies the preview for every user on the server. Take a backup first: only a backup can undo it. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
 
 #### Going back
 
@@ -327,7 +331,7 @@ All variables are set on the **server**, except `FRAME_ANCESTORS`, which belongs
 | MONGO_NO_ADMIN_RIGHTS | false                              | Do not ask for admin rights on the Mongo database                                                                                                                                                                     |
 | PORT                  | 8080                               | The port of the server, **do not** modify if you're using Docker                                                                                                                                                      |
 | FRAME_ANCESTORS       | _not defined_                      | Sites allowed to frame the website, comma separated list of URLs (`i-want-a-security-vulnerability-and-want-to-allow-all-frame-ancestors` to allow every website)                                                     |
-| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between Spotify requests (imports, polling, login). A longer delay makes Spotify rate limits less likely, but imports slower. The optional ISRC deduplication script uses its own delay |
+| SPOTIFY_API_DELAY_MS  | 2000                               | Minimum delay in milliseconds between Spotify requests (imports, polling, login). A longer delay makes Spotify rate limits less likely, but imports slower. Imports and the ISRC lookup add their own wait on top     |
 | DISABLE_POLLING       | false                              | Stop fetching recently played tracks from Spotify every few minutes, for example when you only use imports or while Spotify rate limits the app. Imports and the Spotify login still work                             |
 
 ### Advanced CORS settings
@@ -367,7 +371,7 @@ The web app can't reach the server. Check that the `API_ENDPOINT` address is rea
 
 ### Spotify rate limited the app. What now?
 
-Spotify sometimes blocks an app for several hours, especially after large imports. Logins and imports then show until when the block lasts and your existing stats stay usable as long as you are logged in. Wait until then and retry. If it happens often, raise `SPOTIFY_API_DELAY_MS`; you can also set `DISABLE_POLLING` while you wait.
+Spotify sometimes blocks an app for several hours, especially after large imports. Logins and imports then show until when the block lasts and your existing stats stay usable as long as you are logged in. Imports and the duplicate song lookup pause and continue on their own a few minutes after the block ends, and they slow down after every block; only a login has to be retried. If it happens often, raise `SPOTIFY_API_DELAY_MS`; you can also set `DISABLE_POLLING` while you wait.
 
 ### Songs don't seem to synchronize anymore
 

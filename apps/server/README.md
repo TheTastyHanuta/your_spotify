@@ -58,8 +58,8 @@ scrape_configs:
 
 ## Operations
 
-- [ISRC Track Deduplication](./ISRC_DEDUPLICATION.md): run the manual migration
-  for merging duplicate Spotify track IDs that represent the same recording.
+- Duplicate Spotify track IDs of the same recording are merged by ISRC from
+  the admin settings (Settings → Admin → Merge duplicate songs).
 
 ## API
 
@@ -184,6 +184,32 @@ Delete user account (requires admin).
 - `204`: Success
 - `404`: User not found
 - `500`: Error
+
+#### `GET /isrc-merge`
+
+State of the duplicate song merge (requires admin): the ISRC lookup (`job`,
+`progress`, `importRunning`) and the preview (`plan`: groups of versions
+sharing an ISRC, the version that stays, play counts of all users).
+
+#### `POST /isrc-merge/start`
+
+Start the background ISRC lookup as the current admin, or restart it after it
+stopped (requires admin).
+
+**Response:**
+
+- `204`: Started
+
+#### `POST /isrc-merge/apply`
+
+Merge what the preview shows, planned again from the current data (requires
+admin). Runs in the background; `GET /isrc-merge` shows `applying` and the
+result in `lastApply`.
+
+**Response:**
+
+- `202`: Merge started
+- `409`: A merge is already running, or the lookup was never started
 
 ## Spotify Integration
 
@@ -795,7 +821,7 @@ Get artist statistics.
 }
 ```
 
-`mostListened` and `albumMostListened` each contain up to ten entries. `total` includes `primaryCount` and `featuredCount`. The redesign removed `bestPeriod`; `dayRepartition` is not returned. Use `GET /spotify/timeline?type=artist&id=SPOTIFY_ID` for the listening timeline. When there are no usable listening statistics, the response is `{ "code": "NEVER_LISTENED" }` instead.
+`mostListened` and `albumMostListened` each contain up to ten entries. `total` includes `primaryCount` and `featuredCount`. Use `GET /spotify/timeline?type=artist&id=SPOTIFY_ID` for the listening timeline. When there are no usable listening statistics, the response is `{ "code": "NEVER_LISTENED" }` instead.
 
 #### `GET /artist/search/:query`
 
@@ -902,7 +928,7 @@ Get track statistics.
 }
 ```
 
-`artists` follows the track's credit order. `listenedOn` contains the album versions actually played, with their listen counts. The redesign removed `bestPeriod`; use `GET /spotify/timeline?type=track&id=SPOTIFY_ID` for the listening timeline. When the track has no listens, the response is `{ "code": "NEVER_LISTENED" }` instead.
+`artists` follows the track's credit order. `listenedOn` contains the album versions actually played, with their listen counts. Use `GET /spotify/timeline?type=track&id=SPOTIFY_ID` for the listening timeline. When the track has no listens, the response is `{ "code": "NEVER_LISTENED" }` instead.
 
 #### `GET /track/:id/rank`
 

@@ -137,7 +137,14 @@ async function updateExistingTrackIsrcs(
       return [];
     }
     return [
-      { updateOne: { filter: { id: track.id }, update: { $set: { isrc } } } },
+      // Checked again on write: a merge since the read unset this ISRC on
+      // purpose, and setting it back would block the primary's unique ISRC
+      {
+        updateOne: {
+          filter: { id: track.id, mergedInto: { $exists: false } },
+          update: { $set: { isrc } },
+        },
+      },
     ];
   });
 

@@ -37,6 +37,7 @@ jobs:
           pnpm typecheck
           node scripts/sessions.check.mjs
           node scripts/hooks.check.mjs
+          node scripts/isrcMerge.check.mjs
 
       - name: Client
         working-directory: apps/client

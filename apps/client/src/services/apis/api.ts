@@ -19,6 +19,7 @@ import {
   CollaborativeMode,
   TrackWithFullArtistAlbum,
   AlbumWithFullArtist,
+  SpotifyImage,
 } from "../types";
 
 const axios = Axios.create({
@@ -287,6 +288,37 @@ export type LongestSessionsResponse = {
   full_albums: Record<string, Album>;
 }[];
 
+// One version of a song in the ISRC merge preview, plays of all users
+export interface IsrcMergeTrack {
+  id: string;
+  name: string;
+  artist: string;
+  album: string;
+  albumImages: SpotifyImage[];
+  plays: number;
+}
+
+export interface IsrcMergeState {
+  job: {
+    rateLimitedUntil?: string;
+    stoppedReason?: "reauth" | "user-missing";
+    applying: boolean;
+    lastApply?: { at: string; tracksMerged: number; listensRepointed: number };
+  } | null;
+  progress: { checked: number; found: number; none: number; remaining: number };
+  plan: {
+    groups: {
+      isrc: string;
+      primary: IsrcMergeTrack;
+      secondaries: IsrcMergeTrack[];
+    }[];
+    tracksToMerge: number;
+    listensToRepoint: number;
+    isrcsToStore: number;
+  };
+  importRunning: boolean;
+}
+
 export type DiscoveriesResponse = {
   plays: number;
   // First listen ever, and the song it was
@@ -353,6 +385,9 @@ export const api = {
   getAccounts: () => get<AdminAccount[]>("/accounts"),
   setAdmin: (id: string, status: boolean) => put(`/admin/${id}`, { status }),
   deleteUser: (id: string) => delet(`/account/${id}`),
+  isrcMerge: () => get<IsrcMergeState>("/isrc-merge"),
+  startIsrcMerge: () => post("/isrc-merge/start"),
+  applyIsrcMerge: () => post("/isrc-merge/apply"),
   setGlobalPreferences: (preferences: Partial<GlobalPreferences>) =>
     post<GlobalPreferences>("/global/preferences", preferences),
   play: (id: string) => axios.post("/spotify/play", { id }),

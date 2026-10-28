@@ -5,6 +5,7 @@ import { ArtistSchema } from "./schemas/artist";
 import { GlobalPreferencesSchema } from "./schemas/globalPreference";
 import { ImporterStateSchema } from "./schemas/import";
 import { InfosSchema } from "./schemas/info";
+import { IsrcLookupSchema, IsrcMergeJobSchema } from "./schemas/isrcMerge";
 import { MigrationSchema } from "./schemas/migration";
 import { PrivateDataSchema } from "./schemas/privateData";
 import { TrackSchema } from "./schemas/track";
@@ -22,3 +23,5 @@ export const GlobalPreferencesModel = model(
 );
 export const ImporterStateModel = model("ImporterState", ImporterStateSchema);
 export const PrivateDataModel = model("PrivateData", PrivateDataSchema);
+export const IsrcLookupModel = model("IsrcLookup", IsrcLookupSchema);
+export const IsrcMergeJobModel = model("IsrcMergeJob", IsrcMergeJobSchema);

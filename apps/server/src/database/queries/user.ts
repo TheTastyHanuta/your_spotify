@@ -105,8 +105,29 @@ export const addTrackIdsToUser = async (
   id: string,
   infos: Omit<Infos, "owner">[],
 ) => {
+  // A track merged after the caller resolved it would keep these listens
+  // apart, so they go to the track it was merged into
+  const mergedInto = new Map<string, string>();
+  let ids = [...new Set(infos.map((info) => info.id))];
+  // A merge target can itself be merged later, a few steps cover the chain
+  for (let step = 0; step < 5 && ids.length > 0; step += 1) {
+    const merged = await TrackModel.find(
+      { id: { $in: ids }, mergedInto: { $exists: true, $ne: null } },
+      { id: 1, mergedInto: 1 },
+    ).lean();
+    for (const track of merged) {
+      mergedInto.set(track.id, track.mergedInto!);
+      for (const [from, to] of mergedInto) {
+        if (to === track.id) {
+          mergedInto.set(from, track.mergedInto!);
+        }
+      }
+    }
+    ids = merged.map((track) => track.mergedInto!);
+  }
   const realInfos = infos.map((info) => ({
     ...info,
+    id: mergedInto.get(info.id) ?? info.id,
     owner: new Types.ObjectId(id),
   }));
   return InfosModel.create(realInfos);

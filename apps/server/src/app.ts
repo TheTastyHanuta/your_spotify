@@ -12,6 +12,7 @@ import { router as albumRouter } from "./routes/album";
 import { router as artistRouter } from "./routes/artist";
 import { router as globalRouter } from "./routes/global";
 import { router as importRouter } from "./routes/importer";
+import { router as isrcMergeRouter } from "./routes/isrcMerge";
 import { router as metricsRouter } from "./routes/metrics";
 import { router as oauthRouter } from "./routes/oauth";
 import { router as searchRouter } from "./routes/search";
@@ -100,6 +101,7 @@ app.use("/album", albumRouter);
 app.use("/track", trackRouter);
 app.use("/search", searchRouter);
 app.use("/", importRouter);
+app.use("/isrc-merge", isrcMergeRouter);
 app.use("/", metricsRouter);
 
 app.use((error: any, req: any, res: any, next: any) => {

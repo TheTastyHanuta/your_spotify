@@ -6,6 +6,7 @@ import { getUserFromField, storeInUser } from "../../database";
 import { SpotifyAlbum } from "../../database/schemas/album";
 import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
+import { getWithDefault } from "../env";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
 import { chunk, wait } from "../misc";
@@ -24,9 +25,28 @@ interface SpotifyPlaylist {
 }
 
 // Milliseconds every request made inside run() waits before it is queued.
-// Imports run in it, so after a ban they leave more of Spotify's limit, which
-// the polling loop shares, to the polling loop.
+// Background jobs (imports, ISRC lookups) run in it, so they leave more of
+// Spotify's limit, which the polling loop shares, to the polling loop.
 export const requestSlowdown = new AsyncLocalStorage<number>();
+
+// Background jobs wait this long after a ban ends. It is longer than the
+// polling interval, so the polling loop catches up on the listens of the ban
+// before a job uses Spotify's limit again.
+export const RESUME_MARGIN_MS = 5 * 60 * 1000;
+
+// The slowdown overlaps the delay the queue keeps between all requests, so it
+// is the gap between the requests of a background job (imports, ISRC lookups).
+// Jobs start a bit slower than that delay, which leaves room for the polling
+// loop, and every ban slows them down by half again, until one request every
+// 32s with the default delay.
+export const slowdownMsOf = (state: { slowdownMs?: number }) =>
+  state.slowdownMs ?? 1.5 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000);
+
+export const nextSlowdownMs = (state: { slowdownMs?: number }) =>
+  Math.min(
+    slowdownMsOf(state) * 1.5,
+    16 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000),
+  );
 
 export class SpotifyAPI {
   constructor(private readonly userId: string) {}

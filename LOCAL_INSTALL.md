@@ -46,7 +46,7 @@ node --env-file=.env build/index.js --migrate
 node --env-file=.env build/index.js
 ```
 
-Repeat the migration command before starting an updated build. Unlike the Docker entrypoint, starting the server directly does not run migrations automatically. The optional [ISRC deduplication](apps/server/ISRC_DEDUPLICATION.md) is a separate manual operation.
+Repeat the migration command before starting an updated build. Unlike the Docker entrypoint, starting the server directly does not run migrations automatically.
 
 ## Hosting client
 

@@ -11,8 +11,12 @@ import {
 } from "../../database/queries/importer";
 import { User } from "../../database/schemas/user";
 import { RateLimitedError } from "../apis/queueHttpClient";
-import { requestSlowdown } from "../apis/spotifyApi";
-import { getWithDefault } from "../env";
+import {
+  RESUME_MARGIN_MS,
+  nextSlowdownMs,
+  requestSlowdown,
+  slowdownMsOf,
+} from "../apis/spotifyApi";
 import { logger } from "../logger";
 import { Metrics } from "../metrics";
 import { clearCache } from "./cache";
@@ -33,23 +37,7 @@ const importers: {
 
 const userImporters: { [userId: string]: HistoryImporter<any> } = {};
 
-// Longer than the polling interval, so the polling loop catches up on the
-// listens of the ban before the import uses Spotify's limit again
-const RESUME_MARGIN_MS = 5 * 60 * 1000;
 const resumeTimers = new Map<string, NodeJS.Timeout>();
-
-// The slowdown overlaps the delay the queue keeps between all requests, so it
-// is the gap between the requests of an import. Imports start a bit slower
-// than that delay, which leaves room for the polling loop, and every ban slows
-// them down by half again, until one request every 32s with the default delay.
-const slowdownMsOf = (state: { slowdownMs?: number }) =>
-  state.slowdownMs ?? 1.5 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000);
-
-const nextSlowdownMs = (state: { slowdownMs?: number }) =>
-  Math.min(
-    slowdownMsOf(state) * 1.5,
-    16 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000),
-  );
 
 const cancelResume = (stateId: string) => {
   clearTimeout(resumeTimers.get(stateId));
@@ -96,6 +84,11 @@ export async function resumeImportsAtStart() {
   for (const state of states) {
     scheduleResume(state._id.toString(), state.rateLimitedUntil);
   }
+}
+
+// The ISRC lookups give way to imports, so only one job uses Spotify at a time
+export function isAnyImportRunning() {
+  return Object.keys(userImporters).length > 0;
 }
 
 export function canUserImport(userId: string) {

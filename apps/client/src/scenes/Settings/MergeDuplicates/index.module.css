@@ -1,0 +1,119 @@
+/* A long list, so it takes the whole width under the other admin panels */
+.root {
+  grid-column: 1 / -1;
+}
+
+.intro {
+  max-width: 70ch;
+  margin: 0 0 12px;
+}
+
+.status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+
+/* A heading inside the section, the size of section titles */
+.title {
+  margin: 22px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.none {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Like the header row of the chart tables */
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.group + .group {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+/* The whole row opens the versions */
+.head {
+  cursor: pointer;
+  list-style: none;
+}
+
+.head::-webkit-details-marker {
+  display: none;
+}
+
+.head:hover .line {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.head:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+
+.line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: var(--muted);
+  transition: transform 150ms ease-out;
+}
+
+.group[open] .chevron {
+  transform: rotate(180deg);
+}
+
+/* Versions sit under the song's name, past its cover */
+.body {
+  padding: 0 0 12px 52px;
+}
+
+.more {
+  margin-top: 8px !important;
+}
+
+.dialogText {
+  max-width: 60ch;
+  margin: 0;
+}
+
+.dialogButton {
+  margin-top: 16px;
+  text-align: right;
+}
+
+@media screen and (max-width: 900px) {
+  .body {
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
