@@ -25,7 +25,7 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **Listened album context** - track and history views show which album version you actually played a song from
 > - **Remove wrong listens** - take a listen out of your statistics, for example a song Spotify recorded although you skipped it right away, with Undo and a list in the settings to restore it later
 > - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks them up on [MusicBrainz](https://musicbrainz.org) in the background. Genres Spotify returned before are kept
-> - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports and logins tell you until when instead of hanging and your stats stay usable
+> - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports pause and continue on their own afterwards, logins tell you until when instead of hanging and your stats stay usable
 > - **Better Spotify auth handling** - when Spotify revokes your access, the app asks you to log in again instead of silently stopping to record
 > - **More reliable imports** - imports no longer drop listens, resume from the right place after a failure and keep their uploaded files across updates, so a failed import can still be retried
 > - **Smaller, safer Docker images** - both containers run without root rights, the web app is served by Nginx with long-term browser caching and the server image ships Node.js without npm or build tools
@@ -213,13 +213,19 @@ Choose the method matching your export, upload the files (up to 50 files, 20 MB 
 
 It is best to import right after creating your account. YourSpotify detects duplicate listens, but a few may still be inserted twice.
 
+### When Spotify blocks the import
+
+If Spotify rate limits the app for a long time, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. The pause leaves the polling of your recent listens time to catch up first. Imports send their requests a bit slower than the rest of the app (one every 1.5 × `SPOTIFY_API_DELAY_MS`, 3 seconds by default), and after every such block 1.5 times slower again, down to one request every 16 × `SPOTIFY_API_DELAY_MS` (32 seconds by default), so they are less likely to get the app blocked again. A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
+
+To stop a paused import, choose **Cancel** in the menu next to it in **Import history**. This deletes its uploaded files.
+
 ### When an import fails
 
-An import can fail if the server restarts, if a Spotify request fails 10 times in a row, or if Spotify rate limits the app for a long time (the import history in **Settings** and the server log show until when).
+An import fails if a Spotify request fails 10 times in a row, if your Spotify login is no longer valid, or if its files cannot be read.
 
 To retry a failed import, open **Settings → Account → Import data**, then the menu next to the import in **Import history** and choose **Retry**. **Clean up** deletes the import and its uploaded files, so only use it if you do not want to retry.
 
-The uploaded files are kept in the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose), so a failed import can still be retried after a restart or an update. Without that volume, an update replaces the container and a failed import needs its files uploaded again.
+The uploaded files are kept in the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose), so a paused or failed import can still continue after a restart or an update. Without that volume, an update replaces the container and the import needs its files uploaded again.
 
 ## Updating
 

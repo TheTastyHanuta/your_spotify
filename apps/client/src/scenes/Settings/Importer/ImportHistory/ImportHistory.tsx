@@ -22,6 +22,7 @@ const statusToString: Record<ImporterStateStatus, string> = {
   failure: "Failed",
   progress: "In progress",
   success: "Success",
+  waiting: "Paused",
 };
 
 export default function ImportHistory() {
@@ -62,11 +63,12 @@ export default function ImportHistory() {
                 <span className={clsx("num", s.count)}>
                   {st.current.toLocaleString()}/{st.total.toLocaleString()}
                 </span>
-                {st.status === "failure" && st.rateLimitedUntil && (
+                {st.status === "waiting" && (
                   <Text className={s.ratelimited} size="small">
-                    Spotify blocks requests until{" "}
-                    {DateFormatter.toDateTime(new Date(st.rateLimitedUntil))},
-                    retry after that
+                    {st.rateLimitedUntil
+                      ? `Spotify blocks requests until ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
+                      : ""}
+                    continues on its own
                   </Text>
                 )}
               </Text>
@@ -75,9 +77,9 @@ export default function ImportHistory() {
                   st.status === "failure"
                     ? { label: "Retry", onClick: () => onImport(st._id) }
                     : undefined,
-                  st.status === "failure"
+                  st.status === "failure" || st.status === "waiting"
                     ? {
-                        label: "Clean up",
+                        label: st.status === "waiting" ? "Cancel" : "Clean up",
                         onClick: () => cleanImport(st._id),
                         style: "destructive",
                       }

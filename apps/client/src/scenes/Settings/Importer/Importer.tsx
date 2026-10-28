@@ -27,7 +27,10 @@ export default function Importer() {
     ImporterStateType.privacy,
   );
 
-  const running = imports?.find((st) => st.status === "progress");
+  // A paused import resumes on its own, a second one cannot start meanwhile
+  const running = imports?.find(
+    (st) => st.status === "progress" || st.status === "waiting",
+  );
   const Component = importType
     ? ImportTypeToComponent[importType].component
     : null;
@@ -42,7 +45,8 @@ export default function Importer() {
         {running && (
           <div>
             <Text className={s.progress} size="normal">
-              Importing {running.current} of {running.total}
+              {running.status === "waiting" ? "Paused at" : "Importing"}{" "}
+              {running.current} of {running.total}
             </Text>
             <LinearProgress
               style={{ width: "100%" }}

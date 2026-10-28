@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "async_hooks";
+
 import { Types } from "mongoose";
 
 import { getUserFromField, storeInUser } from "../../database";
@@ -6,7 +8,7 @@ import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
-import { chunk } from "../misc";
+import { chunk, wait } from "../misc";
 import { spotifyProvider } from "../oauth/Provider";
 import { HttpError } from "./queueHttpClient";
 
@@ -20,6 +22,11 @@ interface SpotifyPlaylist {
   name: string;
   owner: { id: string };
 }
+
+// Milliseconds every request made inside run() waits before it is queued.
+// Imports run in it, so after a ban they leave more of Spotify's limit, which
+// the polling loop shares, to the polling loop.
+export const requestSlowdown = new AsyncLocalStorage<number>();
 
 export class SpotifyAPI {
   constructor(private readonly userId: string) {}
@@ -36,6 +43,10 @@ export class SpotifyAPI {
   }
 
   private async checkToken() {
+    const slowdown = requestSlowdown.getStore();
+    if (slowdown) {
+      await wait(slowdown);
+    }
     const user = await getUserFromField(
       "_id",
       new Types.ObjectId(this.userId),

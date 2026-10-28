@@ -2,7 +2,9 @@ export type ImporterStateStatus =
   | "progress"
   | "success"
   | "failure"
-  | "failure-removed";
+  | "failure-removed"
+  // Paused while Spotify blocks the requests, resumes on its own
+  | "waiting";
 
 export enum ImporterStateType {
   privacy = "privacy",
@@ -17,7 +19,7 @@ export interface BaseImporterState {
   current: number;
   total: number;
   status: ImporterStateStatus;
-  // Set when the import failed because Spotify blocked the requests
+  // Set while the import waits for Spotify to stop blocking the requests
   rateLimitedUntil?: string;
 }
 

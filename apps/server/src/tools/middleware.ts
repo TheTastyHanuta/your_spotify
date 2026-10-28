@@ -245,7 +245,10 @@ export const notAlreadyImporting = async (
 ) => {
   const { user } = req as LoggedRequest;
   const imports = await getUserImporterState(user._id.toString());
-  if (imports.some((imp) => imp.status === "progress")) {
+  // A paused import resumes on its own, so it blocks a second one too
+  if (
+    imports.some((imp) => imp.status === "progress" || imp.status === "waiting")
+  ) {
     throw new AlreadyImportingError();
   }
   next();

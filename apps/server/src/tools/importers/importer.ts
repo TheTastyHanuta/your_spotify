@@ -2,12 +2,17 @@ import { Types } from "mongoose";
 
 import { getUserFromField } from "../../database";
 import {
+  claimImporterState,
   createImporterState,
   getImporterState,
+  getImportsToResumeAtStart,
   setImporterStateStatus,
+  setImporterStateWaiting,
 } from "../../database/queries/importer";
 import { User } from "../../database/schemas/user";
 import { RateLimitedError } from "../apis/queueHttpClient";
+import { requestSlowdown } from "../apis/spotifyApi";
+import { getWithDefault } from "../env";
 import { logger } from "../logger";
 import { Metrics } from "../metrics";
 import { clearCache } from "./cache";
@@ -28,19 +33,85 @@ const importers: {
 
 const userImporters: { [userId: string]: HistoryImporter<any> } = {};
 
+// Longer than the polling interval, so the polling loop catches up on the
+// listens of the ban before the import uses Spotify's limit again
+const RESUME_MARGIN_MS = 5 * 60 * 1000;
+const resumeTimers = new Map<string, NodeJS.Timeout>();
+
+// The slowdown overlaps the delay the queue keeps between all requests, so it
+// is the gap between the requests of an import. Imports start a bit slower
+// than that delay, which leaves room for the polling loop, and every ban slows
+// them down by half again, until one request every 32s with the default delay.
+const slowdownMsOf = (state: { slowdownMs?: number }) =>
+  state.slowdownMs ?? 1.5 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000);
+
+const nextSlowdownMs = (state: { slowdownMs?: number }) =>
+  Math.min(
+    slowdownMsOf(state) * 1.5,
+    16 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000),
+  );
+
+const cancelResume = (stateId: string) => {
+  clearTimeout(resumeTimers.get(stateId));
+  resumeTimers.delete(stateId);
+};
+
+const scheduleResume = (stateId: string, until?: Date) => {
+  cancelResume(stateId);
+  const delay =
+    Math.max((until?.getTime() ?? 0) - Date.now(), 0) + RESUME_MARGIN_MS;
+  resumeTimers.set(
+    stateId,
+    setTimeout(() => {
+      resumeTimers.delete(stateId);
+      resumeImport(stateId).catch((e) => {
+        // Tried again later, a waiting import without a timer would block
+        // the imports of its user until the next restart
+        logger.error(e);
+        scheduleResume(stateId);
+      });
+    }, delay),
+  );
+};
+
+async function resumeImport(stateId: string) {
+  // Resumed like a manual retry, so an import that cannot start (its user
+  // lost the Spotify login, for instance) is left for the user to retry
+  const state = await claimImporterState(stateId, ["waiting"], "failure");
+  if (!state) {
+    return;
+  }
+  logger.info(`Resuming import ${stateId}`);
+  await runImporter(
+    stateId,
+    state.type,
+    state.user.toString(),
+    state.metadata,
+    () => {},
+  );
+}
+
+export async function resumeImportsAtStart() {
+  const states = await getImportsToResumeAtStart();
+  for (const state of states) {
+    scheduleResume(state._id.toString(), state.rateLimitedUntil);
+  }
+}
+
 export function canUserImport(userId: string) {
   return !(userId in userImporters);
 }
 export async function cleanupImport(existingStateId: string) {
-  const importState = await getImporterState(existingStateId);
+  const importState = await claimImporterState(
+    existingStateId,
+    ["failure", "waiting"],
+    "failure-removed",
+  );
   if (!importState) {
     return;
   }
-  const { type, status } = importState;
-  if (status !== "failure") {
-    return;
-  }
-  await setImporterStateStatus(existingStateId, "failure-removed");
+  cancelResume(existingStateId);
+  const { type } = importState;
   const instanceClass = importers[type];
   if (!instanceClass) {
     return;
@@ -152,19 +223,28 @@ async function startImport<T extends ImporterStateType>(
       )) as any as ImporterStateFromType<T>;
     }
     initDone(true);
-    await instance.run(existingState._id.toString());
+    const stateId = existingState._id.toString();
+    await requestSlowdown.run(slowdownMsOf(existingState), () =>
+      instance.run(stateId),
+    );
     await instance.cleanup(requiredInitData);
     await setImporterStateStatus(existingState._id.toString(), "success");
     Metrics.importsTotal
       .labels({ status: "success", user: userId, type: name })
       .inc();
   } catch (e) {
-    if (existingState) {
-      await setImporterStateStatus(
-        existingState._id.toString(),
-        "failure",
-        e instanceof RateLimitedError ? e.until : undefined,
+    if (existingState && e instanceof RateLimitedError) {
+      const stateId = existingState._id.toString();
+      const slowdownMs = nextSlowdownMs(existingState);
+      await setImporterStateWaiting(stateId, e.until, slowdownMs);
+      scheduleResume(stateId, e.until);
+      logger.warn(
+        `Import paused until Spotify stops blocking requests at ${e.until.toLocaleString()}, it resumes on its own a few minutes later with at least ${slowdownMs}ms between its requests`,
       );
+      return;
+    }
+    if (existingState) {
+      await setImporterStateStatus(existingState._id.toString(), "failure");
       Metrics.importsTotal
         .labels({ status: "failure", user: userId, type: name })
         .inc();

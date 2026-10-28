@@ -15,7 +15,9 @@ export type ImporterStateStatus =
   | "progress"
   | "success"
   | "failure"
-  | "failure-removed";
+  | "failure-removed"
+  // Paused while Spotify blocks the requests, resumes on its own
+  | "waiting";
 
 export interface BaseImporterState {
   _id: Types.ObjectId;
@@ -24,8 +26,10 @@ export interface BaseImporterState {
   current: number;
   total: number;
   status: ImporterStateStatus;
-  // Set when the import failed because Spotify blocked the requests
+  // Set while the import waits for Spotify to stop blocking the requests
   rateLimitedUntil?: Date;
+  // Extra wait before each Spotify request, raised after every ban
+  slowdownMs?: number;
 }
 export interface PrivacyImporterState extends BaseImporterState {
   type: "privacy";

@@ -28,26 +28,28 @@ export default function StatusStrip() {
     }
   }, [dispatch, user, isGuest]);
 
-  const newest = [...(imports ?? [])].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt),
-  )[0];
   const running = imports?.find((imp) => imp.status === "progress");
   const isRunning = Boolean(running);
+  const paused = imports?.find((imp) => imp.status === "waiting");
+  const isPaused = Boolean(paused);
 
-  // Follows a running import on every page, until it ends or fails
+  // Follows a running import on every page, until it ends or fails. A paused
+  // one is checked now and then, to notice when the server resumes it.
   useEffect(() => {
-    if (!isRunning || isGuest) {
+    if ((!isRunning && !isPaused) || isGuest) {
       return;
     }
-    const interval = setInterval(() => {
-      dispatch(getImports(true)).catch(console.error);
-    }, 2000);
+    const interval = setInterval(
+      () => {
+        dispatch(getImports(true)).catch(console.error);
+      },
+      isRunning ? 2000 : 60_000,
+    );
     return () => clearInterval(interval);
-  }, [dispatch, isRunning, isGuest]);
-  const blockedUntil =
-    newest?.status === "failure" && newest.rateLimitedUntil
-      ? new Date(newest.rateLimitedUntil)
-      : undefined;
+  }, [dispatch, isRunning, isPaused, isGuest]);
+  const blockedUntil = paused?.rateLimitedUntil
+    ? new Date(paused.rateLimitedUntil)
+    : undefined;
 
   const messages = [
     isGuest && <>You are viewing as guest.</>,
@@ -64,11 +66,14 @@ export default function StatusStrip() {
         <span className="num">{running.total}</span>
       </>
     ),
-    blockedUntil && blockedUntil > new Date() && (
+    paused && (
       <>
-        Spotify is blocking requests until{" "}
-        {DateFormatter.toDateTime(blockedUntil)}. The import can be retried in{" "}
-        <Link to="/settings/account">Settings</Link> after that.
+        Import paused at <span className="num">{paused.current}</span> of{" "}
+        <span className="num">{paused.total}</span>
+        {blockedUntil && blockedUntil > new Date()
+          ? `, Spotify is blocking requests until ${DateFormatter.toDateTime(blockedUntil)}`
+          : ""}
+        . It continues on its own.
       </>
     ),
   ].filter(Boolean);

@@ -11,10 +11,11 @@ export const ImporterStateSchema = new Schema<ImporterState>(
     user: { type: Schema.Types.ObjectId, ref: "User" },
     status: {
       type: String,
-      enum: ["progress", "success", "failure", "failure-removed"],
+      enum: ["progress", "success", "failure", "failure-removed", "waiting"],
       default: "progress",
     },
     rateLimitedUntil: { type: Date },
+    slowdownMs: { type: Number },
   },
   { timestamps: true },
 );

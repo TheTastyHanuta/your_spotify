@@ -2,10 +2,10 @@ import http from "http";
 
 import { app } from "../app";
 import { checkBlacklistConsistency, connect } from "../database";
-import { fixRunningImportsAtStart } from "../database/queries/importer";
 import { dbLoop } from "../spotify/looper";
 import { get, getWithDefault } from "../tools/env";
 import { genresLoop } from "../tools/genres";
+import { resumeImportsAtStart } from "../tools/importers/importer";
 import { logger } from "../tools/logger";
 
 export function startServer() {
@@ -48,7 +48,7 @@ export function startServer() {
       server.listen(port);
       server.on("error", onError);
       server.on("listening", onListening);
-      fixRunningImportsAtStart().catch(logger.error);
+      resumeImportsAtStart().catch(logger.error);
       checkBlacklistConsistency().catch(logger.error);
       genresLoop().catch(logger.error);
       const domain = get("CLIENT_ENDPOINT");
