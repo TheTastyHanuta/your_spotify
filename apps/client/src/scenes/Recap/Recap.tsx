@@ -1,7 +1,7 @@
 import { Button } from "@mui/material";
 import clsx from "clsx";
 import { endOfMonth, startOfMonth } from "date-fns";
-import { ReactNode, useState } from "react";
+import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import {
@@ -21,12 +21,17 @@ import ItemRow, { ArtistNames, RowsSkeleton } from "../../components/ItemRow";
 import { NB_SHOWN, seeAll } from "../../components/ListPage";
 import PageHero from "../../components/PageHero";
 import Section, { ChartSkeleton } from "../../components/Section";
-import StatStrip, { formatDelta } from "../../components/StatStrip";
+import StatStrip, {
+  formatDelta,
+  newOf,
+  Stat,
+} from "../../components/StatStrip";
 import Text from "../../components/Text";
 import ChartTooltip from "../../components/Tooltip";
 import { api } from "../../services/apis/api";
 import { DateFormatter, fromDay } from "../../services/date";
 import { useAPI } from "../../services/hooks/hooks";
+import { useCoverColor } from "../../services/hooks/useCoverColor";
 import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { alertMessage } from "../../services/redux/modules/message/reducer";
 import { selectUser } from "../../services/redux/modules/user/selector";
@@ -36,25 +41,44 @@ import { medianYear, musicalAge } from "../../services/taste";
 import { getAtLeastImage, plural } from "../../services/tools";
 import { listeningTraits } from "../../services/traits";
 import { SpotifyImage, Timesplit } from "../../services/types";
-import { compareTops, Move, TOP } from "./movers";
+import Letter, { letterText, Paragraph } from "./Letter";
+import { DROPPED_FROM, droppedOut, NB_TOP, RANKED, withMoves } from "./movers";
 import { renderRecapImage, shareRecapImage } from "./recapImage";
 import {
   artistDiscoveryRow,
+  artistMoveRow,
   Count,
-  DISCOVERY_TABS,
+  KIND_TABS,
   discoveryInfo,
+  DroppedLine,
   HOOKED_INFO,
   hookYearRow,
+  movesInfo,
   songDiscoveryRow,
+  songMoveRow,
 } from "./rows";
 import { useRecapYear, YearSelect } from "./year";
 
 import s from "./index.module.css";
 
-// Top lists compared with the previous year
-const NB_TOP = 30;
 // Top 5 shown, the rest in the Charts pages
 const NB_TOP_SHOWN = 5;
+// The top shown with its movement since the previous year
+const NB_MOVES = 10;
+
+// Numbers inside a short answer in the mono face, like "159 days"
+const withNums = (text: string) =>
+  text.split(/(\d[\d,.]*)/).map((part, index) =>
+    index % 2 ? (
+      <span key={index} className="num">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+
+const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a");
 
 export default function Recap() {
   const user = useSelector(selectUser);
@@ -77,6 +101,13 @@ export default function Recap() {
     NB_TOP,
     0,
   );
+  const previousArtistRanks = useAPI(
+    api.getRanks,
+    previousStart,
+    previousEnd,
+    "artist",
+    RANKED,
+  );
   const songs = useAPI(api.getBestSongs, start, end, NB_TOP, 0);
   const previousSongs = useAPI(
     api.getBestSongs,
@@ -85,7 +116,14 @@ export default function Recap() {
     NB_TOP,
     0,
   );
-  const albums = useAPI(api.getBestAlbums, start, end, 1, 0);
+  const previousSongRanks = useAPI(
+    api.getRanks,
+    previousStart,
+    previousEnd,
+    "track",
+    RANKED,
+  );
+  const albums = useAPI(api.getBestAlbums, start, end, NB_TOP_SHOWN, 0);
   const months = useAPI(api.timePer, start, end, Timesplit.month);
   const discoveries = useAPI(
     api.getArtistDiscoveries,
@@ -103,6 +141,14 @@ export default function Recap() {
   const taste = useAPI(api.getTaste, start, end);
   const genres = useAPI(api.getGenres, start, end, 1);
 
+  const topArtist = artists?.[0];
+  const topSong = songs?.[0];
+  const topAlbum = albums?.[0];
+  // The hero's colour, for the share image. PageHero reads the same smallest
+  // image, so this is the same cached colour.
+  const heroImages = topArtist?.artist.images;
+  const color = useCoverColor(heroImages?.[heroImages.length - 1]?.url);
+
   if (!user) {
     return null;
   }
@@ -113,7 +159,9 @@ export default function Recap() {
     : `in ${previousYear}`;
   const hasPrevious = !!previous && previous.plays > 0;
   const median = taste ? medianYear(taste.years) : undefined;
-  const topGenre = genres?.genres[0]?.genre;
+  const age = median === undefined ? undefined : musicalAge(median, year);
+  const topGenre = genres?.genres[0];
+  const yearTitle = range.soFar ? `${year} so far` : `${year}`;
 
   const change = (old: number, now: number) => {
     const percent = getPercentMore(old, now);
@@ -122,34 +170,127 @@ export default function Recap() {
     }
     return `${Math.abs(percent)}% ${percent > 0 ? "more" : "less"} than ${than}`;
   };
+  const hours = overview
+    ? Math.round(overview.durationMs / 3_600_000).toLocaleString()
+    : "";
+  const durationChange =
+    overview && hasPrevious && previous
+      ? change(previous.durationMs, overview.durationMs)
+      : undefined;
+
+  const traits =
+    overview && previous
+      ? listeningTraits(
+          overview,
+          hasPrevious ? previous : null,
+          (cell) => cell.durationMs,
+          { than, wholeHistory: false },
+        )
+      : undefined;
+  const timeOfDay = traits?.[0];
+
+  // The hour of the day with the most listening
+  const perHour = Array.from(Array(24).keys()).map((hour) => ({
+    hour,
+    durationMs:
+      overview?.heatmap
+        .filter((cell) => cell.hour === hour)
+        .reduce((sum, cell) => sum + cell.durationMs, 0) ?? 0,
+  }));
+  const goldenHour = perHour.reduce((a, b) =>
+    b.durationMs > a.durationMs ? b : a,
+  );
+  const longest = overview?.streaks.longest;
+  const busiest = overview?.busiestDay;
+
+  // The year in short, under the numbers
+  const answers: Stat[] = [];
+  if (timeOfDay) {
+    answers.push({
+      label: "Time of day",
+      value: timeOfDay.title,
+      note: timeOfDay.short ?? timeOfDay.text,
+    });
+  }
+  if (median !== undefined && age !== undefined) {
+    answers.push({
+      label: "Musical age",
+      value: withNums(plural(age, "year")),
+      note: `half from ${median} or earlier`,
+    });
+  }
+  if (topGenre && genres) {
+    answers.push({
+      label: "Top genre",
+      value: topGenre.genre,
+      note: `${Math.round((topGenre.plays / genres.totalPlays) * 100)}% of your plays`,
+    });
+  }
+  if (longest) {
+    answers.push({
+      label: "Longest streak",
+      value: withNums(plural(longest.days, "day")),
+      note: `from ${DateFormatter.toDayMonth(fromDay(longest.start))}`,
+    });
+  }
+  if (busiest) {
+    const day = fromDay(busiest.date);
+    answers.push({
+      label: "Busiest day",
+      value: withNums(DateFormatter.toDayMonth(day)),
+      note: `${DateFormatter.fromIsoWeekdayLong(day.getDay() || 7)}, ${formatHours(busiest.durationMs)}`,
+    });
+  }
+  if (overview && overview.durationMs > 0) {
+    answers.push({
+      label: "Golden hour",
+      value: withNums(DateFormatter.fromNumberToHour(goldenHour.hour)),
+      note: `${Math.round((goldenHour.durationMs / overview.durationMs) * 100)}% of your listening time`,
+    });
+  }
+  const answersReady = !!overview && !!traits && !!taste && !!genres;
 
   const share = async () => {
-    if (!overview || !songs || !artists) {
+    if (!overview) {
       return;
     }
     setSharing(true);
     try {
-      const topArtist = artists[0]?.artist;
-      const blob = await renderRecapImage({
-        year,
-        hours: Math.round(overview.durationMs / 3_600_000).toLocaleString(),
-        change:
-          hasPrevious && previous
-            ? change(previous.durationMs, overview.durationMs)
-            : undefined,
-        topArtist: topArtist && {
-          name: topArtist.name,
-          image: imageOf(topArtist.images, 240),
+      const facts = [
+        timeOfDay && {
+          value: timeOfDay.title,
+          label: timeOfDay.short ?? "time of day",
         },
-        topSongs: songs
-          .slice(0, NB_TOP_SHOWN)
-          .map((song) => ({
-            name: song.track.name,
-            artist: song.track_artists.map((a) => a.name).join(", "),
-            image: imageOf(song.album.images, 100),
-          })),
-        musicalAge: median === undefined ? undefined : musicalAge(median, year),
-        topGenre,
+        age !== undefined && {
+          value: plural(age, "year"),
+          label: "musical age",
+        },
+        topGenre && { value: topGenre.genre, label: "top genre" },
+        longest && {
+          value: plural(longest.days, "day"),
+          label: "longest streak",
+        },
+      ].filter((fact): fact is { value: string; label: string } => !!fact);
+      const blob = await renderRecapImage({
+        title: yearTitle,
+        hours,
+        change: durationChange,
+        color,
+        topArtist: topArtist && {
+          name: topArtist.artist.name,
+          image: imageOf(topArtist.artist.images, 300),
+        },
+        topSong: topSong && {
+          name: topSong.track.name,
+          artist: topSong.track_artists.map((a) => a.name).join(", "),
+          image: imageOf(topSong.album.images, 300),
+        },
+        topAlbum: topAlbum && {
+          name: topAlbum.album.name,
+          artist: topAlbum.album_artists.map((a) => a.name).join(", "),
+          image: imageOf(topAlbum.album.images, 300),
+        },
+        facts,
       });
       await shareRecapImage(blob, year);
     } catch (error) {
@@ -164,7 +305,18 @@ export default function Recap() {
     setSharing(false);
   };
 
-  const topArtist = artists?.[0];
+  const shareButton = overview && overview.plays > 0 && (
+    <Button
+      color="inherit"
+      size="small"
+      disabled={sharing || !songs || !artists || !albums || !answersReady}
+      onClick={() => {
+        share().catch(console.error);
+      }}>
+      Share image
+    </Button>
+  );
+
   const hero = (
     <PageHero
       title={`Recap ${year}`}
@@ -197,17 +349,7 @@ export default function Recap() {
       }
       actions={
         <div className={s.actions}>
-          {overview && overview.plays > 0 && (
-            <Button
-              color="inherit"
-              size="small"
-              disabled={sharing || !songs || !artists || !taste || !genres}
-              onClick={() => {
-                share().catch(console.error);
-              }}>
-              Share image
-            </Button>
-          )}
+          {shareButton}
           <YearSelect {...yearState} />
         </div>
       }
@@ -247,36 +389,112 @@ export default function Recap() {
   const monthName = (month: number) =>
     DateFormatter.toMonthString(new Date(year, month - 1, 1));
 
-  const traits =
-    overview && previous
-      ? listeningTraits(
-          overview,
-          hasPrevious ? previous : null,
-          (cell) => cell.durationMs,
-          { than, wholeHistory: false },
+  const artistMoves =
+    artists && previousArtistRanks && hasPrevious
+      ? withMoves(
+          artists.slice(0, NB_MOVES),
+          previousArtistRanks,
+          (a) => a.artist.id,
         )
       : undefined;
-
-  // The hour of the day with the most listening
-  const perHour = Array.from(Array(24).keys()).map((hour) => ({
-    hour,
-    durationMs:
-      overview?.heatmap
-        .filter((cell) => cell.hour === hour)
-        .reduce((sum, cell) => sum + cell.durationMs, 0) ?? 0,
-  }));
-  const goldenHour = perHour.reduce((a, b) =>
-    b.durationMs > a.durationMs ? b : a,
-  );
-
-  const artistMoves =
-    artists && previousArtists && hasPrevious
-      ? compareTops(artists, previousArtists, (a) => a.artist.id)
-      : undefined;
   const songMoves =
-    songs && previousSongs && hasPrevious
-      ? compareTops(songs, previousSongs, (a) => a.track.id)
+    songs && previousSongRanks && hasPrevious
+      ? withMoves(
+          songs.slice(0, NB_MOVES),
+          previousSongRanks,
+          (a) => a.track.id,
+        )
       : undefined;
+  const droppedTitle = `Were in your ${previousYear} top ${DROPPED_FROM}, now out of your top ${NB_TOP}`;
+
+  // The closing text, each sentence only when its numbers are there
+  const paragraphs: Paragraph[] = [];
+  if (overview) {
+    const first: Paragraph = [
+      [
+        "You listened for ",
+        { num: hours, tint: true },
+        hours === "1" ? " hour" : " hours",
+        durationChange ? `, ${durationChange}.` : ".",
+      ],
+    ];
+    if (topArtist) {
+      first.push([
+        { name: topArtist.artist.name },
+        " was your top artist with ",
+        { num: topArtist.count.toLocaleString() },
+        topArtist.count === 1 ? " play" : " plays",
+        // Neutral words: the top can be ranked by time, not plays
+        ...(topSong
+          ? [", and ", { name: topSong.track.name }, " your top song."]
+          : ["."]),
+      ]);
+    }
+    if (topAlbum) {
+      first.push(["Your top album was ", { name: topAlbum.album.name }, "."]);
+    }
+    paragraphs.push(first);
+
+    const second: Paragraph = [];
+    if (timeOfDay) {
+      second.push(
+        timeOfDay.part
+          ? [
+              `You were ${article(timeOfDay.title)} `,
+              { tint: timeOfDay.title.toLowerCase() },
+              ` (${timeOfDay.short}).`,
+            ]
+          : [timeOfDay.text],
+      );
+    }
+    if (overview.newArtists > 0) {
+      const best = discoveries?.[0];
+      second.push([
+        { num: overview.newArtists.toLocaleString() },
+        overview.newArtists === 1
+          ? " artist was new to you"
+          : " artists were new to you",
+        ...(best
+          ? [", and ", { name: best.artist.name }, " stuck the most."]
+          : ["."]),
+      ]);
+    }
+    if (longest && longest.days > 1) {
+      second.push([
+        "Your longest streak ran for ",
+        { num: longest.days.toLocaleString(), tint: true },
+        ` days in a row, from ${DateFormatter.toDayMonth(fromDay(longest.start))} to ${DateFormatter.toDayMonth(fromDay(longest.end))}.`,
+      ]);
+    }
+    if (median !== undefined && taste) {
+      // The median only counts plays whose release year is known
+      const dated = taste.years.reduce((sum, y) => sum + y.plays, 0);
+      second.push([
+        dated < overview.plays
+          ? "Half of your plays with a known release year were of music released in "
+          : "Half of your plays were of music released in ",
+        { num: String(median) },
+        " or before",
+        ...(topGenre
+          ? [", and ", { name: topGenre.genre }, " was your top genre."]
+          : ["."]),
+      ]);
+    }
+    if (second.length > 0) {
+      paragraphs.push(second);
+    }
+  }
+  const letterTitle = `Your ${yearTitle}`;
+  const copyLetter = async () => {
+    try {
+      await navigator.clipboard.writeText(letterText(letterTitle, paragraphs));
+      dispatch(alertMessage({ level: "success", message: "Text copied" }));
+    } catch {
+      dispatch(
+        alertMessage({ level: "error", message: "Could not copy the text" }),
+      );
+    }
+  };
 
   return (
     <div>
@@ -285,11 +503,20 @@ export default function Recap() {
         stats={[
           stat("Time listened", (o) => o.durationMs, formatHours),
           stat("Plays", (o) => o.plays),
-          stat("Artists", (o) => o.artists),
-          stat("Songs", (o) => o.tracks),
+          {
+            ...stat("Artists", (o) => o.artists),
+            extra: newOf(overview?.newArtists, overview?.artists),
+          },
+          {
+            ...stat("Songs", (o) => o.tracks),
+            extra: newOf(overview?.newTracks, overview?.tracks),
+          },
         ]}
       />
-      <div className={clsx("ruled-columns", s.work)}>
+      {answersReady && answers.length > 0 && (
+        <StatStrip words stats={answers} />
+      )}
+      <div className={s.tops}>
         <Section
           title="Top songs"
           link={{
@@ -305,7 +532,13 @@ export default function Recap() {
                   key={item.track.id}
                   rank={index + 1}
                   image={item.album.images}
-                  title={<InlineTrack track={item.track} size="normal" />}
+                  title={
+                    <InlineTrack
+                      track={item.track}
+                      size="normal"
+                      className={s.oneLine}
+                    />
+                  }
                   subtitle={<ArtistNames artists={item.track_artists} />}
                   right={<Count n={item.count} />}
                 />
@@ -314,47 +547,58 @@ export default function Recap() {
             <RowsSkeleton />
           )}
         </Section>
-        <div>
-          <Section
-            title="Top artists"
-            link={{
-              to: "/top/artists",
-              label: "See all",
-              onClick: () => openPeriod(start, end, "/top/artists"),
-            }}>
-            {artists ? (
-              artists
-                .slice(0, NB_TOP_SHOWN)
-                .map((item, index) => (
-                  <ItemRow
-                    key={item.artist.id}
-                    rank={index + 1}
-                    image={item.artist.images}
-                    round
-                    title={<InlineArtist artist={item.artist} size="normal" />}
-                    right={<Count n={item.count} />}
-                  />
-                ))
-            ) : (
-              <RowsSkeleton />
-            )}
-          </Section>
-          <Section title="Top album" className={s.stacked}>
-            {albums ? (
-              albums[0] && (
+        <Section
+          title="Top artists"
+          link={{
+            to: "/top/artists",
+            label: "See all",
+            onClick: () => openPeriod(start, end, "/top/artists"),
+          }}>
+          {artists ? (
+            artists
+              .slice(0, NB_TOP_SHOWN)
+              .map((item, index) => (
                 <ItemRow
-                  big
-                  image={albums[0].album.images}
-                  title={<InlineAlbum album={albums[0].album} size="normal" />}
-                  subtitle={<ArtistNames artists={albums[0].album_artists} />}
-                  right={<Count n={albums[0].count} />}
+                  key={item.artist.id}
+                  rank={index + 1}
+                  image={item.artist.images}
+                  round
+                  title={<InlineArtist artist={item.artist} size="normal" />}
+                  right={<Count n={item.count} />}
                 />
-              )
-            ) : (
-              <RowsSkeleton />
-            )}
-          </Section>
-        </div>
+              ))
+          ) : (
+            <RowsSkeleton />
+          )}
+        </Section>
+        <Section
+          title="Top albums"
+          link={{
+            to: "/top/albums",
+            label: "See all",
+            onClick: () => openPeriod(start, end, "/top/albums"),
+          }}>
+          {albums ? (
+            albums.map((item, index) => (
+              <ItemRow
+                key={item.album.id}
+                rank={index + 1}
+                image={item.album.images}
+                title={
+                  <InlineAlbum
+                    album={item.album}
+                    size="normal"
+                    className={s.oneLine}
+                  />
+                }
+                subtitle={<ArtistNames artists={item.album_artists} />}
+                right={<Count n={item.count} />}
+              />
+            ))
+          ) : (
+            <RowsSkeleton />
+          )}
+        </Section>
       </div>
       <div className={s.sections}>
         {months ? (
@@ -432,37 +676,71 @@ export default function Recap() {
         ) : (
           <ChartSkeleton title="Hours per month" />
         )}
-        {artistMoves && songMoves && (
-          <div className={clsx("ruled-columns", s.work)}>
-            <Section title={`Artists since ${previousYear}`}>
-              <Moves
-                moves={artistMoves}
-                previousYear={previousYear}
-                render={(item) => ({
-                  image: item.artist.images,
-                  round: true,
-                  title: <InlineArtist artist={item.artist} size="normal" />,
-                })}
-              />
-            </Section>
-            <Section title={`Songs since ${previousYear}`}>
-              <Moves
-                moves={songMoves}
-                previousYear={previousYear}
-                render={(item) => ({
-                  image: item.album.images,
-                  title: <InlineTrack track={item.track} size="normal" />,
-                  subtitle: <ArtistNames artists={item.track_artists} />,
-                })}
-              />
-            </Section>
-          </div>
-        )}
+        {artistMoves &&
+          songMoves &&
+          artists &&
+          songs &&
+          previousArtists &&
+          previousSongs && (
+            <div className={clsx("ruled-columns", s.work, s.even)}>
+              <Section
+                title={`Top artists since ${previousYear}`}
+                info={movesInfo(year, previousYear)}
+                link={{
+                  to: `/recap/changes?year=${year}&tab=artists`,
+                  label: "See all",
+                }}>
+                {artistMoves.map(artistMoveRow(previousYear))}
+                <DroppedLine
+                  title={droppedTitle}
+                  items={droppedOut(
+                    previousArtists,
+                    artists.map((a) => a.artist.id),
+                    (a) => a.artist.id,
+                  ).map(({ item, before }) => ({
+                    before,
+                    item: {
+                      id: item.artist.id,
+                      name: item.artist.name,
+                      images: item.artist.images,
+                      to: `/artist/${item.artist.id}`,
+                      round: true,
+                    },
+                  }))}
+                />
+              </Section>
+              <Section
+                title={`Top songs since ${previousYear}`}
+                info={movesInfo(year, previousYear)}
+                link={{
+                  to: `/recap/changes?year=${year}&tab=songs`,
+                  label: "See all",
+                }}>
+                {songMoves.map(songMoveRow(previousYear))}
+                <DroppedLine
+                  title={droppedTitle}
+                  items={droppedOut(
+                    previousSongs,
+                    songs.map((a) => a.track.id),
+                    (a) => a.track.id,
+                  ).map(({ item, before }) => ({
+                    before,
+                    item: {
+                      id: item.track.id,
+                      name: item.track.name,
+                      images: item.album.images,
+                      to: `/song/${item.track.id}`,
+                    },
+                  }))}
+                />
+              </Section>
+            </div>
+          )}
         <div className={clsx("ruled-columns", s.work)}>
           <Section
             title="Best discoveries"
             info={discoveryInfo(discoveryTab)}
-            tabs={DISCOVERY_TABS}
+            tabs={KIND_TABS}
             tab={discoveryTab}
             onTab={setDiscoveryTab}
             link={seeAll(
@@ -510,172 +788,38 @@ export default function Recap() {
             )}
           </Section>
         </div>
-        <div className={clsx("ruled-columns", s.work)}>
-          <Section title="Habits">
-            {overview && traits ? (
-              <div className={s.facts}>
-                {traits.map((trait) => (
-                  <Fact key={trait.title} title={trait.title}>
-                    {trait.text}
-                  </Fact>
-                ))}
-                {overview.busiestDay && (
-                  <Fact title="Busiest day">
-                    {DateFormatter.toWeekdayDayMonthYear(
-                      fromDay(overview.busiestDay.date),
-                    )}
-                    , {formatHours(overview.busiestDay.durationMs)}
-                  </Fact>
-                )}
-                {overview.durationMs > 0 && (
-                  <Fact title="Golden hour">
-                    {DateFormatter.fromNumberToHour(goldenHour.hour)} –{" "}
-                    {DateFormatter.fromNumberToHour((goldenHour.hour + 1) % 24)}
-                    ,{" "}
-                    {Math.round(
-                      (goldenHour.durationMs / overview.durationMs) * 100,
-                    )}
-                    % of your listening time
-                  </Fact>
-                )}
-                {overview.streaks.longest && (
-                  <Fact title="Longest streak">
-                    {plural(overview.streaks.longest.days, "day")} in a row,
-                    from{" "}
-                    {DateFormatter.toDayMonthYear(
-                      fromDay(overview.streaks.longest.start),
-                    )}
-                  </Fact>
-                )}
-              </div>
-            ) : (
-              <RowsSkeleton />
-            )}
-          </Section>
-          <Section title="Taste">
-            {taste && genres ? (
-              <div className={s.taste}>
-                {median !== undefined && (
-                  <Fact title="Musical age">
-                    {plural(musicalAge(median, year), "year")} in {year}: half
-                    of your plays were of music released in {median} or before
-                  </Fact>
-                )}
-                {topGenre && (
-                  <Fact title="Top genre">
-                    {topGenre}:{" "}
-                    {Math.round(
-                      (genres.genres[0]!.plays / genres.totalPlays) * 100,
-                    )}
-                    % of your plays were by artists tagged {topGenre}
-                  </Fact>
-                )}
-                {taste.years.length > 0 && (
-                  <TopReleaseYear years={taste.years} />
-                )}
-              </div>
-            ) : (
-              <RowsSkeleton />
-            )}
-          </Section>
-        </div>
       </div>
+      {paragraphs.length > 0 && (
+        <Letter
+          title={letterTitle}
+          paragraphs={paragraphs}
+          covers={[
+            topArtist && {
+              label: "Top artist",
+              images: topArtist.artist.images,
+              to: `/artist/${topArtist.artist.id}`,
+              round: true,
+            },
+            topSong && {
+              label: "Top song",
+              images: topSong.album.images,
+              to: `/song/${topSong.track.id}`,
+            },
+            topAlbum && {
+              label: "Top album",
+              images: topAlbum.album.images,
+              to: `/album/${topAlbum.album.id}`,
+            },
+          ].filter((cover) => !!cover)}
+          onCopy={() => {
+            copyLetter().catch(console.error);
+          }}
+          share={shareButton}
+        />
+      )}
     </div>
   );
 }
 
-// A count in a row's right column
 const imageOf = (images: SpotifyImage[], size: number) =>
   images.length > 0 ? getAtLeastImage(images, size) : undefined;
-
-function Fact({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <Text element="div" size="normal" weight="bold">
-        {title}
-      </Text>
-      <Text element="div" size="normal">
-        {children}
-      </Text>
-    </div>
-  );
-}
-
-function TopReleaseYear({
-  years,
-}: {
-  years: NonNullable<Awaited<ReturnType<typeof api.getTaste>>["data"]>["years"];
-}) {
-  const top = years.reduce((best, y) => (y.plays > best.plays ? y : best));
-  return (
-    <Fact title="Most played release year">
-      {top.year}: {plural(top.plays, "play")} of songs from that year
-      {top.top.track && (
-        <>
-          , most of all {top.top.track.name} ({plural(top.top.plays, "play")})
-        </>
-      )}
-    </Fact>
-  );
-}
-
-interface MovesProps<T> {
-  moves: ReturnType<typeof compareTops<T>>;
-  previousYear: number;
-  render: (item: T) => {
-    image: SpotifyImage[];
-    round?: boolean;
-    title: ReactNode;
-    subtitle?: ReactNode;
-  };
-}
-
-function Moves<T>({ moves, previousYear, render }: MovesProps<T>) {
-  const sections: {
-    title: string;
-    moves: Move<T>[];
-    label: (m: Move<T>) => string;
-  }[] = [
-    {
-      title: "Moved up",
-      moves: moves.climbers,
-      label: (m) => `#${m.before} → #${m.rank}`,
-    },
-    {
-      title: `New in your top ${TOP}, not in your ${previousYear} top ${NB_TOP}`,
-      moves: moves.newcomers,
-      label: (m) => `#${m.rank}`,
-    },
-    {
-      title: `Was in your ${previousYear} top ${TOP}, now out of your top ${NB_TOP}`,
-      moves: moves.dropped,
-      label: (m) => `was #${m.before}`,
-    },
-  ];
-  const shown = sections.filter((section) => section.moves.length > 0);
-  if (shown.length === 0) {
-    return (
-      <Text size="normal" greyed>
-        Your top is the same as in {previousYear}.
-      </Text>
-    );
-  }
-  return (
-    <div className={s.facts}>
-      {shown.map((section) => (
-        <div key={section.title}>
-          <Text element="div" size="normal" weight="bold">
-            {section.title}
-          </Text>
-          {section.moves.map((move, index) => (
-            <ItemRow
-              key={index}
-              {...render(move.item)}
-              right={<span className="num">{section.label(move)}</span>}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}

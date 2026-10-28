@@ -40,6 +40,7 @@ import ItemHistory from "./scenes/ItemHistory";
 import Logout from "./scenes/Logout";
 import OnThisDayPage from "./scenes/OnThisDay";
 import Recap from "./scenes/Recap";
+import RecapChanges from "./scenes/Recap/RecapChanges";
 import RecapDiscoveries from "./scenes/Recap/RecapDiscoveries";
 import RecapHooked from "./scenes/Recap/RecapHooked";
 import Settings from "./scenes/Settings";
@@ -182,6 +183,14 @@ function App() {
                   element={
                     <PrivateRoute>
                       <Recap />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/recap/changes"
+                  element={
+                    <PrivateRoute>
+                      <RecapChanges />
                     </PrivateRoute>
                   }
                 />

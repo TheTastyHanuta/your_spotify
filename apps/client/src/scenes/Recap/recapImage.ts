@@ -1,24 +1,31 @@
-// Draws the recap as a 1080×1920 image, the size of a phone story. Black and
-// white like the app: the pictures are the only colour.
+import { Rgb, shadeOf } from "../../services/coverColor";
+
+// Draws the recap as a 1080×1920 image, the size of a phone story, lit by the
+// page's cover colour like the hero. The pictures are the only other colour.
 export interface RecapImageData {
-  year: number;
+  // Like "2026 so far"
+  title: string;
   // Whole hours
   hours: string;
   // Like "12% more than in 2024"
   change?: string;
+  // The page's cover colour, null for neutral
+  color: Rgb | null;
   topArtist?: { name: string; image?: string };
-  topSongs: { name: string; artist: string; image?: string }[];
-  musicalAge?: number;
-  topGenre?: string;
+  topSong?: { name: string; artist: string; image?: string };
+  topAlbum?: { name: string; artist: string; image?: string };
+  // Up to four short answers, like "Night owl" over "62% at night"
+  facts: { value: string; label: string }[];
 }
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
-const MARGIN = 90;
+const MARGIN = 86;
 const WHITE = "#ffffff";
-const GREY = "rgba(255, 255, 255, 0.6)";
+const GREY = "rgba(255, 255, 255, 0.72)";
 const LINE = "rgba(255, 255, 255, 0.2)";
-const SONG_ROW = 120;
+// The page background of the dark theme
+const NIGHT = "#0b0b0d";
 
 // Spotify's image server allows cross origin reads, so the canvas can still
 // be exported. A picture that does not load is left out.
@@ -46,6 +53,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, width: number) {
   return `${cut}…`;
 }
 
+// The picture with a soft shadow under it, like the hero's cover
 function drawPicture(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement | null,
@@ -54,21 +62,29 @@ function drawPicture(
   size: number,
   round: boolean,
 ) {
+  const shape = () => {
+    ctx.beginPath();
+    if (round) {
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    } else {
+      ctx.roundRect(x, y, size, size, 12);
+    }
+  };
   ctx.save();
-  ctx.beginPath();
-  if (round) {
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-  } else {
-    ctx.roundRect(x, y, size, size, 8);
-  }
-  ctx.clip();
-  if (image) {
-    ctx.drawImage(image, x, y, size, size);
-  } else {
-    ctx.fillStyle = LINE;
-    ctx.fillRect(x, y, size, size);
-  }
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = 60;
+  ctx.shadowOffsetY = 28;
+  shape();
+  ctx.fillStyle = LINE;
+  ctx.fill();
   ctx.restore();
+  if (image) {
+    ctx.save();
+    shape();
+    ctx.clip();
+    ctx.drawImage(image, x, y, size, size);
+    ctx.restore();
+  }
 }
 
 export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
@@ -81,9 +97,10 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
   if (!ctx) {
     throw new Error("Canvas is not supported");
   }
-  const [artistImage, ...songImages] = await Promise.all([
+  const [artistImage, songImage, albumImage] = await Promise.all([
     loadImage(data.topArtist?.image),
-    ...data.topSongs.map((song) => loadImage(song.image)),
+    loadImage(data.topSong?.image),
+    loadImage(data.topAlbum?.image),
   ]);
 
   const text = (
@@ -99,55 +116,62 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
     ctx.fillStyle = color;
     ctx.fillText(fitText(ctx, value, width), x, y);
   };
-  const label = (value: string, x: number, y: number) =>
-    text(value.toUpperCase(), x, y, 32, 600, GREY);
 
-  ctx.fillStyle = "#000000";
+  const background = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  background.addColorStop(0, shadeOf(data.color, [0.42, 0.09]));
+  background.addColorStop(0.46, shadeOf(data.color, [0.22, 0.05]));
+  background.addColorStop(1, NIGHT);
+  ctx.fillStyle = background;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  label(`${data.year} in music`, MARGIN, 150);
+  text(data.title, MARGIN, 150, 40, 500, GREY);
   text(data.hours, MARGIN - 6, 360, 200, 800);
-  text("hours listened", MARGIN, 450, 52, 600);
+  text("hours listened", MARGIN, 440, 60, 700);
   if (data.change) {
-    text(data.change, MARGIN, 515, 36, 500, GREY);
+    text(data.change, MARGIN, 505, 38, 500, GREY);
   }
 
   let y = 590;
   if (data.topArtist) {
-    drawPicture(ctx, artistImage, MARGIN, y, 240, true);
-    label("Top artist", MARGIN + 290, y + 100);
-    text(data.topArtist.name, MARGIN + 290, y + 180, 72, 800);
-    y += 300;
+    drawPicture(ctx, artistImage, MARGIN, y, 260, true);
+    text("Top artist", MARGIN + 300, y + 110, 40, 500, GREY);
+    text(data.topArtist.name, MARGIN + 300, y + 200, 88, 800);
+    y += 320;
   }
 
-  label("Top songs", MARGIN, y + 30);
-  y += 70;
-  data.topSongs.slice(0, 5).forEach((song, index) => {
-    const rowY = y + index * SONG_ROW;
-    text(`${index + 1}`, MARGIN, rowY + 66, 48, 800, GREY, 50);
-    drawPicture(ctx, songImages[index] ?? null, MARGIN + 60, rowY, 100, false);
-    text(song.name, MARGIN + 190, rowY + 44, 42, 700);
-    text(song.artist, MARGIN + 190, rowY + 90, 34, 500, GREY);
-  });
-  y += 5 * SONG_ROW + 30;
+  const item = (
+    label: string,
+    entry: { name: string; artist: string } | undefined,
+    image: HTMLImageElement | null,
+  ) => {
+    if (!entry) {
+      return;
+    }
+    drawPicture(ctx, image, MARGIN, y, 220, false);
+    text(label, MARGIN + 260, y + 70, 38, 500, GREY);
+    text(entry.name, MARGIN + 260, y + 140, 60, 700);
+    text(entry.artist, MARGIN + 260, y + 196, 40, 500, GREY);
+    y += 260;
+  };
+  item("Top song", data.topSong, songImage);
+  item("Top album", data.topAlbum, albumImage);
 
-  const facts = [
-    data.musicalAge !== undefined && {
-      title: "Musical age",
-      value: `${data.musicalAge}`,
-    },
-    data.topGenre && { title: "Top genre", value: data.topGenre },
-  ].filter((fact): fact is { title: string; value: string } => !!fact);
-  const factWidth = (WIDTH - 2 * MARGIN) / Math.max(1, facts.length);
-  ctx.fillStyle = LINE;
-  ctx.fillRect(MARGIN, y, WIDTH - 2 * MARGIN, 2);
-  facts.forEach((fact, index) => {
-    const x = MARGIN + index * factWidth;
-    label(fact.title, x, y + 80);
-    text(fact.value, x, y + 160, 64, 800, WHITE, factWidth - 40);
-  });
+  // Two rows of two short answers above the name of the app
+  const facts = data.facts.slice(0, 4);
+  if (facts.length > 0) {
+    const top = Math.max(y + 30, 1490);
+    const width = (WIDTH - 2 * MARGIN) / 2;
+    ctx.fillStyle = LINE;
+    ctx.fillRect(MARGIN, top, WIDTH - 2 * MARGIN, 2);
+    facts.forEach((fact, index) => {
+      const x = MARGIN + (index % 2) * width;
+      const rowY = top + 100 + Math.floor(index / 2) * 150;
+      text(fact.value, x, rowY, 64, 800, WHITE, width - 40);
+      text(fact.label, x, rowY + 50, 36, 500, GREY, width - 40);
+    });
+  }
 
-  text("Your Spotify", MARGIN, HEIGHT - 70, 36, 700, GREY);
+  text("Your Spotify", MARGIN, HEIGHT - 70, 40, 700, GREY);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

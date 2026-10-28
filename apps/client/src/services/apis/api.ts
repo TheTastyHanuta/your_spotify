@@ -587,6 +587,13 @@ export const api = {
         album_artists: Artist[];
       }[]
     >("/spotify/top/albums", { start, end, nb, offset }),
+  // The IDs of the top items in order, without the items themselves
+  getRanks: (
+    start: Date,
+    end: Date,
+    type: "track" | "artist" | "album",
+    nb: number,
+  ) => get<string[]>("/spotify/top/ranks", { start, end, type, nb }),
   getImports: () => get<ImporterState[]>("/imports"),
   doImportPrivacy: (files: File[]) => {
     const formData = new FormData();

@@ -1,41 +1,39 @@
-// How a top list moved since the previous one. Ranks start at 1, and an item
-// missing from a list is out of it (the lists are the top 30).
-const SHOWN = 10;
-export const TOP = 20;
+// Top lists Recap compares with the previous year
+export const NB_TOP = 30;
 
-export type Move<T> = { item: T; rank?: number; before?: number };
+// How a top list moved since the previous year. Ranks start at 1; the
+// previous ranks are the previous year's top RANKED, an item outside it is new.
+export const RANKED = 500;
+// The previous top that "dropped out" looks at
+export const DROPPED_FROM = 20;
 
-export function compareTops<T>(
+export type Move<T> = { item: T; rank: number; before?: number };
+
+export function withMoves<T>(
   current: T[],
-  previous: T[],
+  previousRanks: string[],
   id: (item: T) => string,
-) {
-  const rankIn = (list: T[]) =>
-    new Map(list.map((item, index) => [id(item), index + 1]));
-  const before = rankIn(previous);
-  const now = rankIn(current);
-
-  const moves = current.map((item, index) => ({
+): Move<T>[] {
+  const before = new Map(previousRanks.map((itemId, i) => [itemId, i + 1]));
+  return current.map((item, i) => ({
     item,
-    rank: index + 1,
+    rank: i + 1,
     before: before.get(id(item)),
   }));
-  return {
-    // Biggest jumps first
-    climbers: moves
-      .filter((move) => move.before !== undefined && move.before > move.rank)
-      .sort((a, b) => b.before! - b.rank - (a.before! - a.rank))
-      .slice(0, SHOWN) as Move<T>[],
-    // In the top 20 now, not in the previous top list at all
-    newcomers: moves
-      .slice(0, TOP)
-      .filter((move) => move.before === undefined)
-      .slice(0, SHOWN) as Move<T>[],
-    // In the previous top 20, not in the top list anymore
-    dropped: previous
-      .slice(0, TOP)
-      .map((item, index) => ({ item, before: index + 1 }))
-      .filter((move) => !now.has(id(move.item)))
-      .slice(0, SHOWN) as Move<T>[],
-  };
+}
+
+export type Dropped<T> = { item: T; before: number };
+
+// The previous top DROPPED_FROM items missing from the current IDs, with
+// their previous rank
+export function droppedOut<T>(
+  previous: T[],
+  current: string[],
+  id: (item: T) => string,
+): Dropped<T>[] {
+  const now = new Set(current);
+  return previous
+    .slice(0, DROPPED_FROM)
+    .map((item, i) => ({ item, before: i + 1 }))
+    .filter((move) => !now.has(id(move.item)));
 }

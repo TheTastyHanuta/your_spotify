@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
 
-import StatStrip, { formatDelta } from "../../components/StatStrip";
+import StatStrip, { formatDelta, newOf } from "../../components/StatStrip";
 import { api } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
@@ -48,14 +48,16 @@ export default function OverviewStats() {
         {
           label: "Artists",
           value: value(now?.artists),
+          extra: newOf(now?.newArtists, now?.artists),
           delta: delta((o) => o.artists),
           note: note((o) => o.artists),
         },
         {
-          label: "New artists",
-          value: value(now?.newArtists),
-          delta: delta((o) => o.newArtists),
-          note: note((o) => o.newArtists),
+          label: "Songs",
+          value: value(now?.tracks),
+          extra: newOf(now?.newTracks, now?.tracks),
+          delta: delta((o) => o.tracks),
+          note: note((o) => o.tracks),
         },
       ]}
     />

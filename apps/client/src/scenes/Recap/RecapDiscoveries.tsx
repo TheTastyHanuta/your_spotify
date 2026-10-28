@@ -7,8 +7,8 @@ import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
 import {
   artistDiscoveryRow,
-  DISCOVERY_TAB_VALUES,
-  DISCOVERY_TABS,
+  KIND_TAB_VALUES,
+  KIND_TABS,
   discoveryInfo,
   songDiscoveryRow,
   discoveredSince,
@@ -25,7 +25,7 @@ const plays = (n: number) => (
 export default function RecapDiscoveries() {
   const yearState = useRecapYear();
   const { year, range } = yearState;
-  const [tab, setTab] = useParamTab("tab", DISCOVERY_TAB_VALUES, "artists");
+  const [tab, setTab] = useParamTab("tab", KIND_TAB_VALUES, "artists");
   const artists = useAPI(
     api.getArtistDiscoveries,
     range.start,
@@ -38,7 +38,7 @@ export default function RecapDiscoveries() {
     title: "Best discoveries",
     back: { to: `/recap?year=${year}`, label: `Recap ${year}` },
     info: discoveryInfo(tab),
-    tabs: DISCOVERY_TABS,
+    tabs: KIND_TABS,
     tab,
     onTab: setTab,
     hideInterval: true,

@@ -318,6 +318,60 @@ export const getBest = (
     },
   ]);
 
+// Keeps the documents whose localId is in the collection, like getBest's
+// lookups and unwinds do
+const existsIn = (from: string, localId: unknown) => [
+  {
+    $lookup: {
+      from,
+      let: { id: localId },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$id", "$$id"] } } },
+        { $project: { _id: 1, album: 1 } },
+      ],
+      as: from,
+    },
+  },
+  { $match: { [from]: { $ne: [] } } },
+];
+
+// The IDs of getBest's first nb items in the same order, without sending the
+// items, so a long ranking stays small. An item getBest drops for a missing
+// track, album or artist is dropped here too, or every rank below it shifts.
+export const getRanks = async (
+  itemType: ItemType,
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const res = await InfosModel.aggregate<{ _id: string }>([
+    ...basicMatch(user._id, start, end),
+    {
+      $group: {
+        _id: itemType.field,
+        duration_ms: { $sum: "$durationMs" },
+        count: { $sum: 1 },
+        trackId: { $first: "$id" },
+        albumId: { $first: "$albumId" },
+        primaryArtistId: { $first: "$primaryArtistId" },
+      },
+    },
+    { $sort: { [getTrackSortType(user)]: -1, _id: 1 } },
+    ...existsIn("tracks", "$trackId"),
+    ...existsIn(
+      "albums",
+      itemType === ItemType.album
+        ? "$albumId"
+        : { $arrayElemAt: ["$tracks.album", 0] },
+    ),
+    ...existsIn("artists", "$primaryArtistId"),
+    { $limit: nb },
+    { $project: { _id: 1 } },
+  ]);
+  return res.map((item) => item._id);
+};
+
 export const getLongestListeningSession = async (
   userId: string,
   start: Date,

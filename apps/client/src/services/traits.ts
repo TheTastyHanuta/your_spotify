@@ -2,8 +2,14 @@ import { OverviewResponse } from "./apis/api";
 import { DateFormatter } from "./date";
 
 type Cell = OverviewResponse["heatmap"][number];
-// part: the part of the day the trait is about, if any
-export type Trait = { title: string; text: string; part?: PartOfDay["key"] };
+// part: the part of the day the trait is about, if any. short: the text in a
+// few words, for a stat cell
+export type Trait = {
+  title: string;
+  text: string;
+  short?: string;
+  part?: PartOfDay["key"];
+};
 
 // Differences smaller than this, in percentage points, count as usual
 export const NOTABLE = 3;
@@ -90,6 +96,7 @@ function partOfDayTrait(
     return {
       title: best.part.title,
       text: `${describe(best)}.`,
+      short: `${best.share}% ${best.part.name}`,
       part: best.part.key,
     };
   }
@@ -110,6 +117,7 @@ function partOfDayTrait(
   return {
     title: best.part.title,
     text: `${describe(best)}, against ${best.usual}% ${than}.`,
+    short: `${best.share}% ${best.part.name}`,
     part: best.part.key,
   };
 }

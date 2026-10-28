@@ -30,6 +30,35 @@ export function rgbToOklch([r, g, b]: Rgb) {
   return { l: L, c: Math.hypot(A, B), h: h < 0 ? h + 360 : h };
 }
 
+// Back from OKLCH, clamped to sRGB
+export function oklchToRgb(l: number, c: number, h: number): Rgb {
+  const A = c * Math.cos((h * Math.PI) / 180);
+  const B = c * Math.sin((h * Math.PI) / 180);
+  const lc = (l + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+  const mc = (l - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+  const sc = (l - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  const toSrgb = (v: number) => {
+    const x = Math.min(1, Math.max(0, v));
+    const g = x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
+    return Math.round(g * 255);
+  };
+  return [
+    toSrgb(4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc),
+    toSrgb(-1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc),
+    toSrgb(-0.0041960863 * lc - 0.7034186147 * mc + 1.707614701 * sc),
+  ];
+}
+
+// The cover's hue at a fixed lightness and capped chroma, as a CSS colour a
+// canvas can take
+export function shadeOf(
+  rgb: Rgb | null,
+  [l, max]: readonly [number, number],
+): string {
+  const { c, h } = rgb ? rgbToOklch(rgb) : { c: 0, h: 0 };
+  return `rgb(${oklchToRgb(l, Math.min(c, max), h).join(", ")})`;
+}
+
 // Pixels vote for one of 12 hue ranges, weighted by how colourful they are.
 // Greys, near-black, near-white and transparent pixels don't vote. Returns
 // the average colour of the winning range.

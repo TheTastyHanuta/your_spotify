@@ -4,18 +4,45 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Two columns of the same width */
+.even {
+  --columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* A name cut to one line in the narrow top lists, the tooltip has it all */
+.oneLine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Top songs, artists and albums side by side */
+.tops {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.tops > * + * {
+  border-left: 1px solid var(--line);
+}
+
 /* Full-width parts, the rules between them come from here */
 .sections > * {
   border-bottom: 1px solid var(--line);
 }
 
-/* A second section in the same column */
-.stacked {
-  border-top: 1px solid var(--line);
-}
-
 @media screen and (max-width: 1100px) {
   .work > :nth-child(even) {
+    border-top: 1px solid var(--line);
+  }
+
+  .tops {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tops > * + * {
+    border-left: none;
     border-top: 1px solid var(--line);
   }
 }
@@ -34,19 +61,6 @@
   color: var(--muted);
 }
 
-.facts {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 75ch;
-}
-
-.taste {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px 28px;
-}
-
 /* The month a song hooked, the weeks under it */
 .hookWhen {
   display: flex;
@@ -58,4 +72,166 @@
   font-family: var(--font);
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Places moved since the previous year */
+.movement {
+  display: inline-flex;
+  align-items: center;
+}
+
+.movement svg {
+  margin: 0 -2px 0 -6px;
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.newEntry {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Last year's top items that left the list */
+.dropped {
+  margin-top: 14px;
+}
+
+.droppedItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.droppedItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.droppedItem:hover {
+  color: var(--text);
+}
+
+.droppedImage {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.droppedImage.round,
+.coverImage.round {
+  border-radius: 50%;
+}
+
+/* The closing text, a band lit from below like the hero from above */
+.letter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px 48px;
+  padding: 44px 28px 40px;
+  background: linear-gradient(0deg, var(--tint-mid), var(--bg));
+}
+
+.letterTitle {
+  margin: 0 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.letterText p {
+  margin: 0;
+  max-width: 38ch;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+
+.letterText p + p {
+  margin-top: 16px;
+}
+
+.letterText strong {
+  font-weight: 800;
+}
+
+.letterTint {
+  color: var(--tint);
+  font-weight: 800;
+}
+
+.letterText :global(.num) {
+  font-size: 0.92em;
+}
+
+.letterActions {
+  display: flex;
+  gap: 8px;
+  margin: 22px 0 0 -5px;
+}
+
+.covers {
+  display: grid;
+  grid-template-columns: repeat(3, 132px);
+  gap: 16px;
+}
+
+.cover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.cover:hover {
+  color: var(--text);
+}
+
+.coverImage {
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}
+
+@media screen and (max-width: 1100px) {
+  .letter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .letter {
+    padding: 32px 16px;
+  }
+
+  .letterText p {
+    font-size: 22px;
+  }
+
+  .covers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .coverImage {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
 }

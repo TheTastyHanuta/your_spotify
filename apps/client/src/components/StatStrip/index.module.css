@@ -22,6 +22,21 @@
   margin-top: 4px;
 }
 
+.extra {
+  margin-left: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* A short answer in words, as heavy as the hero's name but smaller */
+.word {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
 .sub {
   display: flex;
   align-items: center;

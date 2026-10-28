@@ -11,6 +11,7 @@ import {
   getBestArtistsPer,
   getLongestListeningSession,
   getBest,
+  getRanks,
   ItemType,
   getMostListenedSongOfArtist,
   getArtists,
@@ -274,7 +275,7 @@ const intervalPerSchemaNbOffset = z.object({
     toDate,
     z.date().default(() => new Date()),
   ),
-  nb: z.preprocess(toNumber, z.number().min(1).max(30)),
+  nb: z.preprocess(toNumber, z.number().int().min(1).max(500)),
   offset: z.preprocess(toNumber, z.number().min(0).default(0)),
 });
 
@@ -309,6 +310,17 @@ router.get("/top/albums", isLoggedOrGuest, async (req, res) => {
 
   const result = await getBest(ItemType.album, user, start, end, nb, offset);
   res.status(200).send(result);
+});
+
+const ranksSchema = interval.extend({
+  type: z.enum(["track", "artist", "album"]),
+  nb: nbRows(500),
+});
+
+router.get("/top/ranks", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, type, nb } = validate(req.query, ranksSchema);
+  res.status(200).send(await getRanks(ItemType[type], user, start, end, nb));
 });
 
 const collaborativeSchema = intervalPerSchema.merge(

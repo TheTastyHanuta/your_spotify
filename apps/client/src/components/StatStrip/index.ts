@@ -1,2 +1,2 @@
-export { default, formatDelta } from "./StatStrip";
+export { default, formatDelta, newOf } from "./StatStrip";
 export type { Stat } from "./StatStrip";
