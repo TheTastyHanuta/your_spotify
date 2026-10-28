@@ -638,31 +638,31 @@ Get the songs heard for the first time in the period that were played again at l
 
 #### `GET /spotify/discoveries/overview`
 
-Get the numbers of new artists and songs, the new songs by artists played before the period, the artists back after a break (at least 10 plays, then none for 6 months) and whether the artists discovered in the period stuck (at least 3 plays from 3 months after the first listen).
+Get the numbers of new artists and songs, the new songs by artists played before the period (`knownArtistTracks`) and by artists also first heard in it (`newArtistTracks`), the artists back after a break (at least 10 plays, then none for 6 months) and whether the artists discovered in the period stuck (at least 3 plays from 3 months after the first listen).
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of rows in `knownArtistTracks` and `comebacks` (1-500, default 20)
+- `nb`: number - Number of rows in `knownArtistTracks`, `newArtistTracks` and `comebacks` (1-500, default 20)
 
 **Response:**
 
-- `200`: Object with the counts, `knownArtistTracks`, `comebacks` and `stick`
+- `200`: Object with the counts, `knownArtistTracks`, `newArtistTracks`, `comebacks` and `stick`
 
-#### `GET /spotify/discoveries/on-repeat`
+#### `GET /spotify/discoveries/artists`
 
-Get the songs (20 unless `nb` says otherwise) with the most plays inside any 7 days of the period (at least 5), with the first and last day of those 7 days that had plays.
+Get the artists heard for the first time in the period that were played again at least 30 days after the first listen (that play may be after the period), most played in the period first. Used by the Recap's best discoveries.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of songs to return (1-500, default 20)
+- `nb`: number - Number of artists to return (1-500, default 5)
 
 **Response:**
 
-- `200`: Array of songs with `plays`, `from` and `to` (`YYYY-MM-DD` in the stats timezone)
+- `200`: Array of artists with `plays` in the period, `first` (first listen) and `months` (number of months of the period with plays, in the stats timezone)
 
 #### `GET /spotify/discoveries/per`
 
@@ -677,6 +677,62 @@ Get the plays of each time step, and the plays of songs heard for the first time
 **Response:**
 
 - `200`: Array of steps with `count` and `newCount`
+
+### Hooked Songs
+
+A song hooked you when it got at least 6 plays in 7 days, more than four times its weekly average of the 60 days before. You stay hooked while a week has at least 3 plays (one quiet week allowed). A hook "clicked late" when the song was first heard at least 60 days before. Days are in the stats timezone. Each hook has `hook` (first day, `YYYY-MM-DD`), `weeks`, `plays` (plays while hooked, used for ranking), `peakDay`, `knownDays`, `stayedUntil` (`null` while the song is still with you), `comebacks`, `shape` (plays per week) and `yearLater` (played again a year later, `null` when it is too early to tell).
+
+#### `GET /spotify/hooks`
+
+Get the songs that hooked the listener in the period, strongest first.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of songs to return (1-500, default 20)
+
+**Response:**
+
+- `200`: Array of hooks, each with its `track`
+
+#### `GET /spotify/hooks/summary`
+
+Get how the listener got hooked in the period.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `step`: string - `month` (default) or `year`
+
+**Response:**
+
+- `200`: Object with `hooks`, `clickedLate`, `averageWeeks` (`null` without hooks), `yearLater` (`kept` of `counted`) and `perStep` (`newFinds` and `clickedLate` per month or year)
+
+#### `GET /spotify/hooks/years`
+
+Get the strongest hooks of every year, newest year first.
+
+**Query Parameters:**
+
+- `nb`: number - Number of hooks per year (1-500, default 3)
+
+**Response:**
+
+- `200`: Array of `{ year, hooks }`, each hook with its `track`
+
+#### `GET /spotify/hooks/song`
+
+Get the hook of one song (a song has at most one), shown on the song page.
+
+**Query Parameters:**
+
+- `id`: string - Spotify track ID
+
+**Response:**
+
+- `200`: `{ hook }`, `null` when the song never hooked the listener
 
 ### Your Story
 

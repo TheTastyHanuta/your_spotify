@@ -17,9 +17,9 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > **This is a fork** of [Yooooomi/your_spotify](https://github.com/Yooooomi/your_spotify), maintained since April 2026. I try to stay in sync with upstream regularly. Coming from the original project? See [Switching from the original YourSpotify](#switching-from-the-original-yourspotify). This fork adds:
 >
 > - **Complete redesign** - a consistent layout on every page, page colors taken from album and artist artwork, dark and light themes, clearer statistics with comparisons to the previous period and a layout that works on tablets and phones
-> - **New insight pages** - **Taste** (genres, release years and decades, your musical age over time), **Habits** (streaks, a listening calendar, time of day, longest listening sessions), **Discoveries** (new artists and songs, comebacks, songs on repeat), **Your story** (forgotten favorites, eras, evergreen songs) and **On this day**. They replace upstream's "All stats" page
+> - **New insight pages** - **Taste** (genres, release years and decades, your musical age over time), **Habits** (streaks, a listening calendar, time of day, longest listening sessions, how you get hooked on songs), **Discoveries** (new artists and songs, comebacks, hooked songs), **Your story** (forgotten favorites, eras, evergreen songs, your hooks over the years) and **On this day**. They replace upstream's "All stats" page
 > - **Recap** - a yearly summary compared with the previous year, with a shareable image
-> - **Playlists from insights** - lists like songs on repeat, forgotten favorites and evergreen songs can be saved as a Spotify playlist
+> - **Playlists from insights** - lists like hooked songs, forgotten favorites and evergreen songs can be saved as a Spotify playlist
 > - **Track deduplication by ISRC** - different releases of the same song (single, album, remaster) count as one song with a combined listen history. Older history is merged from the admin settings, with a preview first
 > - **Multi-artist support** - every credited artist is shown and artists you only heard as a featured artist get their own page and appear in search
 > - **Listened album context** - track and history views show which album version you actually played a song from
