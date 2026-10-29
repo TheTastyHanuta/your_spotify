@@ -3,6 +3,7 @@ name: Checks
 
 on:
   push:
+    branches: [master]
   pull_request:
 
 permissions:
@@ -38,6 +39,7 @@ jobs:
           node scripts/sessions.check.mjs
           node scripts/hooks.check.mjs
           node scripts/isrcMerge.check.mjs
+          pnpm build
 
       - name: Client
         working-directory: apps/client
@@ -46,3 +48,4 @@ jobs:
           pnpm typecheck
           node scripts/coverColor.check.mjs
           node scripts/apiCache.check.mjs
+          pnpm build
