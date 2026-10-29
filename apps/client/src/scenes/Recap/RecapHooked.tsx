@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL } from "../../components/ListPage";
 import { api } from "../../services/apis/api";
-import { hookDay, weeksText } from "../../services/hooked";
+import { phaseWeeks, phaseWhen } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
 import { HOOKED_INFO, hookYearRow } from "./rows";
@@ -21,7 +21,7 @@ export default function RecapHooked() {
       back={{ to: `/recap?year=${year}`, label: `Recap ${year}` }}
       items={items}
       info={HOOKED_INFO}
-      count={(n) => plural(n, "song")}
+      count={(n) => plural(n, "hook")}
       empty="No song hooked you this year."
       row={hookYearRow}
       hideInterval
@@ -32,7 +32,7 @@ export default function RecapHooked() {
           <AddToPlaylist
             context={{
               type: "specific",
-              songIds: items.map((item) => item.track.id),
+              songIds: [...new Set(items.map((item) => item.track.id))],
             }}
           />
         )
@@ -43,7 +43,7 @@ export default function RecapHooked() {
         nameText: item.track.name,
         meta: (
           <>
-            Hooked {hookDay(item.hook)} for {weeksText(item.weeks)} ·{" "}
+            {phaseWhen(item)} for {phaseWeeks(item)} ·{" "}
             <span className="num">{item.plays.toLocaleString()}</span> plays
           </>
         ),

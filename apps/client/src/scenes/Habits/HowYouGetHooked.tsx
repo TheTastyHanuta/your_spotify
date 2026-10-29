@@ -23,7 +23,11 @@ import { percent } from "../../services/tools";
 import s from "./index.module.css";
 
 const TITLE = "How you get hooked";
-const SERIES = { newFinds: "New finds", clickedLate: "Clicked late" };
+const SERIES = {
+  newFinds: "New finds",
+  clickedLate: "Clicked late",
+  cameBack: "Came back",
+};
 
 // Every month (or year) from the first hook to the last, with the steps
 // without hooks at 0
@@ -49,6 +53,7 @@ const fillSteps = (steps: HookSummaryResponse["perStep"]) => {
           : DateFormatter.toShortMonthYear(new Date(year, month - 1, 1)),
       newFinds: step?.newFinds ?? 0,
       clickedLate: step?.clickedLate ?? 0,
+      cameBack: step?.cameBack ?? 0,
     });
     if (month === undefined) {
       year += 1;
@@ -77,11 +82,12 @@ export default function HowYouGetHooked() {
     return <ChartSkeleton title={TITLE} />;
   }
   const data = fillSteps(summary.perStep);
+  const newHooks = summary.hooks - summary.comebacks;
 
   return (
     <Section
       title={TITLE}
-      info="A song hooks you when it suddenly gets at least 6 plays in 7 days, four times your usual for it. Clicked late: you had known it for 2 months or more"
+      info="A song hooks you when you play it about 2 times a week or more for weeks in a row, 12 plays at least. Came back: it did that again after at least 12 quiet weeks. Clicked late: you had known it for 2 months or more"
       link={
         summary.hooks > 0
           ? { to: "/discoveries/hooked", label: "See the songs" }
@@ -99,12 +105,18 @@ export default function HowYouGetHooked() {
                 {
                   label: "Hooks",
                   value: summary.hooks.toLocaleString(),
-                  note: "Songs that suddenly took over",
+                  note:
+                    summary.comebacks > 0
+                      ? `${summary.comebacks.toLocaleString()} of them came back`
+                      : "Songs that took over",
                 },
                 {
                   label: "Clicked late",
-                  value: `${percent(summary.clickedLate, summary.hooks)}%`,
-                  note: "Known 2 months or more before",
+                  value:
+                    newHooks > 0
+                      ? `${percent(summary.clickedLate, newHooks)}%`
+                      : "—",
+                  note: "Of new hooks, known 2 months before",
                 },
                 {
                   label: "Hooked for",
@@ -159,7 +171,14 @@ export default function HowYouGetHooked() {
                     dataKey="clickedLate"
                     name={SERIES.clickedLate}
                     stackId="hooks"
-                    fill="color-mix(in oklab, var(--tint) 45%, var(--bg))"
+                    fill="color-mix(in oklab, var(--tint) 60%, var(--bg))"
+                    maxBarSize={48}
+                  />
+                  <Bar
+                    dataKey="cameBack"
+                    name={SERIES.cameBack}
+                    stackId="hooks"
+                    fill="color-mix(in oklab, var(--tint) 30%, var(--bg))"
                     maxBarSize={48}
                     radius={[4, 4, 0, 0]}
                   />

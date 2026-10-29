@@ -5,7 +5,7 @@ import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { SectionTabs } from "../../components/Section";
 import { api } from "../../services/apis/api";
-import { hookMonth, weeksText } from "../../services/hooked";
+import { hookMonth, phaseWeeks } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { plural } from "../../services/tools";
 import { makeHookedRow } from "../Discoveries/rows";
@@ -162,13 +162,13 @@ const hookRow = makeHookedRow(hookMonth);
 // Every hook of the whole history, strongest first
 function HooksList() {
   const [start, end] = useMemo(() => [new Date(0), new Date()], []);
-  const items = useAPI(api.getHookedSongs, start, end, NB_ALL);
+  const items = useAPI(api.getHookedSongs, start, end, NB_ALL, true);
   return (
     <ListPage
       title="Your hooks"
       back={back}
       items={items}
-      info="Every song that suddenly took over: at least 6 plays in 7 days, four times your usual for it. Strongest first, by plays while hooked"
+      info="Every song that took over: weeks in a row with about 2 plays a week or more, 12 plays at least. Strongest first, by plays in those weeks"
       count={(n) => plural(n, "song")}
       empty="No song has hooked you yet."
       row={hookRow}
@@ -180,7 +180,7 @@ function HooksList() {
         nameText: item.track.name,
         meta: (
           <>
-            Hooked {hookMonth(item.hook)} for {weeksText(item.weeks)} ·{" "}
+            Hooked {hookMonth(item.start)} for {phaseWeeks(item)} ·{" "}
             <span className="num">{item.plays.toLocaleString()}</span> plays
           </>
         ),

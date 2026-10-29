@@ -10,7 +10,7 @@ import {
   HookedSong,
 } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { hookDay, knownText, weeksText } from "../../services/hooked";
+import { phaseNote, phaseWeeks, phaseWhen } from "../../services/hooked";
 import HookShape from "./HookShape";
 
 import s from "./index.module.css";
@@ -101,19 +101,21 @@ export const comebackRow = (item: Comeback, index: number) => (
   />
 );
 
-// "10 Jan · 7 weeks · known 3 months · artists", the weeks drawn beside the
-// plays while hooked. when: the hook day's text.
+// "Hooked 10 Jan · 7 weeks · known 3 months · artists" or "Came back 3 Mar ·
+// 5 weeks · after 2 years · artists", the weeks drawn beside the plays in
+// them. when: the start day's text.
 export const makeHookedRow =
-  (when: (day: string) => string) => (item: HookedSong, index: number) => (
+  (when?: (day: string) => string) => (item: HookedSong, index: number) => (
     <ItemRow
-      key={item.track.id}
+      // A song can hook and come back in one period
+      key={`${item.track.id}-${item.start}`}
       rank={index + 1}
       image={item.track.full_album.images}
       title={<InlineTrack track={item.track} size="normal" />}
       subtitle={
         <ArtistNames
           artists={item.track.full_artists}
-          prefix={`${when(item.hook)} · ${weeksText(item.weeks)} · ${knownText(item.knownDays)} · `}
+          prefix={`${phaseWhen(item, when)} · ${phaseWeeks(item)} · ${phaseNote(item)} · `}
         />
       }
       right={
@@ -125,4 +127,4 @@ export const makeHookedRow =
     />
   );
 
-export const hookedRow = makeHookedRow(hookDay);
+export const hookedRow = makeHookedRow();

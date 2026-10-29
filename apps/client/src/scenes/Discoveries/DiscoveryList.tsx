@@ -5,7 +5,7 @@ import AddToPlaylist from "../../components/AddToPlaylist";
 import ListPage, { NB_ALL, useParamTab } from "../../components/ListPage";
 import { api } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
-import { hookDay, weeksText } from "../../services/hooked";
+import { phaseWeeks, phaseWhen } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { plural } from "../../services/tools";
@@ -184,7 +184,7 @@ function HookedList() {
       back={back}
       items={items}
       info={HOOKED_INFO}
-      count={(n) => plural(n, "song")}
+      count={(n) => plural(n, "hook")}
       empty={HOOKED_EMPTY}
       row={hookedRow}
       right={
@@ -204,8 +204,7 @@ function HookedList() {
         nameText: item.track.name,
         meta: (
           <>
-            Hooked {hookDay(item.hook)} for {weeksText(item.weeks)} ·{" "}
-            {plays(item.plays)}
+            {phaseWhen(item)} for {phaseWeeks(item)} · {plays(item.plays)}
           </>
         ),
       })}

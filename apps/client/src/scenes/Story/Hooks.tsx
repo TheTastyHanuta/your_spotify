@@ -26,7 +26,7 @@ export default function Hooks() {
   return (
     <Section
       title="Your hooks over the years"
-      info="The songs that suddenly took over each year, strongest first: at least 6 plays in 7 days, four times your usual for them. The bar is how many weeks each one held you"
+      info="The songs that took over each year, strongest first: weeks in a row with about 2 plays a week or more, 12 plays at least. The bar is how many weeks each one held you"
       link={
         years && years.length > 0
           ? { to: "/story/hooks", label: "See all" }
@@ -41,7 +41,7 @@ export default function Hooks() {
                 <div className={s.hookList}>
                   {hooks.map((h) => {
                     const note = [
-                      DateFormatter.toMonthString(fromDay(h.hook)),
+                      DateFormatter.toMonthString(fromDay(h.start)),
                       h.track.full_artists.map((a) => a.name).join(", "),
                       clickedText(h.knownDays),
                     ].filter(Boolean);
