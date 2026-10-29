@@ -11,7 +11,7 @@ import { selectRawIntervalDetail } from "../../services/redux/modules/user/selec
 import { hookedRow } from "./rows";
 
 export const HOOKED_INFO =
-  "Songs that suddenly took over in this period: at least 6 plays in 7 days, four times your usual for them. Old songs that clicked late count too. Ranked by plays while hooked, the weeks with at least 3 plays";
+  "Songs that took over in this period: weeks in a row with about 2 plays a week or more, 12 plays at least. Old songs that clicked late count too, and songs that came back after at least 12 quiet weeks. Ranked by plays in those weeks";
 export const HOOKED_EMPTY = "No song hooked you in this period.";
 
 export default function Hooked() {
@@ -34,7 +34,11 @@ export default function Hooked() {
           <AddToPlaylist
             context={{
               type: "specific",
-              songIds: songs.slice(0, NB_SHOWN).map((song) => song.track.id),
+              songIds: [
+                ...new Set(
+                  songs.slice(0, NB_SHOWN).map((song) => song.track.id),
+                ),
+              ],
             }}
           />
         )

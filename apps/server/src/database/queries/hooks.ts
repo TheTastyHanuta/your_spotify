@@ -1,6 +1,6 @@
-// Hooked songs: the moment a song suddenly takes over, how long it held the
-// listener and whether it stayed. No imports, so scripts/hooks.check.mjs can
-// run it directly.
+// Hooked songs: a song's stretches of heavy listening (phases). The first is
+// the hook, a later one after a long break a comeback. No imports, so
+// scripts/hooks.check.mjs can run it directly.
 
 export interface PlaysOnDay {
   // "YYYY-MM-DD" in the stats timezone
@@ -8,45 +8,47 @@ export interface PlaysOnDay {
   plays: number;
 }
 
-export interface Hook {
-  // First day of the hook window
-  hook: string;
-  // Hooked for, in weeks from the hook day
+// again: a later phase without the break of a comeback
+export type PhaseKind = "hook" | "comeback" | "again";
+
+export interface Phase {
+  kind: PhaseKind;
+  // First day with plays
+  start: string;
+  // From its first week to its last, Monday to Sunday
   weeks: number;
-  // Plays in those weeks, the ranking of hooked songs
   plays: number;
-  // Most plays on one day while hooked
-  peakDay: number;
-  // Days from the first listen ever to the hook
-  knownDays: number;
-  // Start of the first quiet stretch after the hook, null: still with you
-  stayedUntil: string | null;
-  // First day of each comeback and its plays in COMEBACK_DAYS days
-  comebacks: PlaysOnDay[];
-  // Plays per week, from SHAPE_BEFORE weeks before the hook
+  // Its last busy week is recent enough for it to go on
+  ongoing: boolean;
+  // Days from the end of the previous phase, 0 for the hook
+  breakDays: number;
+  // Plays per week from SHAPE_BEFORE weeks before its first week
   shape: number[];
-  // Played in the YEAR_LATER_DAYS days from a year after the hook, null when
-  // those days are not over yet
+}
+
+export interface SongPhases {
+  // Monday of the week of the first listen
+  firstWeek: string;
+  // Plays per week from firstWeek to the week of today
+  weeks: number[];
+  // In time order, the hook first; empty when the song never hooked
+  phases: Phase[];
+  // Days from the first listen to the hook
+  knownDays: number;
+  // Played in the YEAR_LATER_DAYS days from a year after the hook, null
+  // without a hook or when those days are not over yet
   yearLater: boolean | null;
 }
 
-// A hook: at least HOOK_PLAYS plays in HOOK_DAYS days, at more than
-// HOOK_FACTOR times the weekly average of the PRIOR_DAYS days before
-const HOOK_DAYS = 7;
-export const HOOK_PLAYS = 6;
-const PRIOR_DAYS = 60;
-const HOOK_FACTOR = 4;
-// Hooked while a week has at least HELD_PLAYS plays, one quiet week allowed
-const HELD_PLAYS = 3;
-// Stayed with you until STAYED_WEEKS weeks in a row with fewer than
-// STAYED_PLAYS plays together
-const STAYED_WEEKS = 8;
-const STAYED_PLAYS = 6;
-// A comeback: at least COMEBACK_PLAYS plays in COMEBACK_DAYS days, at least
-// COMEBACK_GAP days after the previous one
-const COMEBACK_DAYS = 4;
-const COMEBACK_PLAYS = 4;
-const COMEBACK_GAP = 30;
+// A week is busy with at least one play and HOT_PLAYS plays in it and the
+// weeks right before and after it (about 2 a week)
+const HOT_PLAYS = 6;
+// Up to BRIDGE_WEEKS quiet weeks between busy ones stay in the phase
+const BRIDGE_WEEKS = 4;
+// A phase needs PHASE_PLAYS plays, quiet weeks inside it included
+export const PHASE_PLAYS = 12;
+// A comeback starts at least COMEBACK_WEEKS weeks after the previous phase
+const COMEBACK_WEEKS = 12;
 const SHAPE_BEFORE = 4;
 const SHAPE_WEEKS = 24;
 const YEAR_LATER_DAYS = 90;
@@ -74,97 +76,86 @@ export const periodDays = (start: Date, end: Date, timezone: string) => {
 };
 const toNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / DAY_MS;
 const toDay = (n: number) => new Date(n * DAY_MS).toISOString().slice(0, 10);
+// 1970-01-01 was a Thursday
+const mondayOf = (n: number) => n - ((n + 3) % 7);
 
-// days: sorted by day, with plays. today: the last day of the data; windows
-// reaching past it count with the plays they have.
-export function findHook(days: PlaysOnDay[], today: string): Hook | null {
+// days: sorted by day, with plays. today: the last day of the data; the
+// week of today counts with the plays it has.
+export function findPhases(
+  days: PlaysOnDay[],
+  today: string,
+): SongPhases | null {
   if (days.length === 0) {
     return null;
   }
   const numbers = days.map((d) => toNumber(d.day));
+  const first = mondayOf(numbers[0]!);
   const last = toNumber(today);
-  // Plays in [from, to)
-  const plays = (from: number, to: number) => {
-    let sum = 0;
-    for (let i = 0; i < days.length; i += 1) {
-      if (numbers[i]! >= from && numbers[i]! < to) sum += days[i]!.plays;
-    }
-    return sum;
-  };
-
-  // Windows only start on days with plays, never before the first listen
-  const start = numbers.find((n) => {
-    const inWindow = plays(n, n + HOOK_DAYS);
-    const priorWeekly = plays(n - PRIOR_DAYS, n) / (PRIOR_DAYS / HOOK_DAYS);
-    return inWindow >= HOOK_PLAYS && priorWeekly < inWindow / HOOK_FACTOR;
+  const weekOf = (n: number) => Math.floor((n - first) / 7);
+  const weeks: number[] = Array.from(
+    { length: Math.max(weekOf(last), weekOf(numbers.at(-1)!)) + 1 },
+    () => 0,
+  );
+  days.forEach((d, i) => {
+    weeks[weekOf(numbers[i]!)]! += d.plays;
   });
-  if (start === undefined) {
-    return null;
-  }
-  const week = (i: number) => plays(start + 7 * i, start + 7 * i + 7);
+  const at = (i: number) => weeks[i] ?? 0;
+  const busy = weeks.map(
+    (n, i) => n > 0 && at(i - 1) + n + at(i + 1) >= HOT_PLAYS,
+  );
 
-  // A quiet week only counts once a good week follows it
-  let weeks = 0;
-  let held = 0;
-  let quiet: number | null = null;
-  for (let i = 0; start + 7 * i <= last; i += 1) {
-    const n = week(i);
-    if (n >= HELD_PLAYS) {
-      weeks = i + 1;
-      held += n + (quiet ?? 0);
-      quiet = null;
-    } else if (quiet === null) {
-      quiet = n;
-    } else {
-      break;
+  // Runs of busy weeks, quiet stretches of up to BRIDGE_WEEKS bridged
+  const runs: { from: number; to: number }[] = [];
+  let quiet = 0;
+  busy.forEach((isBusy, i) => {
+    if (!isBusy) {
+      quiet += 1;
+      return;
     }
-  }
-  const heldEnd = start + 7 * weeks;
+    const run = runs.at(-1);
+    if (run && quiet <= BRIDGE_WEEKS) run.to = i;
+    else runs.push({ from: i, to: i });
+    quiet = 0;
+  });
+  const kept = runs
+    .map((run) => ({
+      ...run,
+      plays: weeks.slice(run.from, run.to + 1).reduce((a, b) => a + b, 0),
+    }))
+    .filter((run) => run.plays >= PHASE_PLAYS);
 
-  let peakDay = 0;
-  numbers.forEach((n, i) => {
-    if (n >= start && n < heldEnd) peakDay = Math.max(peakDay, days[i]!.plays);
+  const phases = kept.map((run, i): Phase => {
+    const monday = first + 7 * run.from;
+    const previous = kept[i - 1];
+    const gap = previous ? run.from - previous.to - 1 : 0;
+    return {
+      kind: !previous ? "hook" : gap >= COMEBACK_WEEKS ? "comeback" : "again",
+      // Busy weeks have plays
+      start: days[numbers.findIndex((n) => n >= monday)]!.day,
+      weeks: run.to - run.from + 1,
+      plays: run.plays,
+      ongoing: run.to >= weeks.length - 1 - BRIDGE_WEEKS,
+      breakDays: previous ? 7 * gap : 0,
+      shape: Array.from({ length: SHAPE_WEEKS }, (_, w) =>
+        at(run.from - SHAPE_BEFORE + w),
+      ),
+    };
   });
 
-  // Only whole runs of weeks inside the data
-  let stayedUntil: string | null = null;
-  for (let i = weeks; start + 7 * (i + STAYED_WEEKS) - 1 <= last; i += 1) {
-    if (plays(start + 7 * i, start + 7 * (i + STAYED_WEEKS)) < STAYED_PLAYS) {
-      stayedUntil = toDay(start + 7 * i);
-      break;
-    }
+  const hook = phases[0];
+  let yearLater: boolean | null = null;
+  if (hook) {
+    const from = toNumber(hook.start) + 365;
+    yearLater =
+      from + YEAR_LATER_DAYS - 1 > last
+        ? null
+        : numbers.some((n) => n >= from && n < from + YEAR_LATER_DAYS);
   }
-
-  const comebacks: PlaysOnDay[] = [];
-  let previous: number | null = null;
-  for (const n of numbers) {
-    if (n < heldEnd || (previous !== null && n - previous < COMEBACK_GAP)) {
-      continue;
-    }
-    const inWindow = plays(n, n + COMEBACK_DAYS);
-    if (inWindow >= COMEBACK_PLAYS) {
-      comebacks.push({ day: toDay(n), plays: inWindow });
-      previous = n;
-    }
-  }
-
-  const yearStart = start + 365;
-  const yearLater =
-    yearStart + YEAR_LATER_DAYS - 1 > last
-      ? null
-      : plays(yearStart, yearStart + YEAR_LATER_DAYS) > 0;
-
   return {
-    hook: toDay(start),
+    firstWeek: toDay(first),
     weeks,
-    plays: held,
-    peakDay,
-    knownDays: start - numbers[0]!,
-    stayedUntil,
-    comebacks,
-    shape: Array.from({ length: SHAPE_WEEKS }, (_, i) =>
-      week(i - SHAPE_BEFORE),
-    ),
+    phases,
+    knownDays: hook ? toNumber(hook.start) - numbers[0]! : 0,
     yearLater,
   };
 }

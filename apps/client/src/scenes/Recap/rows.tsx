@@ -13,7 +13,7 @@ import {
   SongDiscoveriesResponse,
 } from "../../services/apis/api";
 import { DateFormatter, fromDay } from "../../services/date";
-import { isLate, weeksText } from "../../services/hooked";
+import { breakText, isLate, phaseWeeks } from "../../services/hooked";
 import { plural } from "../../services/tools";
 import { Artist, SpotifyImage, Track } from "../../services/types";
 import { Dropped, Move, RANKED } from "./movers";
@@ -80,25 +80,33 @@ export const songDiscoveryRow = (
 );
 
 export const HOOKED_INFO =
-  "The songs that suddenly took over this year, strongest first: at least 6 plays in 7 days, four times your usual for them. Clicked late: you had known it for 2 months or more";
+  "The songs that took over this year, strongest first: weeks in a row with about 2 plays a week or more, 12 plays at least. Clicked late: you had known it for 2 months or more. Came back: played a lot again after at least 12 quiet weeks";
 
-// "clicked late · artists", the month it hooked and for how long on the right
+// "clicked late · artists" or "came back after 2 years · artists", the month
+// it started and for how long on the right
 export const hookYearRow = (item: HookedSong, index: number) => (
   <ItemRow
-    key={item.track.id}
+    // A song can hook and come back in one year
+    key={`${item.track.id}-${item.start}`}
     rank={index + 1}
     image={item.track.full_album.images}
     title={<InlineTrack track={item.track} size="normal" />}
     subtitle={
       <ArtistNames
         artists={item.track.full_artists}
-        prefix={`${isLate(item.knownDays) ? "clicked late" : "new find"} · `}
+        prefix={`${
+          item.kind === "comeback"
+            ? `came back ${breakText(item.breakDays)}`
+            : isLate(item.knownDays)
+              ? "clicked late"
+              : "new find"
+        } · `}
       />
     }
     right={
       <span className={s.hookWhen}>
-        {DateFormatter.toMonthString(fromDay(item.hook)).slice(0, 3)}
-        <small>{weeksText(item.weeks)}</small>
+        {DateFormatter.toMonthString(fromDay(item.start)).slice(0, 3)}
+        <small>{phaseWeeks(item)}</small>
       </span>
     }
   />

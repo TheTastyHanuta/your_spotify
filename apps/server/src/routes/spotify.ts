@@ -34,7 +34,7 @@ import {
   getHookedSongs,
   getHookSummary,
   getHooksPerYear,
-  getSongHook,
+  getSongPhases,
 } from "../database/queries/hooked";
 import {
   getCalendar,
@@ -68,7 +68,7 @@ import {
 } from "../tools/middleware";
 import { uniq } from "../tools/misc";
 import { SpotifyRequest, LoggedRequest, Timesplit } from "../tools/types";
-import { toDate, toNumber } from "../tools/zod";
+import { toBoolean, toDate, toNumber } from "../tools/zod";
 
 export const router = Router();
 
@@ -636,10 +636,15 @@ router.get("/discoveries/overview", isLoggedOrGuest, async (req, res) => {
   res.status(200).send(await getDiscoveryOverview(user, start, end, nb));
 });
 
+// hooksOnly: leave the comebacks out
+const hooksSchema = listSchema.extend({
+  hooksOnly: z.preprocess(toBoolean, z.boolean().default(false)),
+});
+
 router.get("/hooks", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end, nb } = validate(req.query, listSchema);
-  res.status(200).send(await getHookedSongs(user, start, end, nb));
+  const { start, end, nb, hooksOnly } = validate(req.query, hooksSchema);
+  res.status(200).send(await getHookedSongs(user, start, end, nb, hooksOnly));
 });
 
 const hookSummarySchema = interval.extend({
@@ -664,7 +669,7 @@ router.get("/hooks/song", isLoggedOrGuest, async (req, res) => {
     req.query,
     z.object({ id: z.string().min(1).max(64) }),
   );
-  res.status(200).send({ hook: await getSongHook(user, id) });
+  res.status(200).send({ song: await getSongPhases(user, id) });
 });
 
 router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {

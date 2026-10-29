@@ -114,10 +114,6 @@
   background-color: var(--tint);
 }
 
-.shape > i.stayed {
-  background-color: color-mix(in oklab, var(--tint) 45%, var(--bg));
-}
-
 @media screen and (max-width: 480px) {
   .shape {
     display: none;
