@@ -1,10 +1,14 @@
 # The build context is the repository root, the Dockerfiles copy what they need
 **/node_modules
-**/build
-.git
+apps/*/build
+# Dotfiles and local tool folders (.git, .github, .env, editor and agent files)
+.*
+apps/*/.*
+# Docs and screenshots
+docs
+**/*.md
 # Local data and secrets, never needed by a build
 db_data*
 your_spotify_db
 *.gz
-.env*
 docker-compose-personal.yml
