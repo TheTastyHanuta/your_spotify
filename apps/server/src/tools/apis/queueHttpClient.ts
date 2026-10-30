@@ -308,8 +308,8 @@ export class QueuedHttpClient {
         const until = new Date(this.queueState.rateLimitedUntil);
         logger.warn(
           quotaExceeded
-            ? `The request quota of this Spotify app is used up until ${until.toLocaleString()}, requests fail until then instead of waiting`
-            : `Rate limited by ${url.host} until ${until.toLocaleString()}, requests fail until then instead of waiting`,
+            ? `The request quota of this Spotify app is used up until ${until.toISOString()}, requests fail until then instead of waiting`
+            : `Rate limited by ${url.host} until ${until.toISOString()}, requests fail until then instead of waiting`,
         );
         this.report(quotaExceeded ? "quota" : "ban", queueItem, sentAt, until);
         throw new RateLimitedError(until);
@@ -322,6 +322,9 @@ export class QueuedHttpClient {
       // Spotify keeps limiting, so the caller pauses like on a ban (imports
       // and ISRC lookups slow down) instead of asking again right away
       if (queueItem.retry429AttemptCount >= maxAttempts) {
+        logger.warn(
+          `Still rate limited by ${url.host} after ${maxAttempts} retries, the request fails`,
+        );
         throw new RateLimitedError(new Date(Date.now() + retryAfterMs));
       }
 

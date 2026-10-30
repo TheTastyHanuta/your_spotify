@@ -40,13 +40,15 @@ export function get<E extends EnvVariable>(
   return validatedEnv[variable];
 }
 
+let missingRequired = false;
 Object.entries(validators).forEach(([key, value]) => {
   const v = process.env[key];
   try {
     const output = value.parse(v);
     validatedEnv[key] = output;
   } catch (e) {
-    console.error(`[error] ${key} env variable is missing`);
+    missingRequired ||= v === undefined;
+    console.error(`[error] ${key} env variable is missing or invalid`);
     if (e instanceof z.ZodError) {
       e.issues.forEach((issue) => {
         console.error(`[error] -> ${issue.message}`);
@@ -54,5 +56,10 @@ Object.entries(validators).forEach(([key, value]) => {
     }
   }
 });
+// Starting without one only crashes later with a less clear error. Invalid
+// optional values are still ignored, as before.
+if (missingRequired) {
+  process.exit(1);
+}
 
 export const logLevel = getWithDefault("LOG_LEVEL", "info");

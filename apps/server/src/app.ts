@@ -35,16 +35,16 @@ if (corsValue?.[0] === ALLOW_ALL_CORS) {
 }
 
 // Mask certain query params in logs
-const maskedSearchParams: Record<string, Set<string>> = {
-  "/oauth/spotify/callback": new Set(["code"]),
-};
+const maskedSearchParams = new Set(["code", "token"]);
 
 morgan.token<IncomingMessage & { originalUrl?: string }>("url", (req) => {
   try {
     const url = new URL(req.originalUrl ?? req.url!, "http://localhost");
 
     for (const param of url.searchParams.keys()) {
-      if (maskedSearchParams[url.pathname]?.has(param)) {
+      // The public share token opens a user's stats. The OAuth code is masked
+      // everywhere too, Express also routes variants such as a trailing slash.
+      if (maskedSearchParams.has(param)) {
         url.searchParams.set(param, "MASKED");
       }
     }
@@ -86,7 +86,13 @@ app.use((_, res, next) => {
 });
 
 if (LogLevelAccepts("info")) {
-  app.use(morgan("dev"));
+  app.use(
+    morgan("tiny", {
+      // Prometheus scrapes would fill the log
+      skip: (req) => /^\/metrics\/?(\?|$)/i.test(req.url ?? ""),
+      stream: { write: (line) => logger.info(line.trimEnd()) },
+    }),
+  );
 }
 app.use(cookieParser());
 app.use("/static", express.static(path.join(import.meta.dirname, "public")));
@@ -108,7 +114,18 @@ app.use((error: any, req: any, res: any, next: any) => {
   if (!error) {
     return next();
   }
-  logger.error(error);
+  // Client mistakes (not logged in, bad parameters, a file too large) are no
+  // server problem, so they only show at debug level
+  const clientError =
+    (error instanceof YourSpotifyError &&
+      ErrorTypeToHTTPCode[error.type] < 500) ||
+    error instanceof multer.MulterError ||
+    (error.expose && error.status < 500);
+  if (clientError) {
+    logger.debug(error);
+  } else {
+    logger.error(error);
+  }
   if (error instanceof YourSpotifyError) {
     return res.status(ErrorTypeToHTTPCode[error.type]).send(error);
   }

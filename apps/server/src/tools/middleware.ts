@@ -55,7 +55,6 @@ export const validate = <
     }
     return value;
   } catch (e) {
-    logger.error(e);
     throw new ValidationError(e);
   }
 };

@@ -72,7 +72,7 @@ async function lookUpBatch() {
         $set: { rateLimitedUntil: e.until, slowdownMs },
       });
       logger.warn(
-        `[isrc] lookups paused until Spotify stops blocking requests at ${e.until.toLocaleString()}, they continue a few minutes later with at least ${slowdownMs}ms between requests`,
+        `[isrc] lookups paused until Spotify stops blocking requests at ${e.until.toISOString()}, they continue a few minutes later with at least ${slowdownMs}ms between requests`,
       );
       return Math.max(e.until.getTime() - Date.now(), 0) + RESUME_MARGIN_MS;
     }

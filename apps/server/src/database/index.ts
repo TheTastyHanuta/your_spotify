@@ -16,7 +16,17 @@ const WAIT_MS = 30_000;
 export const connect = async () => {
   const fallbackConnection = "mongodb://mongo:27017/your_spotify";
   const endpoint = getWithDefault("MONGO_ENDPOINT", fallbackConnection);
-  logger.info(`Trying to connect to database at ${endpoint}`);
+  // The endpoint can hold passwords, in the credentials and in its options
+  const shownEndpoint = endpoint
+    .replace(/\/\/[^@/]*@/, "//***@")
+    .replace(/\?.*$/, "");
+  // Driver errors quote a malformed endpoint as is
+  const shownError = (e: unknown) =>
+    String(e instanceof Error ? e.message : e).replaceAll(
+      endpoint,
+      shownEndpoint,
+    );
+  logger.info(`Trying to connect to database at ${shownEndpoint}`);
   let client: Mongoose | undefined;
   let lastError: Error | undefined;
   for (let i = 0; i < TRIES; i += 1) {
@@ -25,12 +35,14 @@ export const connect = async () => {
       break;
     } catch (e) {
       lastError = e;
-      logger.error(`Failed to connect to database, try ${i + 1}/${TRIES}`);
+      logger.error(
+        `Failed to connect to database, try ${i + 1}/${TRIES}: ${shownError(e)}`,
+      );
       await wait(WAIT_MS);
     }
   }
   if (!client) {
-    throw lastError;
+    throw new Error(shownError(lastError));
   }
   logger.info("Connected to database !");
   return client;

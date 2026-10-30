@@ -128,7 +128,7 @@ export class Database {
           return acc + curr.duplicates.length;
         }, 0);
         if (nbDuplicates > 0) {
-          console.log(
+          logger.info(
             `Removing ${nbDuplicates} duplicates for user ${user.username}`,
           );
         }

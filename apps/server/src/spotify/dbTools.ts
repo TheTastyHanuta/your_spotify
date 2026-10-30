@@ -181,7 +181,7 @@ function mapSpotifyIdsToCanonicalTracks(
 
 const toStoredTracks = (userId: string, spotifyTracks: SpotifyTrack[]) => {
   const tracks = spotifyTracks.map<Track>((track) => {
-    logger.info(
+    logger.debug(
       `Storing non existing track ${track.name} by ${track.artists[0]?.name}`,
     );
     return spotifyTrackToStoredTrack(track);
@@ -200,7 +200,7 @@ export const getTracks = async (userId: string, ids: string[]) => {
 // read anywhere and Spotify deprecated album genres, so they default to empty.
 const toStoredAlbums = (userId: string, spotifyAlbums: SpotifyAlbum[]) => {
   const albums: Album[] = spotifyAlbums.map((alb) => {
-    logger.info(
+    logger.debug(
       `Storing non existing album ${alb.name} by ${alb.artists[0]?.name}`,
     );
 
@@ -270,7 +270,7 @@ export const getArtists = async (userId: string, ids: string[]) => {
   const spotifyArtists = compact(await client.getArtists(ids));
 
   for (const spotifyArtist of spotifyArtists) {
-    logger.info(`Storing non existing artist ${spotifyArtist.name}`);
+    logger.debug(`Storing non existing artist ${spotifyArtist.name}`);
   }
 
   Metrics.ingestedArtistsTotal.inc({ user: userId }, spotifyArtists.length);

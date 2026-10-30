@@ -95,7 +95,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         (e) => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
       );
       if (duplicate.length > 0 || currentImportDuplicate) {
-        logger.info(
+        logger.debug(
           `${item.track.name} - ${item.track.artists[0]?.name} was duplicate`,
         );
         continue;
@@ -201,10 +201,13 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
     }
     for (let i = this.currentItem; i < this.elements.length; i += 1) {
       this.currentItem = i;
+      if (i % 1000 === 0) {
+        logger.info(`Importing... (${i}/${this.elements.length})`);
+      }
       const content = this.elements[i]!;
       if (content.msPlayed < 30 * 1000) {
         // If track was played for less than 30 seconds
-        logger.info(
+        logger.debug(
           `Track ${content.trackName} - ${
             content.artistName
           } was passed, only listened for ${Math.floor(
@@ -236,7 +239,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
       if (!item.exists) {
         continue;
       }
-      logger.info(
+      logger.debug(
         `Adding ${item.track.name} - ${item.track.artists[0]?.name} from data (${i}/${this.elements.length})`,
       );
       items.push({ track: item.track, played_at: content.endTime });
