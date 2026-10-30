@@ -1,4 +1,5 @@
 import { escapeRegExp } from "../../tools/misc";
+import { bestNameMatches } from "../../tools/search";
 import { AlbumModel, InfosModel } from "../Models";
 import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
@@ -6,10 +7,14 @@ import { User } from "../schemas/user";
 export const getAlbums = (albumsId: string[]) =>
   AlbumModel.find({ id: { $in: albumsId } });
 
-export const searchAlbum = (str: string) =>
-  AlbumModel.find({
+export const searchAlbum = async (str: string) => {
+  const albums = await AlbumModel.find({
     name: { $regex: new RegExp(escapeRegExp(str), "i") },
-  }).populate("full_artists");
+  });
+  return AlbumModel.populate(bestNameMatches(albums, str), {
+    path: "full_artists",
+  });
+};
 
 export const getFirstAndLastListenedAlbum = async (
   user: User,

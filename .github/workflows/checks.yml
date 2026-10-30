@@ -40,6 +40,7 @@ jobs:
           node scripts/hooks.check.mjs
           node scripts/isrcMerge.check.mjs
           node scripts/spotifyUsage.check.mjs
+          node scripts/search.check.mjs
           pnpm build
 
       - name: Client

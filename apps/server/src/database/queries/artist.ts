@@ -1,4 +1,5 @@
 import { escapeRegExp } from "../../tools/misc";
+import { bestNameMatches } from "../../tools/search";
 import { ArtistModel, InfosModel } from "../Models";
 import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
@@ -21,7 +22,11 @@ export const searchArtist = async (user: User, str: string) => {
       ...notRemoved,
     }),
   );
-  return artists.filter((artist) => listened.has(artist.id));
+  // Limited after the filter, which would otherwise drop listened artists
+  return bestNameMatches(
+    artists.filter((artist) => listened.has(artist.id)),
+    str,
+  );
 };
 
 // Same criterion as searchArtist, so every artist a search returns has stats to
