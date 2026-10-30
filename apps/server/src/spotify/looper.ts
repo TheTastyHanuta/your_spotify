@@ -13,13 +13,15 @@ import { getTracksAlbumsArtists, storeIterationOfLoop } from "./dbTools";
 
 const RETRY = 10;
 
+// Returns when the newest listen Spotify gave back was played, 0 if none
 const loop = async (user: User) => {
   logger.info(`[${user.username}]: refreshing...`);
 
   // No early return on a missing access token: checkToken either refreshes it
   // or flags the account as needing a reconnection. Returning here left those
   // accounts silently untracked, even when a refresh could still have worked.
-  const url = `/me/player/recently-played?after=${
+  // Spotify keeps only the last 50 listens, so one full page holds them all
+  const url = `/me/player/recently-played?limit=50&after=${
     user.lastTimestamp - 1000 * 60 * 60 * 2
   }`;
   const spotifyApi = new SpotifyAPI(user._id.toString());
@@ -42,7 +44,7 @@ const loop = async (user: User) => {
 
   if (items.length === 0) {
     logger.info(`[${user.username}]: no new music`);
-    return;
+    return 0;
   }
 
   const spotifyTracks = items.map((e) => e.track);
@@ -92,9 +94,16 @@ const loop = async (user: User) => {
   logger.info(
     `[${user.username}]: ${infos.length} new plays (${items.length} fetched); new in catalogue: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists`,
   );
+  return Math.max(...items.map((item) => new Date(item.played_at).getTime()));
 };
 
 const WAIT_MS = 120 * 1000;
+// Users who played nothing for ACTIVE_MS are polled only every IDLE_WAIT_MS.
+// Spotify keeps the last 50 listens, far more than fit in that gap, so a new
+// session only shows up a few minutes later.
+const ACTIVE_MS = 15 * 60 * 1000;
+const IDLE_WAIT_MS = 10 * 60 * 1000;
+const nextPollAt = new Map<string, number>();
 
 export const dbLoop = async () => {
   // return;
@@ -106,8 +115,20 @@ export const dbLoop = async () => {
       for (let i = 0; i < nbUsers; i += 1) {
         const users = await getUser(i);
         for (const us of users) {
+          const userId = us._id.toString();
+          if ((nextPollAt.get(userId) ?? 0) > Date.now()) {
+            continue;
+          }
           try {
-            await requestSource.run("polling", () => loop(us));
+            const lastPlayedAt = await requestSource.run("polling", () =>
+              loop(us),
+            );
+            nextPollAt.set(
+              userId,
+              Date.now() - lastPlayedAt < ACTIVE_MS
+                ? 0
+                : Date.now() + IDLE_WAIT_MS,
+            );
           } catch (error) {
             logger.error(`[${us.username}]: Error during refresh`, error);
             if (error instanceof SpotifyReauthRequiredError) {

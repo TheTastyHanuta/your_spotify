@@ -1,4 +1,4 @@
-import { RateLimitedError } from "./apis/queueHttpClient";
+import { HttpError } from "./apis/queueHttpClient";
 import { SpotifyReauthRequiredError } from "./errors/Spotify";
 import { logger } from "./logger";
 
@@ -291,11 +291,12 @@ export const retryPromise = async <T>(
       const res = await fn();
       return res;
     } catch (e) {
-      // Retrying cannot succeed until the user re-logs to Spotify, or while
-      // rate limited for far longer than the retries take
+      // Retrying cannot succeed until the user re-logs to Spotify, and a 4xx
+      // answer stays the same. That includes 429s: the queue already retried
+      // the short ones and turns the rest into a RateLimitedError.
       if (
         e instanceof SpotifyReauthRequiredError ||
-        e instanceof RateLimitedError
+        (e instanceof HttpError && e.status < 500)
       ) {
         throw e;
       }

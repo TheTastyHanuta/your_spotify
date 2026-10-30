@@ -319,12 +319,10 @@ export class QueuedHttpClient {
       const maxAttempts =
         queueItem.config.retry429MaxAttempts ?? DEFAULT_RETRY_429_MAX_ATTEMPTS;
 
+      // Spotify keeps limiting, so the caller pauses like on a ban (imports
+      // and ISRC lookups slow down) instead of asking again right away
       if (queueItem.retry429AttemptCount >= maxAttempts) {
-        throw new HttpError({
-          status: response.status,
-          statusText: response.statusText,
-          body: text,
-        });
+        throw new RateLimitedError(new Date(Date.now() + retryAfterMs));
       }
 
       queueItem.retry429AttemptCount += 1;
