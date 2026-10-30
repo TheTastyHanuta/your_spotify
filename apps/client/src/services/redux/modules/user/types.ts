@@ -12,6 +12,8 @@ export interface User {
   refreshToken?: string | null;
   spotifyAuthDate?: string;
   spotifyReauthRequired?: boolean;
+  // Not from the account: the Spotify ban in force on the server, from /me
+  spotifyBlock?: { until: string; kind: "ban" | "quota" } | null;
   lastTimestamp: number;
   tracks: string[];
   settings: {

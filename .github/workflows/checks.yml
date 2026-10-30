@@ -39,6 +39,7 @@ jobs:
           node scripts/sessions.check.mjs
           node scripts/hooks.check.mjs
           node scripts/isrcMerge.check.mjs
+          node scripts/spotifyUsage.check.mjs
           pnpm build
 
       - name: Client

@@ -2,7 +2,10 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { getGlobalPreferences, updateGlobalPreferences } from "../database";
+import { getSpotifyUsage } from "../database/queries/spotifyUsage";
+import { spotifyHttpClientFactory } from "../tools/apis/queuedHttpClient.providers";
 import { admin, logged, validate } from "../tools/middleware";
+import { LoggedRequest } from "../tools/types";
 
 export const router = Router();
 
@@ -21,4 +24,11 @@ router.post("/preferences", logged, admin, async (req, res) => {
 
   const newPrefs = await updateGlobalPreferences(modifications);
   res.status(200).send(newPrefs);
+});
+
+router.get("/spotify-usage", logged, admin, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  res
+    .status(200)
+    .send(await getSpotifyUsage(user, spotifyHttpClientFactory.rateLimit));
 });

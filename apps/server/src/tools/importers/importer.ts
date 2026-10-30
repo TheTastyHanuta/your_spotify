@@ -10,7 +10,7 @@ import {
   setImporterStateWaiting,
 } from "../../database/queries/importer";
 import { User } from "../../database/schemas/user";
-import { RateLimitedError } from "../apis/queueHttpClient";
+import { RateLimitedError, requestSource } from "../apis/queueHttpClient";
 import {
   RESUME_MARGIN_MS,
   nextSlowdownMs,
@@ -217,8 +217,9 @@ async function startImport<T extends ImporterStateType>(
     }
     initDone(true);
     const stateId = existingState._id.toString();
-    await requestSlowdown.run(slowdownMsOf(existingState), () =>
-      instance.run(stateId),
+    const slowdownMs = slowdownMsOf(existingState);
+    await requestSource.run("import", () =>
+      requestSlowdown.run(slowdownMs, () => instance.run(stateId)),
     );
     await instance.cleanup(requiredInitData);
     await setImporterStateStatus(existingState._id.toString(), "success");

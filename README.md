@@ -25,7 +25,8 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **Listened album context** - track and history views show which album version you actually played a song from
 > - **Remove wrong listens** - take a listen out of your statistics, for example a song Spotify recorded although you skipped it right away, with Undo and a list in the settings to restore it later
 > - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks them up on [MusicBrainz](https://musicbrainz.org) in the background. Genres Spotify returned before are kept
-> - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports pause and continue on their own afterwards, logins tell you until when instead of hanging and your stats stay usable
+> - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports pause and continue on their own afterwards, logins tell you until when instead of hanging, every page shows the ban and your stats stay usable
+> - **Spotify API usage** - administrators see in **Settings → Spotify API** how many requests the server sent to Spotify per hour, day and week, what sent them and whether Spotify rate limited any of them
 > - **Better Spotify auth handling** - when Spotify revokes your access, the app asks you to log in again instead of silently stopping to record
 > - **More reliable imports** - imports no longer drop listens, resume from the right place after a failure and keep their uploaded files across updates, so a failed import can still be retried
 > - **Smaller, safer Docker images** - both containers run without root rights, the web app is served by Nginx with long-term browser caching and the server image ships Node.js without npm or build tools
@@ -379,7 +380,7 @@ The web app can't reach the server. Check that the `API_ENDPOINT` address is rea
 
 ### Spotify rate limited the app. What now?
 
-Spotify sometimes blocks an app for several hours, especially after large imports. Logins and imports then show until when the block lasts and your existing stats stay usable as long as you are logged in. Imports and the duplicate song lookup pause and continue on their own a few minutes after the block ends, and they slow down after every block; only a login has to be retried. If it happens often, raise `SPOTIFY_API_DELAY_MS`; you can also set `DISABLE_POLLING` while you wait.
+Spotify sometimes blocks an app for several hours, especially after large imports. Every page, logins and imports then show until when the block lasts and your existing stats stay usable as long as you are logged in. Imports and the duplicate song lookup pause and continue on their own a few minutes after the block ends, and they slow down after every block; only a login has to be retried. The block is remembered across restarts, so a restarted server does not ask Spotify again before it ends. If it happens often, check **Settings → Spotify API** for what sends the most requests and raise `SPOTIFY_API_DELAY_MS`; you can also set `DISABLE_POLLING` while you wait.
 
 ### Songs don't seem to synchronize anymore
 

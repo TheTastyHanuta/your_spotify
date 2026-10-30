@@ -13,6 +13,7 @@ import {
   storeInUser,
 } from "../database";
 import { GithubAPI } from "../tools/apis/githubApi";
+import { spotifyHttpClientFactory } from "../tools/apis/queuedHttpClient.providers";
 import { getWithDefault } from "../tools/env";
 import {
   admin,
@@ -72,7 +73,14 @@ router.post("/settings", logged, async (req, res) => {
 router.get("/me", optionalLoggedOrGuest, async (req, res) => {
   const { user } = req as OptionalLoggedRequest;
   if (user) {
-    res.status(200).send({ status: true, user });
+    res.status(200).send({
+      status: true,
+      user,
+      // Share-link guests only see the owner's stats
+      spotifyBlock: (req as LoggedRequest).isGuest
+        ? null
+        : spotifyHttpClientFactory.rateLimit,
+    });
     return;
   }
   res.status(200).send({ status: false });
