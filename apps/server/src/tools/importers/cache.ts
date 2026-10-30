@@ -7,17 +7,16 @@ export type SpotifyTrackCacheItem =
   | { exists: false }
   | { exists: true; track: SpotifyTrack };
 
-const cache: Record<string, Record<string, SpotifyTrackCacheItem>> = {};
+// A Map keeps insertion order, so the oldest entry is evicted without listing
+// every key on each insert, which blocked the server on large imports.
+const cache = new Map<string, Map<string, SpotifyTrackCacheItem>>();
 
 function getKey(track: string, artist: string) {
   return `${track}-${artist}`;
 }
 
 export function getFromCacheString(userId: string, str: string) {
-  if (!(userId in cache)) {
-    cache[userId] = {};
-  }
-  return cache[userId]?.[str];
+  return cache.get(userId)?.get(str);
 }
 
 export function getFromCache(
@@ -34,14 +33,18 @@ export function setToCacheString(
   str: string,
   trackObject: SpotifyTrackCacheItem,
 ) {
-  const userCache = cache[userId] ?? {};
-  const keys = Object.keys(cache[userId] ?? {});
-  const [firstKey] = keys;
-  if (keys.length > maxCacheSize && firstKey) {
-    delete cache[userId]?.[firstKey];
+  let userCache = cache.get(userId);
+  if (!userCache) {
+    userCache = new Map();
+    cache.set(userId, userCache);
   }
-  userCache[str] = trackObject;
-  cache[userId] = userCache;
+  if (!userCache.has(str) && userCache.size >= maxCacheSize) {
+    const oldest = userCache.keys().next();
+    if (!oldest.done) {
+      userCache.delete(oldest.value);
+    }
+  }
+  userCache.set(str, trackObject);
 }
 
 export function setToCache(
@@ -55,5 +58,5 @@ export function setToCache(
 }
 
 export function clearCache(userId: string) {
-  cache[userId] = {};
+  cache.delete(userId);
 }
