@@ -69,6 +69,10 @@ function canonicalizeSpotifyTracks(
   const missingTrackIds: string[] = [];
 
   for (const spotifyTrack of spotifyTracks) {
+    // Local files have no id and nothing on Spotify to look up
+    if (!spotifyTrack.id) {
+      continue;
+    }
     const isrc = spotifyTrack.external_ids?.isrc;
     const storedByMatchingIsrc = isrc ? storedByIsrc.get(isrc) : undefined;
     if (storedByMatchingIsrc) {
@@ -282,8 +286,7 @@ const getTracksAndRelatedAlbumArtists = async (
   // The polling loop and the importers already hold full track objects, and
   // fetching them again doubled the requests of an import. Tracks without
   // external_ids are still fetched, so their ISRC is not lost when a response
-  // leaves the field out. Local files go the old way too, Spotify has no
-  // track behind them and the lookup drops them.
+  // leaves the field out.
   const givenById = new Map(
     spotifyTracks
       .filter(
