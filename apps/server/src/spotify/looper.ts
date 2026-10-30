@@ -4,7 +4,11 @@ import { getCloseTrackId, getUser, getUserCount } from "../database";
 import { Infos } from "../database/schemas/info";
 import { RecentlyPlayedTrack } from "../database/schemas/track";
 import { User } from "../database/schemas/user";
-import { HttpError, requestSource } from "../tools/apis/queueHttpClient";
+import {
+  HttpError,
+  RateLimitedError,
+  requestSource,
+} from "../tools/apis/queueHttpClient";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
 import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
@@ -15,7 +19,7 @@ const RETRY = 10;
 
 // Returns when the newest listen Spotify gave back was played, 0 if none
 const loop = async (user: User) => {
-  logger.info(`[${user.username}]: refreshing...`);
+  logger.debug(`[${user.username}]: refreshing...`);
 
   // No early return on a missing access token: checkToken either refreshes it
   // or flags the account as needing a reconnection. Returning here left those
@@ -43,7 +47,7 @@ const loop = async (user: User) => {
   const lastTimestamp = Date.now();
 
   if (items.length === 0) {
-    logger.info(`[${user.username}]: no new music`);
+    logger.debug(`[${user.username}]: no new music`);
     return 0;
   }
 
@@ -91,7 +95,8 @@ const loop = async (user: User) => {
     artists,
     infos,
   );
-  logger.info(
+  // Spotify's answer overlaps the last poll, so most polls add nothing
+  (infos.length > 0 ? logger.info : logger.debug)(
     `[${user.username}]: ${infos.length} new plays (${items.length} fetched); new in catalogue: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists`,
   );
   return Math.max(...items.map((item) => new Date(item.played_at).getTime()));
@@ -104,18 +109,26 @@ const WAIT_MS = 120 * 1000;
 const ACTIVE_MS = 15 * 60 * 1000;
 const IDLE_WAIT_MS = 10 * 60 * 1000;
 const nextPollAt = new Map<string, number>();
+// Whether each user was last polled at the idle interval, to log changes
+const idleUsers = new Map<string, boolean>();
+const minutes = (ms: number) => ms / 60_000;
 
 export const dbLoop = async () => {
-  // return;
-
+  logger.info(
+    `[poller] polling every ${minutes(WAIT_MS)} minutes, every ${minutes(IDLE_WAIT_MS)} minutes for users with no listen in the last ${minutes(ACTIVE_MS)} minutes`,
+  );
   while (true) {
     try {
       const nbUsers = await getUserCount();
-      logger.info(`[DbLoop] starting for ${nbUsers} users`);
+      logger.debug(`[poller] starting for ${nbUsers} users`);
       for (let i = 0; i < nbUsers; i += 1) {
         const users = await getUser(i);
         for (const us of users) {
           const userId = us._id.toString();
+          // Warned once when flagged, polled again after the next login
+          if (us.spotifyReauthRequired) {
+            continue;
+          }
           if ((nextPollAt.get(userId) ?? 0) > Date.now()) {
             continue;
           }
@@ -123,23 +136,38 @@ export const dbLoop = async () => {
             const lastPlayedAt = await requestSource.run("polling", () =>
               loop(us),
             );
-            nextPollAt.set(
-              userId,
-              Date.now() - lastPlayedAt < ACTIVE_MS
-                ? 0
-                : Date.now() + IDLE_WAIT_MS,
-            );
+            const idle = Date.now() - lastPlayedAt >= ACTIVE_MS;
+            nextPollAt.set(userId, idle ? Date.now() + IDLE_WAIT_MS : 0);
+            if (idleUsers.get(userId) !== idle) {
+              idleUsers.set(userId, idle);
+              logger.info(
+                idle
+                  ? `[${us.username}]: no listen in the last ${minutes(ACTIVE_MS)} minutes, polling every ${minutes(IDLE_WAIT_MS)} minutes`
+                  : `[${us.username}]: listening, polling every ${minutes(WAIT_MS)} minutes`,
+              );
+            }
           } catch (error) {
-            logger.error(`[${us.username}]: Error during refresh`, error);
+            // Warned once when the account got flagged
             if (error instanceof SpotifyReauthRequiredError) {
               continue;
             }
-            if (error instanceof HttpError) {
-              logger.info("Response of failed request", error.message);
+            // The queue already warned when the block started or the
+            // retries ran out
+            if (error instanceof RateLimitedError) {
+              logger.debug(
+                `[${us.username}]: skipped, Spotify blocks requests until ${error.until.toISOString()}`,
+              );
               continue;
             }
-            logger.info(
-              "There appears to be issues with either your internet connection or Spotify",
+            if (error instanceof HttpError) {
+              logger.error(
+                `[${us.username}]: refresh failed, ${error.message}`,
+              );
+              continue;
+            }
+            logger.error(
+              `[${us.username}]: refresh failed, check the internet connection or Spotify`,
+              error,
             );
           }
         }

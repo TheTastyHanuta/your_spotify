@@ -10,8 +10,10 @@ import { genresLoop } from "../tools/genres";
 import { resumeImportsAtStart } from "../tools/importers/importer";
 import { isrcLoop } from "../tools/isrcMerge/loop";
 import { logger } from "../tools/logger";
+import { Version } from "../tools/version";
 
 export function startServer() {
+  logger.info(`Your Spotify ${Version.thisOne().toString()} starting`);
   const port = getWithDefault("PORT", 8080);
   app.set("port", port);
 
@@ -27,11 +29,11 @@ export function startServer() {
     // handle specific listen errors with friendly messages
     switch (error.code) {
       case "EACCES":
-        console.error(`${bind} requires elevated privileges`);
+        logger.error(`${bind} requires elevated privileges`);
         process.exit(1);
         break;
       case "EADDRINUSE":
-        console.error(`${bind} is already in use`);
+        logger.error(`${bind} is already in use`);
         process.exit(1);
         break;
       default:
@@ -43,7 +45,7 @@ export function startServer() {
     const addr = server.address();
     const bind =
       typeof addr === "string" ? `pipe ${addr}` : `port ${addr?.port}`;
-    logger.debug(`Listening on ${bind}`);
+    logger.info(`Listening on ${bind}`);
   }
 
   connect()
@@ -55,6 +57,11 @@ export function startServer() {
       });
       if (block?.until && block.kind) {
         spotifyHttpClientFactory.restoreRateLimit(block.until, block.kind);
+        if (block.until.getTime() > Date.now()) {
+          logger.warn(
+            `Spotify blocks requests until ${block.until.toISOString()} (${block.kind}, stored before the restart), they fail until then`,
+          );
+        }
       }
       server.listen(port);
       server.on("error", onError);
@@ -77,5 +84,10 @@ export function startServer() {
         dbLoop().catch(logger.error);
       }
     })
-    .catch(console.error);
+    .catch((e) => {
+      // Exiting lets Docker restart the container instead of leaving it up
+      // without a server
+      logger.error("Could not start, exiting", e);
+      process.exit(1);
+    });
 }

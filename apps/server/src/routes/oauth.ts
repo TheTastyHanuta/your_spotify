@@ -11,6 +11,7 @@ import { getPrivateData } from "../database/queries/privateData";
 import { RateLimitedError } from "../tools/apis/queueHttpClient";
 import { SpotifyMe } from "../tools/apis/spotifyApi";
 import { get } from "../tools/env";
+import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
 import {
   logged,
@@ -79,6 +80,9 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
     let user = await getUserFromField("spotifyId", spotifyMe.id, false);
     if (!user) {
       if (!globalPreferences.allowRegistrations) {
+        logger.info(
+          `${spotifyMe.display_name} tried to sign up, but registrations are closed`,
+        );
         return res.redirect(`${get("CLIENT_ENDPOINT")}/registrations-disabled`);
       }
       const nbUsers = await getUserCount();
@@ -86,6 +90,9 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
         spotifyMe.display_name,
         spotifyMe.id,
         nbUsers === 0,
+      );
+      logger.info(
+        `New user ${user.username}${nbUsers === 0 ? " (admin, first user)" : ""}`,
       );
     }
     await storeInUser("_id", user._id, {
@@ -103,8 +110,9 @@ router.get("/spotify/callback", withGlobalPreferences, async (req, res) => {
       user._id.toString(),
       privateData.jwtPrivateKey,
     );
+    logger.info(`[${user.username}]: logged in`);
   } catch (e) {
-    logger.error(e);
+    logger.error("Login failed", e);
     const params = new URLSearchParams(
       e instanceof RateLimitedError
         ? { error: "spotify_rate_limited", until: e.until.toISOString() }
@@ -124,7 +132,10 @@ router.get("/spotify/me", logged, withHttpClient, async (req, res) => {
     const me = await client.me();
     res.status(200).send(me);
   } catch (e) {
-    logger.error(e);
+    // Warned once when the account got flagged
+    if (!(e instanceof SpotifyReauthRequiredError)) {
+      logger.error(e);
+    }
     res.status(500).send({ code: "SPOTIFY_ERROR" });
   }
 });

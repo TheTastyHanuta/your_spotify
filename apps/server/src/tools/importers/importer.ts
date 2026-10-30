@@ -216,6 +216,9 @@ async function startImport<T extends ImporterStateType>(
       )) as any as ImporterStateFromType<T>;
     }
     initDone(true);
+    logger.info(
+      `[${user.username}]: ${name} import ${existingStateId ? "resumed" : "started"} (${initedMetadata.total} items)`,
+    );
     const stateId = existingState._id.toString();
     const slowdownMs = slowdownMsOf(existingState);
     await requestSource.run("import", () =>
@@ -223,6 +226,7 @@ async function startImport<T extends ImporterStateType>(
     );
     await instance.cleanup(requiredInitData);
     await setImporterStateStatus(existingState._id.toString(), "success");
+    logger.info(`[${user.username}]: ${name} import finished`);
     Metrics.importsTotal
       .labels({ status: "success", user: userId, type: name })
       .inc();
@@ -233,7 +237,7 @@ async function startImport<T extends ImporterStateType>(
       await setImporterStateWaiting(stateId, e.until, slowdownMs);
       scheduleResume(stateId, e.until);
       logger.warn(
-        `Import paused until Spotify stops blocking requests at ${e.until.toLocaleString()}, it resumes on its own a few minutes later with at least ${slowdownMs}ms between its requests`,
+        `Import paused until Spotify stops blocking requests at ${e.until.toISOString()}, it resumes on its own a few minutes later with at least ${slowdownMs}ms between its requests`,
       );
       return;
     }

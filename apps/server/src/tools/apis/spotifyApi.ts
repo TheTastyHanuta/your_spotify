@@ -6,6 +6,7 @@ import { getUserFromField, storeInUser } from "../../database";
 import { SpotifyAlbum } from "../../database/schemas/album";
 import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
+import { User } from "../../database/schemas/user";
 import { getWithDefault } from "../env";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { logger } from "../logger";
@@ -53,7 +54,14 @@ export class SpotifyAPI {
 
   // The account cannot authenticate on its own anymore. Discard what is left
   // and flag it, so the client knows to ask for a Spotify reconnection.
-  private async requireReauth(userId: Types.ObjectId, username: string) {
+  private async requireReauth(user: User) {
+    const { _id: userId, username } = user;
+    // Flagged accounts still get here from API routes
+    if (!user.spotifyReauthRequired) {
+      logger.warn(
+        `[${username}]: Spotify login is no longer valid, listens are not recorded until this user logs in again`,
+      );
+    }
     await storeInUser("_id", userId, {
       accessToken: null,
       refreshToken: null,
@@ -87,7 +95,7 @@ export class SpotifyAPI {
       if (!token) {
         // Nothing left to refresh with, which is how accounts that were
         // discarded before the flag existed present themselves.
-        throw await this.requireReauth(user._id, user.username);
+        throw await this.requireReauth(user);
       }
       let infos;
       try {
@@ -100,17 +108,17 @@ export class SpotifyAPI {
         ) {
           // Spotify expires refresh tokens six months after the authorization
           // and asks us to discard them instead of retrying.
-          throw await this.requireReauth(user._id, user.username);
+          throw await this.requireReauth(user);
         }
         throw e;
       }
 
       await storeInUser("_id", user._id, infos);
-      logger.info(`Refreshed token for ${user.username}`);
+      logger.debug(`Refreshed token for ${user.username}`);
       access = infos.accessToken;
     }
     if (!access) {
-      throw await this.requireReauth(user._id, user.username);
+      throw await this.requireReauth(user);
     }
     return spotifyProvider.getHttpClient(access);
   }

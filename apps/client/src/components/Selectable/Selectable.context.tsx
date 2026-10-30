@@ -59,7 +59,6 @@ export const SelectableContextProvider = ({
       return;
     }
     const order = Math.sign(index - lastSelected);
-    console.log(order);
     const addedIndexes: number[] = [];
     for (
       let i = lastSelected;

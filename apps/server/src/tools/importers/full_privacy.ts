@@ -104,7 +104,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         (e) => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
       );
       if (duplicate.length > 0 || currentImportDuplicate) {
-        logger.info(
+        logger.debug(
           `${item.track.name} - ${item.track.artists[0]?.name} was duplicate`,
         );
         continue;
@@ -225,7 +225,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       playedAt.forEach((pa) => {
         items.push({ track: searchedItem, played_at: pa });
       });
-      logger.info(
+      logger.debug(
         stored.has(id)
           ? `Adding ${searchedItem.name} from the database`
           : `Adding ${searchedItem.name} - ${searchedItem.artists[0]?.name} from data`,
@@ -246,7 +246,9 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     }
     for (let i = this.currentItem; i < this.elements.length; i += 1) {
       this.currentItem = i;
-      logger.info(`Importing... (${i}/${this.elements.length})`);
+      if (i % 1000 === 0) {
+        logger.info(`Importing... (${i}/${this.elements.length})`);
+      }
       const content = this.elements[i]!;
       if (
         !content.spotify_track_uri ||
@@ -257,7 +259,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       }
       if (content.ms_played < 30 * 1000) {
         // If track was played for less than 30 seconds
-        logger.info(
+        logger.debug(
           `Track ${content.master_metadata_track_name} - ${
             content.master_metadata_album_artist_name
           } was passed, only listened for ${Math.floor(
