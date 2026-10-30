@@ -1,4 +1,5 @@
 import { escapeRegExp } from "../../tools/misc";
+import { bestNameMatches } from "../../tools/search";
 import { InfosModel, TrackModel } from "../Models";
 import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
@@ -6,13 +7,17 @@ import { User } from "../schemas/user";
 export const getTracks = (tracksId: string[]) =>
   TrackModel.find({ id: { $in: tracksId } });
 
-export const searchTrack = (str: string) =>
-  TrackModel.find({
+// Only the best matches get their album and artists
+export const searchTrack = async (str: string) => {
+  const tracks = await TrackModel.find({
     name: { $regex: new RegExp(escapeRegExp(str), "i") },
     mergedInto: { $exists: false },
-  })
-    .populate("full_album")
-    .populate("full_artists");
+  });
+  return TrackModel.populate(bestNameMatches(tracks, str), [
+    { path: "full_album" },
+    { path: "full_artists" },
+  ]);
+};
 
 export const getTrackListenedCount = (user: User, trackId: string) =>
   InfosModel.where({
