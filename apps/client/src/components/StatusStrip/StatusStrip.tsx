@@ -50,6 +50,11 @@ export default function StatusStrip() {
   const blockedUntil = paused?.rateLimitedUntil
     ? new Date(paused.rateLimitedUntil)
     : undefined;
+  // A ban of the whole server, as it was when the app was opened
+  const block =
+    user?.spotifyBlock && new Date(user.spotifyBlock.until) > new Date()
+      ? user.spotifyBlock
+      : undefined;
 
   const messages = [
     isGuest && <>You are viewing as guest.</>,
@@ -57,6 +62,21 @@ export default function StatusStrip() {
       <>
         Spotify needs you to log in again before new plays can be fetched.{" "}
         <Link to="/logout">Log in again</Link>
+      </>
+    ),
+    !isGuest && block && (
+      <>
+        {block.kind === "quota"
+          ? "The request quota of the Spotify app is used up, Spotify is blocking requests"
+          : "Spotify is blocking requests"}{" "}
+        until {DateFormatter.toDateTime(new Date(block.until))}. New plays are
+        fetched after that.
+        {user?.admin && (
+          <>
+            {" "}
+            <Link to="/settings/spotify-api">See API usage</Link>
+          </>
+        )}
       </>
     ),
     running && (
@@ -70,7 +90,7 @@ export default function StatusStrip() {
       <>
         Import paused at <span className="num">{paused.current}</span> of{" "}
         <span className="num">{paused.total}</span>
-        {blockedUntil && blockedUntil > new Date()
+        {!block && blockedUntil && blockedUntil > new Date()
           ? `, Spotify is blocking requests until ${DateFormatter.toDateTime(blockedUntil)}`
           : ""}
         . It continues on its own.

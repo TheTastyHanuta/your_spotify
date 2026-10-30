@@ -1,0 +1,58 @@
+.verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.verdictTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Watch and Blocked: the amber of the status strip */
+.warn {
+  color: var(--notice-text);
+}
+
+.work {
+  --columns: minmax(0, 1.55fr) minmax(0, 1fr);
+}
+
+.work > * {
+  border-bottom: 1px solid var(--line);
+}
+
+.chart {
+  height: 300px;
+}
+
+.mark {
+  fill: var(--notice-text);
+}
+
+.note {
+  margin: 12px 0 0;
+  max-width: 75ch;
+  font-size: 13px;
+}
+
+.count {
+  min-width: 6ch;
+  text-align: right;
+}
+
+.loading {
+  padding: 18px 28px;
+}
+
+@media screen and (max-width: 900px) {
+  .verdict,
+  .loading {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

@@ -29,6 +29,7 @@ import RelogToSpotify from "./RelogToSpotify";
 import RemovedListens from "./RemovedListens";
 import SetAdmin from "./SetAdmin";
 import SpotifyAccountInfos from "./SpotifyAccountInfos";
+import SpotifyUsage from "./SpotifyUsage";
 import { StatMeasurement } from "./StatMeasurement";
 import Timezone from "./Timezone";
 
@@ -64,6 +65,10 @@ export default function Settings() {
     ),
     conditionalEntry(
       { url: "/settings/admin", label: "Admin" },
+      user.admin && !isPublic,
+    ),
+    conditionalEntry(
+      { url: "/settings/spotify-api", label: "Spotify API" },
       user.admin && !isPublic,
     ),
   ]);
@@ -123,6 +128,9 @@ export default function Settings() {
               </div>
             }
           />
+          {user.admin && !isPublic && (
+            <Route path="/spotify-api" element={<SpotifyUsage />} />
+          )}
           <Route
             path="/statistics"
             element={

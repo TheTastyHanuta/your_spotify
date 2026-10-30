@@ -341,6 +341,31 @@ export interface IsrcMergeState {
   importRunning: boolean;
 }
 
+export type SpotifyBlock = { until: string; kind: "ban" | "quota" };
+export type UsageSource = "polling" | "import" | "isrc" | "auth" | "other";
+type UsageCell = { value: number; usual: number | null };
+type UsageBar = { total: number; limited: number };
+
+export interface SpotifyUsageResponse {
+  // The zone the days were grouped in
+  timeZone: string;
+  verdict: "fine" | "watch" | "blocked";
+  block: SpotifyBlock | null;
+  retried24h: number;
+  errors24h: number;
+  bans7d: number;
+  counted: boolean;
+  lastHour: UsageCell;
+  last24h: UsageCell;
+  last7d: UsageCell;
+  limited7d: number;
+  lastLimitedAt: number | null;
+  sources7d: Partial<Record<UsageSource, number>>;
+  hourly: (UsageBar & { hour: number })[];
+  daily: (UsageBar & { day: string })[];
+  weekly: (UsageBar & { from: string; to: string })[];
+}
+
 export type DiscoveriesResponse = {
   plays: number;
   // First listen ever, and the song it was
@@ -400,7 +425,11 @@ export const api = {
   version: () => get<{ update: boolean; version: string }>("/version"),
   logout: () => axios.post("/logout"),
 
-  me: () => get<{ status: true; user: User } | { status: false }>("/me"),
+  me: () =>
+    get<
+      | { status: true; user: User; spotifyBlock: SpotifyBlock | null }
+      | { status: false }
+    >("/me"),
   sme: () => get<SpotifyMe>("/oauth/spotify/me"),
   globalPreferences: () => get<GlobalPreferences>("/global/preferences"),
   rename: (newName: string) => put("/rename", { newName }),
@@ -408,6 +437,7 @@ export const api = {
   setAdmin: (id: string, status: boolean) => put(`/admin/${id}`, { status }),
   deleteUser: (id: string) => delet(`/account/${id}`),
   isrcMerge: () => get<IsrcMergeState>("/isrc-merge"),
+  spotifyUsage: () => get<SpotifyUsageResponse>("/global/spotify-usage"),
   startIsrcMerge: () => post("/isrc-merge/start"),
   applyIsrcMerge: () => post("/isrc-merge/apply"),
   setGlobalPreferences: (preferences: Partial<GlobalPreferences>) =>

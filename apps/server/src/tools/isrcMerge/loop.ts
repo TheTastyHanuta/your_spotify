@@ -5,7 +5,7 @@ import {
   storeIsrcLookup,
   updateIsrcMergeJob,
 } from "../../database/queries/isrcMerge";
-import { RateLimitedError } from "../apis/queueHttpClient";
+import { RateLimitedError, requestSource } from "../apis/queueHttpClient";
 import {
   RESUME_MARGIN_MS,
   SpotifyAPI,
@@ -46,18 +46,20 @@ async function lookUpBatch() {
   const spotifyApi = new SpotifyAPI(user._id.toString());
   try {
     let done = 0;
-    await requestSlowdown.run(slowdownMsOf(job), async () => {
-      for (const id of ids) {
-        // Gives way to an import started meanwhile
-        if (isAnyImportRunning()) {
-          return;
+    await requestSource.run("isrc", () =>
+      requestSlowdown.run(slowdownMsOf(job), async () => {
+        for (const id of ids) {
+          // Gives way to an import started meanwhile
+          if (isAnyImportRunning()) {
+            return;
+          }
+          // Spotify answers 404 for tracks it does not have anymore
+          const track = await spotifyApi.getTrack(id);
+          await storeIsrcLookup(id, track?.external_ids?.isrc ?? null);
+          done += 1;
         }
-        // Spotify answers 404 for tracks it does not have anymore
-        const track = await spotifyApi.getTrack(id);
-        await storeIsrcLookup(id, track?.external_ids?.isrc ?? null);
-        done += 1;
-      }
-    });
+      }),
+    );
     if (job.rateLimitedUntil) {
       await updateIsrcMergeJob({ $unset: { rateLimitedUntil: 1 } });
     }

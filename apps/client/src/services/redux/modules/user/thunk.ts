@@ -19,7 +19,7 @@ export const checkLogged = myAsyncThunk<User | null, void>(
         }
         WeekStart.set(data.user.settings.weekStartsOn);
         resetPresetDates();
-        return data.user;
+        return { ...data.user, spotifyBlock: data.spotifyBlock };
       } else {
         return null;
       }

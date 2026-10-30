@@ -1,6 +1,28 @@
+import { AsyncLocalStorage } from "async_hooks";
+
 import { logger } from "../logger";
 
 export type RequestPriority = "normal" | "high";
+
+// How a request that was sent ended. retried429 is a short rate limit, also
+// the last one when the retries ran out; ban and quota are the 429s that block
+// every request for a while; error is a 5xx, a timeout or a network error.
+export type RequestOutcome =
+  | "ok"
+  | "retried429"
+  | "ban"
+  | "quota"
+  | "error"
+  | "clientError";
+
+export type OutcomeObserver = (
+  outcome: RequestOutcome,
+  request: { url: string; source?: string; sentAt: Date },
+  rateLimitedUntil?: Date,
+) => void;
+
+// Names what is making the requests started inside run(), for the observer
+export const requestSource = new AsyncLocalStorage<string>();
 
 interface HttpClientRequestConfig {
   method: string;
@@ -23,6 +45,7 @@ interface QueueItem<T = any> {
   resolve: (value: HttpClientResponse<T>) => void;
   reject: (reason?: unknown) => void;
   retry429AttemptCount: number;
+  source?: string;
 }
 
 interface QueueState {
@@ -31,6 +54,7 @@ interface QueueState {
   isProcessingQueue: boolean;
   // Timestamp until which every request fails without being sent
   rateLimitedUntil: number;
+  rateLimitKind: "ban" | "quota";
 }
 
 export class HttpError extends Error {
@@ -88,6 +112,7 @@ function createQueueState(): QueueState {
     normalPriorityQueue: [],
     isProcessingQueue: false,
     rateLimitedUntil: 0,
+    rateLimitKind: "ban",
   };
 }
 
@@ -99,8 +124,25 @@ export class QueuedHttpClientFactory {
       baseURL: string;
       headers: Record<string, string>;
       minDelayMs?: number;
+      onOutcome?: OutcomeObserver;
     },
   ) {}
+
+  // The ban in force, if any
+  get rateLimit() {
+    const { rateLimitedUntil, rateLimitKind } = this.queueState;
+    return rateLimitedUntil > Date.now()
+      ? { until: new Date(rateLimitedUntil), kind: rateLimitKind }
+      : null;
+  }
+
+  // Takes back a ban stored before a restart
+  restoreRateLimit(until: Date, kind: "ban" | "quota") {
+    if (until.getTime() > this.queueState.rateLimitedUntil) {
+      this.queueState.rateLimitedUntil = until.getTime();
+      this.queueState.rateLimitKind = kind;
+    }
+  }
 
   createClient(headers: Record<string, string>) {
     const mergedHeaders = { ...this.options.headers, ...headers };
@@ -109,6 +151,7 @@ export class QueuedHttpClientFactory {
       mergedHeaders,
       this.queueState,
       this.options.minDelayMs,
+      this.options.onOutcome,
     );
   }
 }
@@ -119,6 +162,7 @@ export class QueuedHttpClient {
     private readonly headers: Record<string, string>,
     private readonly queueState: QueueState = createQueueState(),
     private readonly minDelayMs = 0,
+    private readonly onOutcome?: OutcomeObserver,
   ) {}
 
   request<T = any>(
@@ -136,6 +180,7 @@ export class QueuedHttpClient {
         resolve,
         reject,
         retry429AttemptCount: 0,
+        source: requestSource.getStore(),
       };
 
       this.enqueue(queueItem);
@@ -222,12 +267,26 @@ export class QueuedHttpClient {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     };
 
-    const response = await fetch(url, payload);
+    // The request counts in the hour it was sent, not the one of the answer
+    const sentAt = new Date();
+    let response: Response;
+    let text: string;
+    try {
+      response = await fetch(url, payload);
+      // A body that breaks off is a failed request, whatever the status
+      text = await response.text();
+    } catch (e) {
+      this.report("error", queueItem, sentAt);
+      throw e;
+    }
 
     if (!response.ok) {
-      const text = await response.text();
-
       if (response.status !== 429) {
+        this.report(
+          response.status >= 500 ? "error" : "clientError",
+          queueItem,
+          sentAt,
+        );
         throw new HttpError({
           status: response.status,
           statusText: response.statusText,
@@ -245,15 +304,18 @@ export class QueuedHttpClient {
           (quotaExceeded
             ? Math.max(retryAfterMs, MIN_QUOTA_EXCEEDED_BLOCK_MS)
             : retryAfterMs);
+        this.queueState.rateLimitKind = quotaExceeded ? "quota" : "ban";
         const until = new Date(this.queueState.rateLimitedUntil);
         logger.warn(
           quotaExceeded
             ? `The request quota of this Spotify app is used up until ${until.toLocaleString()}, requests fail until then instead of waiting`
             : `Rate limited by ${url.host} until ${until.toLocaleString()}, requests fail until then instead of waiting`,
         );
+        this.report(quotaExceeded ? "quota" : "ban", queueItem, sentAt, until);
         throw new RateLimitedError(until);
       }
 
+      this.report("retried429", queueItem, sentAt);
       const maxAttempts =
         queueItem.config.retry429MaxAttempts ?? DEFAULT_RETRY_429_MAX_ATTEMPTS;
 
@@ -277,12 +339,29 @@ export class QueuedHttpClient {
 
     // Spotify answers some requests (playback control, for instance) with an
     // empty 204, which is a success and not parsable as JSON.
-    const text = await response.text();
+    this.report("ok", queueItem, sentAt);
     queueItem.resolve({
       data: (text ? JSON.parse(text) : undefined) as T,
       status: response.status,
       statusText: response.statusText,
     });
+  }
+
+  private report(
+    outcome: RequestOutcome,
+    queueItem: QueueItem<any>,
+    sentAt: Date,
+    rateLimitedUntil?: Date,
+  ) {
+    try {
+      this.onOutcome?.(
+        outcome,
+        { url: queueItem.config.url, source: queueItem.source, sentAt },
+        rateLimitedUntil,
+      );
+    } catch (e) {
+      logger.warn("Could not count a request", e);
+    }
   }
 
   private requeue(queueItem: QueueItem<any>) {

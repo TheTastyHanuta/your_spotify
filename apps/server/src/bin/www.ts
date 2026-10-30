@@ -2,7 +2,9 @@ import http from "http";
 
 import { app } from "../app";
 import { checkBlacklistConsistency, connect } from "../database";
+import { getStoredSpotifyBlock } from "../database/queries/spotifyUsage";
 import { dbLoop } from "../spotify/looper";
+import { spotifyHttpClientFactory } from "../tools/apis/queuedHttpClient.providers";
 import { get, getWithDefault } from "../tools/env";
 import { genresLoop } from "../tools/genres";
 import { resumeImportsAtStart } from "../tools/importers/importer";
@@ -46,6 +48,14 @@ export function startServer() {
 
   connect()
     .then(async () => {
+      // Before anything sends a request into a ban stored before the restart
+      const block = await getStoredSpotifyBlock().catch((e) => {
+        logger.error(e);
+        return undefined;
+      });
+      if (block?.until && block.kind) {
+        spotifyHttpClientFactory.restoreRateLimit(block.until, block.kind);
+      }
       server.listen(port);
       server.on("error", onError);
       server.on("listening", onListening);

@@ -4,7 +4,7 @@ import { getCloseTrackId, getUser, getUserCount } from "../database";
 import { Infos } from "../database/schemas/info";
 import { RecentlyPlayedTrack } from "../database/schemas/track";
 import { User } from "../database/schemas/user";
-import { HttpError } from "../tools/apis/queueHttpClient";
+import { HttpError, requestSource } from "../tools/apis/queueHttpClient";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
 import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
@@ -107,7 +107,7 @@ export const dbLoop = async () => {
         const users = await getUser(i);
         for (const us of users) {
           try {
-            await loop(us);
+            await requestSource.run("polling", () => loop(us));
           } catch (error) {
             logger.error(`[${us.username}]: Error during refresh`, error);
             if (error instanceof SpotifyReauthRequiredError) {
