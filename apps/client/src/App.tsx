@@ -29,7 +29,7 @@ import CollaborativeArtists from "./scenes/Collaborative/Affinity/Artists";
 import CollaborativeSongs from "./scenes/Collaborative/Affinity/Songs";
 import Discoveries from "./scenes/Discoveries";
 import DiscoveryList from "./scenes/Discoveries/DiscoveryList";
-import ApiEndpointSetToFronted from "./scenes/Error/ApiEndpointSetToFronted";
+import ApiEndpointSetToFrontend from "./scenes/Error/ApiEndpointSetToFrontend";
 import NotFound from "./scenes/Error/NotFound";
 import RegistrationsDisabled from "./scenes/Error/RegistrationsDisabled";
 import Habits from "./scenes/Habits";
@@ -218,7 +218,7 @@ function App() {
                 />
                 <Route
                   path="/oauth/spotify" // Error page when someone accidentally configures their API_ENDPOINT to point to the frontend instead of the backend
-                  element={<ApiEndpointSetToFronted />}
+                  element={<ApiEndpointSetToFrontend />}
                 />
                 <Route
                   path="/top/songs"

@@ -1,6 +1,5 @@
 import { Types } from "mongoose";
 
-import { NoResult } from "../../tools/errors/Database";
 import {
   AlbumModel,
   ArtistModel,
@@ -15,18 +14,11 @@ export const getUserFromField = async <F extends keyof User>(
   field: F,
   value: User[F],
   includeTokens: boolean,
-  crash = true,
-) => {
-  const user = UserModel.findOne(
+) =>
+  UserModel.findOne(
     { [field]: value },
     includeTokens ? "" : "-accessToken -refreshToken",
   );
-
-  if (!user && crash) {
-    throw new NoResult();
-  }
-  return user;
-};
 
 export const getAllUsers = (includeTokens: boolean) =>
   UserModel.find({}, includeTokens ? "" : "-accessToken -refreshToken");

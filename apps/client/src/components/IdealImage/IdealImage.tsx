@@ -17,7 +17,7 @@ export default function IdealImage({
     <img
       className={s.image}
       alt="cover"
-      src={images ? getAtLeastImage(images, size) : "no_data.png"}
+      src={images ? getAtLeastImage(images, size) : "/no_data.png"}
       height={size}
       width={size}
       {...other}
