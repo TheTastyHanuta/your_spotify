@@ -58,6 +58,9 @@ const num = (value: number) => (
 );
 
 interface Point {
+  // Unique per bar: hour labels repeat over 48 hours, and recharts matches
+  // the tooltip to the first bar with the same axis value
+  key: string;
   x: string;
   label: string;
   y: number;
@@ -87,6 +90,7 @@ function points(usage: SpotifyUsageResponse, range: Range): Point[] {
       timeZone: usage.timeZone,
     });
     return usage.hourly.map((h) => ({
+      key: String(h.hour),
       x: hour.format(h.hour),
       label: long.format(h.hour),
       y: h.total,
@@ -95,6 +99,7 @@ function points(usage: SpotifyUsageResponse, range: Range): Point[] {
   }
   if (range === "days") {
     return usage.daily.map((d) => ({
+      key: d.day,
       x: dayLabel(d.day),
       label: DateFormatter.toWeekdayDayMonthYear(dayDate(d.day)),
       y: d.total,
@@ -102,6 +107,7 @@ function points(usage: SpotifyUsageResponse, range: Range): Point[] {
     }));
   }
   return usage.weekly.map((w) => ({
+    key: w.from,
     x: dayLabel(w.to),
     label: `${dayLabel(w.from)} – ${dayLabel(w.to)}`,
     y: w.total,
@@ -205,6 +211,7 @@ export default function SpotifyUsage() {
   }
 
   const data = points(usage, range);
+  const ticks = new Map(data.map((p) => [p.key, p.x]));
   const busiest = data.reduce<Point | undefined>(
     (best, p) => (p.y > (best?.y ?? 0) ? p : best),
     undefined,
@@ -253,7 +260,12 @@ export default function SpotifyUsage() {
           <div className={s.chart}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 14, right: 24 }}>
-                <XAxis dataKey="x" tickMargin={8} minTickGap={16} />
+                <XAxis
+                  dataKey="key"
+                  tickFormatter={(key: string) => ticks.get(key) ?? key}
+                  tickMargin={8}
+                  minTickGap={16}
+                />
                 <YAxis width="auto" tickMargin={6} allowDecimals={false} />
                 <RTooltip
                   wrapperStyle={{ zIndex: 10 }}
