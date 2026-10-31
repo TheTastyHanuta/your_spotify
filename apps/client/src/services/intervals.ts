@@ -121,7 +121,7 @@ export const userBasedIntervals: UserBasedIntervalDetails[] = [
     interval: (user) => {
       const { now } = getPresetDates();
       const start = getFirstListenedAt(
-        user ? new Date(user.firstListenedAt) : new Date(2010),
+        user ? new Date(user.firstListenedAt) : new Date(2010, 0, 1),
       );
       return {
         timesplit: getAppropriateTimesplitFromRange(start, now),

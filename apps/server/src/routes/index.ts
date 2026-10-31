@@ -1,6 +1,7 @@
+import { randomUUID } from "crypto";
+
 import { Router } from "express";
 import { Types } from "mongoose";
-import { v4 } from "uuid";
 import { z } from "zod";
 
 import {
@@ -89,7 +90,7 @@ router.get("/me", optionalLoggedOrGuest, async (req, res) => {
 router.post("/generate-public-token", logged, async (req, res) => {
   const { user } = req as LoggedRequest;
 
-  const token = v4();
+  const token = randomUUID();
   await setUserPublicToken(user._id.toString(), token);
   res.status(200).send(token);
 });
