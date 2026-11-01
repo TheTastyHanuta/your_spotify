@@ -1,4 +1,4 @@
-import { Hook, Phase, SongPhases } from "./apis/api";
+import { Hook, Phase, ItemPhases } from "./apis/api";
 import { DateFormatter, fromDay } from "./date";
 import { plural } from "./tools";
 
@@ -36,11 +36,18 @@ export const hookMonth = (day: string) =>
 export const clickedText = (knownDays: number) =>
   isLate(knownDays) ? `clicked after ${knownFor(knownDays)}` : "";
 
-// What a phase is called in rows, charts and tooltips
-export const PHASE_NAME: Record<Phase["kind"], string> = {
-  hook: "Hooked",
-  comeback: "Came back",
-  again: "Played a lot again",
+// Hooks are a song's, deep dives an artist's
+export type HookOf = "song" | "artist";
+
+// What a phase is called in rows, charts and tooltips. An artist's later
+// dive is not "came back": it may have been played all along.
+export const PHASE_NAMES: Record<HookOf, Record<Phase["kind"], string>> = {
+  song: { hook: "Hooked", comeback: "Came back", again: "Played a lot again" },
+  artist: {
+    hook: "Deep dive",
+    comeback: "Dove in again",
+    again: "Played a lot again",
+  },
 };
 
 // "after 3 months", "after 2.8 years"
@@ -52,7 +59,7 @@ export const phaseWeeks = (phase: Phase) =>
 
 // "Hooked in Mar 2022 for 9 weeks, came back 3 times, played a lot again 2
 // more times", so every phase under the weeks is told; null without a hook
-export const hookSentence = (song: SongPhases) => {
+export const hookSentence = (song: ItemPhases, of: HookOf = "song") => {
   const [hook] = song.phases;
   if (!hook) {
     return null;
@@ -61,9 +68,11 @@ export const hookSentence = (song: SongPhases) => {
     song.phases.filter((p) => p.kind === kind).length;
   const back = count("comeback");
   const again = count("again");
+  const names = PHASE_NAMES[of];
   return [
-    `Hooked in ${hookMonth(hook.start)} for ${phaseWeeks(hook)}`,
-    back > 0 && `came back ${back === 1 ? "once" : `${back} times`}`,
+    `${names.hook} in ${hookMonth(hook.start)} for ${phaseWeeks(hook)}`,
+    back > 0 &&
+      `${names.comeback.toLowerCase()} ${back === 1 ? "once" : `${back} times`}`,
     again > 0 &&
       `played a lot again ${again === 1 ? "once more" : `${again} more times`}`,
   ]
@@ -75,7 +84,8 @@ export const hookSentence = (song: SongPhases) => {
 export const phaseWhen = (
   phase: Phase,
   when: (day: string) => string = hookDay,
-) => `${PHASE_NAME[phase.kind]} ${when(phase.start)}`;
+  of: HookOf = "song",
+) => `${PHASE_NAMES[of][phase.kind]} ${when(phase.start)}`;
 
 // What sets a hook or comeback apart: "new find", "known 2.8 years" or
 // "after 3 months"

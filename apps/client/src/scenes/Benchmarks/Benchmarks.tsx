@@ -125,6 +125,10 @@ export default function Benchmarks() {
     },
     { title: "Get hooks per year", request: () => api.getHooksPerYear(3) },
     {
+      title: "Get hooked artists",
+      request: () => api.getHookedArtists(interval.start, interval.end, 20),
+    },
+    {
       title: "Get new plays per",
       request: () =>
         api.getNewPlaysPer(interval.start, interval.end, Timesplit.month),

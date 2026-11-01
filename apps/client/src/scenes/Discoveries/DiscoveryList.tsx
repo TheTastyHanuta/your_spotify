@@ -9,10 +9,18 @@ import { phaseWeeks, phaseWhen } from "../../services/hooked";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { plural } from "../../services/tools";
-import { HOOKED_EMPTY, HOOKED_INFO } from "./Hooked";
+import {
+  DIVES_EMPTY,
+  DIVES_INFO,
+  HOOKED_EMPTY,
+  HOOKED_INFO,
+  HOOKED_TAB_VALUES,
+  HOOKED_TABS,
+} from "./Hooked";
 import {
   breakLength,
   comebackRow,
+  hookedArtistRow,
   hookedRow,
   NEW_SONG_TAB_VALUES,
   NEW_SONG_TABS,
@@ -170,7 +178,58 @@ function Comebacks() {
   );
 }
 
+// Songs and artists are two lists of different items, one page each
 function HookedList() {
+  const [tab, setTab] = useParamTab("tab", HOOKED_TAB_VALUES, "songs");
+  const tabs = { tabs: HOOKED_TABS, tab, onTab: setTab };
+  return tab === "songs" ? (
+    <HookedSongs tabs={tabs} />
+  ) : (
+    <HookedArtists tabs={tabs} />
+  );
+}
+
+type Tabs = {
+  tabs: typeof HOOKED_TABS;
+  tab: string;
+  onTab: (value: string) => void;
+};
+
+function HookedArtists({ tabs }: { tabs: Tabs }) {
+  const { interval } = useSelector(selectRawIntervalDetail);
+  const items = useAPI(
+    api.getHookedArtists,
+    interval.start,
+    interval.end,
+    NB_ALL,
+  );
+  return (
+    <ListPage
+      title="Hooked"
+      back={back}
+      items={items}
+      info={DIVES_INFO}
+      {...tabs}
+      count={(n) => plural(n, "deep dive")}
+      empty={DIVES_EMPTY}
+      row={hookedArtistRow}
+      lead={(item) => ({
+        images: item.artist.images,
+        round: true,
+        name: <Link to={`/artist/${item.artist.id}`}>{item.artist.name}</Link>,
+        nameText: item.artist.name,
+        meta: (
+          <>
+            {phaseWhen(item, undefined, "artist")} for {phaseWeeks(item)} ·{" "}
+            {plays(item.plays)}
+          </>
+        ),
+      })}
+    />
+  );
+}
+
+function HookedSongs({ tabs }: { tabs: Tabs }) {
   const { interval } = useSelector(selectRawIntervalDetail);
   const items = useAPI(
     api.getHookedSongs,
@@ -184,6 +243,7 @@ function HookedList() {
       back={back}
       items={items}
       info={HOOKED_INFO}
+      {...tabs}
       count={(n) => plural(n, "hook")}
       empty={HOOKED_EMPTY}
       row={hookedRow}

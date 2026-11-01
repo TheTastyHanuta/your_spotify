@@ -18,7 +18,7 @@ import {
   api,
   ItemType,
   itemPath,
-  SongPhases,
+  ItemPhases,
   TimelineCounts,
 } from "../../services/apis/api";
 import { DateFormatter, orderedIsoWeekdays } from "../../services/date";
@@ -55,8 +55,8 @@ const TABS = [
   { value: "weekdays", label: "Weekdays" },
   { value: "hours", label: "Hours" },
 ];
-// Songs also get their weeks, with the phases
-const SONG_TABS = [
+// Songs and artists also get their weeks, with the phases
+const WEEK_TABS = [
   TABS[0]!,
   { value: "weeks", label: "Weeks" },
   ...TABS.slice(1),
@@ -94,16 +94,16 @@ interface ItemTimelineProps {
   id: string;
   // Already fetched by the page; fetched here when not given
   data?: Awaited<ReturnType<typeof api.getTimeline>>["data"] | null;
-  // A song's weeks and phases: adds the Weeks tab, opened first when the song
-  // has a hook
-  song?: SongPhases | null;
+  // A song's or artist's weeks and phases: adds the Weeks tab, opened first
+  // when a song has a hook (an artist's months tell its story better)
+  phases?: ItemPhases | null;
 }
 
 export default function ItemTimeline({
   type,
   id,
   data,
-  song,
+  phases,
 }: ItemTimelineProps) {
   const [fetched] = useConditionalAPI(
     data === undefined,
@@ -113,7 +113,8 @@ export default function ItemTimeline({
   );
   const timeline = data === undefined ? fetched : data;
   const [chosen, setTab] = useState<string | null>(null);
-  const tab = chosen ?? (song?.phases.length ? "weeks" : "months");
+  const tab =
+    chosen ?? (type === "track" && phases?.phases.length ? "weeks" : "months");
   const measurement = useSelector(selectStatMeasurement);
   const navigate = useNavigate();
   const { best } = useTimelineSummary(timeline);
@@ -250,11 +251,19 @@ export default function ItemTimeline({
   return (
     <Section
       title="Over time"
-      tabs={song !== undefined ? SONG_TABS : TABS}
+      tabs={phases !== undefined ? WEEK_TABS : TABS}
       tab={tab}
       onTab={setTab}>
-      {tab === "weeks" && song ? (
-        <WeeksChart song={song} />
+      {tab === "weeks" ? (
+        // Still loading (or failed): never the months under the Weeks tab
+        phases ? (
+          <WeeksChart
+            song={phases}
+            of={type === "artist" ? "artist" : "song"}
+          />
+        ) : (
+          <Skeleton variant="rectangular" height={300} />
+        )
       ) : (
         <div className={s.chart}>
           {!comparison ? (

@@ -7,6 +7,7 @@ import Text from "../../components/Text";
 import {
   DiscoveriesResponse,
   DiscoveryOverviewResponse,
+  HookedArtist,
   HookedSong,
 } from "../../services/apis/api";
 import { DateFormatter } from "../../services/date";
@@ -128,3 +129,30 @@ export const makeHookedRow =
   );
 
 export const hookedRow = makeHookedRow();
+
+// "Deep dive 10 Jan · 4 weeks · known 3 years" or "Dove in again 3 Mar ·
+// 3 weeks · after 2 years", like the songs' rows
+export const makeHookedArtistRow =
+  (when?: (day: string) => string) => (item: HookedArtist, index: number) => (
+    <ItemRow
+      // An artist can dive and dive again in one period
+      key={`${item.artist.id}-${item.start}`}
+      rank={index + 1}
+      image={item.artist.images}
+      round
+      title={<InlineArtist artist={item.artist} size="normal" />}
+      subtitle={
+        <Text size="normal" greyed className={s.ellipsis}>
+          {`${phaseWhen(item, when, "artist")} · ${phaseWeeks(item)} · ${phaseNote(item)}`}
+        </Text>
+      }
+      right={
+        <span className={s.hookRight}>
+          <HookShape hook={item} />
+          <Plays n={item.plays} />
+        </span>
+      }
+    />
+  );
+
+export const hookedArtistRow = makeHookedArtistRow();

@@ -17,9 +17,9 @@ import {
   YAxis,
 } from "recharts";
 
-import { Phase, SongPhases } from "../../services/apis/api";
+import { Phase, ItemPhases } from "../../services/apis/api";
 import { DateFormatter, dayRange, fromDay } from "../../services/date";
-import { hookSentence, PHASE_NAME } from "../../services/hooked";
+import { HookOf, hookSentence, PHASE_NAMES } from "../../services/hooked";
 import Text from "../Text";
 import Tooltip from "../Tooltip";
 
@@ -39,10 +39,12 @@ const LABEL_ROW = 30;
 function PhaseLane({
   spans,
   weeks,
+  of,
   onTwoRows,
 }: {
   spans: Span[];
   weeks: number;
+  of: HookOf;
   onTwoRows: (twoRows: boolean) => void;
 }) {
   const plot = usePlotArea();
@@ -51,7 +53,7 @@ function PhaseLane({
   const placed = spans.map(({ phase, from, to }) => {
     const x = (plot?.x ?? 0) + from * width;
     const quiet = phase.kind === "again";
-    const name = quiet ? "Again" : PHASE_NAME[phase.kind];
+    const name = quiet ? "Again" : PHASE_NAMES[of][phase.kind];
     const stats = `${phase.weeks} wk · ${phase.plays}`;
     // ponytail: estimated text widths, measure them if labels ever clip
     const labelWidth = Math.max(name.length * 6.5, stats.length * 7);
@@ -107,9 +109,15 @@ function PhaseLane({
   );
 }
 
-// A song's plays per week, its phases in the tint. Always plays, as the
-// phases are made of plays.
-export default function WeeksChart({ song }: { song: SongPhases }) {
+// A song's or artist's plays per week, its phases in the tint. Always plays,
+// as the phases are made of plays.
+export default function WeeksChart({
+  song,
+  of,
+}: {
+  song: ItemPhases;
+  of: HookOf;
+}) {
   const scroll = useRef<HTMLDivElement>(null);
   const [twoRows, setTwoRows] = useState(false);
   const first = fromDay(song.firstWeek);
@@ -132,7 +140,7 @@ export default function WeeksChart({ song }: { song: SongPhases }) {
     )
     .map(({ x }) => x);
   const years = newYears.length > 0 ? newYears : [0];
-  const sentence = hookSentence(song);
+  const sentence = hookSentence(song, of);
 
   // On phones the weeks scroll sideways: start at the newest
   useLayoutEffect(() => {
@@ -148,7 +156,7 @@ export default function WeeksChart({ song }: { song: SongPhases }) {
       {span && (
         <>
           <br />
-          {`${PHASE_NAME[span.phase.kind]}: ${dayRange(
+          {`${PHASE_NAMES[of][span.phase.kind]}: ${dayRange(
             fromDay(span.phase.start),
             addDays(weekStart(span.to), 6),
           )}`}
@@ -209,6 +217,7 @@ export default function WeeksChart({ song }: { song: SongPhases }) {
                 <PhaseLane
                   spans={spans}
                   weeks={rows.length}
+                  of={of}
                   onTwoRows={setTwoRows}
                 />
               </BarChart>
