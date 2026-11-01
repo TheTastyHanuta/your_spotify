@@ -8,7 +8,7 @@ import {
   isAfter,
   startOfDay,
 } from "date-fns";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import Section from "../../components/Section";
 import { CalendarResponse } from "../../services/apis/api";
@@ -54,6 +54,18 @@ export default function Calendar({
   const [selected, setYear] = useState<number>();
   // The day that gets the keyboard focus, the grid is one tab stop
   const [active, setActive] = useState<string>();
+  const scroll = useRef<HTMLDivElement>(null);
+
+  // On narrow screens the year scrolls sideways: start at its newest day
+  // (today in the current year), not at January
+  useLayoutEffect(() => {
+    const box = scroll.current;
+    const last = [...(box?.querySelectorAll("[data-day]") ?? [])].at(-1);
+    if (box && last) {
+      box.scrollLeft +=
+        last.getBoundingClientRect().right - box.getBoundingClientRect().right;
+    }
+  }, [days, selected, start, end]);
   if (!days) {
     return (
       <Section title="Calendar">
@@ -155,7 +167,7 @@ export default function Calendar({
           </Select>
         )
       }>
-      <div className={s.calendar}>
+      <div className={s.calendar} ref={scroll}>
         <div
           className={s.calendarGrid}
           onKeyDown={onKeyDown}

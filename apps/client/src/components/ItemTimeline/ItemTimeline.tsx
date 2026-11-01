@@ -1,6 +1,6 @@
 import { Skeleton } from "@mui/material";
 import { format } from "date-fns";
-import { CSSProperties, useState } from "react";
+import { CSSProperties, useLayoutEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   Bar,
@@ -181,6 +181,15 @@ export default function ItemTimeline({
   const measurement = useSelector(selectStatMeasurement);
   const navigate = useNavigate();
   const { best } = useTimelineSummary(timeline);
+  const scroll = useRef<HTMLDivElement>(null);
+
+  // On phones the months scroll sideways: start at the newest
+  useLayoutEffect(() => {
+    const box = scroll.current;
+    if (box) {
+      box.scrollLeft = box.scrollWidth;
+    }
+  }, [tab, timeline]);
 
   if (timeline && ("code" in timeline || timeline.months.length === 0)) {
     return null;
@@ -350,7 +359,7 @@ export default function ItemTimeline({
         <div className={s.chart}>
           {!comparison ? (
             // At least 10px per month: on phones the chart scrolls sideways
-            <div className={s.scroll}>
+            <div className={s.scroll} ref={scroll}>
               <div
                 className={s.inner}
                 style={{ "--months": months.length } as CSSProperties}>
