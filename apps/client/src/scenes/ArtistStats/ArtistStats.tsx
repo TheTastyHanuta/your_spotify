@@ -20,6 +20,7 @@ import {
   formatHours,
   msToMinutes,
 } from "../../services/stats";
+import { dates, monthNumber } from "../Story/Eras";
 import ArtistContextMenu from "./ArtistContextMenu";
 import ArtistRank from "./ArtistRank/ArtistRank";
 import { MostListenedTracksContextMenuButton } from "./mostListenedTracksContextMenuButton/mostListenedTracksContextMenuButton";
@@ -38,6 +39,8 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
   // Fetched here once: the strip sums its months, the chart draws them
   const timeline = useAPI(api.getTimeline, "artist", artistId);
   const phases = useAPI(api.getArtistPhases, artistId);
+  // The whole history's eras (cached, Your story asks for them too)
+  const allEras = useAPI(api.getEras);
   const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
   const recent = useAPI(
     api.getTracks,
@@ -59,6 +62,22 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
     : (stats.artist.mbGenres ?? []);
   const first = stats.firstLast.first;
   const last = stats.firstLast.last;
+  const eras =
+    allEras?.artists.filter((era) => era.artist.id === artistId) ?? [];
+  // A first deep dive from two months before an era to its end started it
+  const hook = phases?.artist?.phases[0];
+  const startsEra =
+    hook &&
+    eras.some(
+      (era) =>
+        monthNumber(hook.start) >= monthNumber(era.from) - 2 &&
+        monthNumber(hook.start) <= monthNumber(era.to),
+    );
+  // "Your era Dec 2025 – Apr 2026, again since Aug 2026"
+  const eraText = eras
+    .map((era, i) => `${i === 0 ? "Your era" : "again"} ${dates(era)}`)
+    .join(", ");
+
   // The rank counts listens where the artist is credited first
   const rankText =
     rank && rank.index >= 0 ? `#${rank.index + 1} of all time` : undefined;
@@ -73,9 +92,17 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
         round
         name={stats.artist.name}
         nameText={stats.artist.name}
-        meta={[rankText, genres.slice(0, 4).join(", ")]
+        meta={[
+          rankText,
+          genres.slice(0, 4).join(", "),
+          eraText && (
+            <Link key="era" to="/story">
+              {eraText}
+            </Link>
+          ),
+        ]
           .filter(Boolean)
-          .join(" · ")}
+          .flatMap((part, i) => (i > 0 ? [" · ", part] : [part]))}
         actions={
           <ArtistContextMenu
             artistId={stats.artist.id}
@@ -126,6 +153,10 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
         id={artistId}
         data={timeline}
         phases={phases?.artist ?? null}
+        eras={eras}
+        hookNote={
+          startsEra ? `the start of your ${stats.artist.name} era` : undefined
+        }
       />
       <div className={clsx("ruled-columns", s.columns)}>
         <Section

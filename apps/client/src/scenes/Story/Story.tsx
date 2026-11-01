@@ -70,6 +70,8 @@ export default function Story() {
         }
       />
       <div className={s.groups}>
+        {/* The hero shows the latest era, the rest of them follow */}
+        <Eras eras={eras} />
         <Section
           title="Forgotten favorites"
           tabs={SINCE_TABS}
@@ -132,7 +134,6 @@ export default function Story() {
             )}
           </Section>
         </div>
-        <Eras eras={eras} />
         <Hooks />
         <Loyal />
       </div>

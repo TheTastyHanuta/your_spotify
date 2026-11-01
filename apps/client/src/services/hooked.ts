@@ -59,7 +59,12 @@ export const phaseWeeks = (phase: Phase) =>
 
 // "Hooked in Mar 2022 for 9 weeks, came back 3 times, played a lot again 2
 // more times", so every phase under the weeks is told; null without a hook
-export const hookSentence = (song: ItemPhases, of: HookOf = "song") => {
+// note: said right after the hook ("the start of your Lorde era")
+export const hookSentence = (
+  song: ItemPhases,
+  of: HookOf = "song",
+  note?: string,
+) => {
   const [hook] = song.phases;
   if (!hook) {
     return null;
@@ -71,6 +76,7 @@ export const hookSentence = (song: ItemPhases, of: HookOf = "song") => {
   const names = PHASE_NAMES[of];
   return [
     `${names.hook} in ${hookMonth(hook.start)} for ${phaseWeeks(hook)}`,
+    note,
     back > 0 &&
       `${names.comeback.toLowerCase()} ${back === 1 ? "once" : `${back} times`}`,
     again > 0 &&
