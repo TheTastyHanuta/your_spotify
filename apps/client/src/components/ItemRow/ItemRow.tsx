@@ -44,6 +44,8 @@ export function ArtistNames({
 export interface ItemRowProps {
   rank?: number;
   image: SpotifyImage[];
+  // Drawn instead of the image, like a genre's stack of faces
+  cover?: ReactNode;
   round?: boolean;
   big?: boolean;
   title: ReactNode;
@@ -56,6 +58,7 @@ export interface ItemRowProps {
 export default function ItemRow({
   rank,
   image,
+  cover,
   round,
   big,
   title,
@@ -76,15 +79,16 @@ export default function ItemRow({
           {rank}
         </Text>
       )}
-      {playId && !big ? (
-        <PlayButton id={playId} covers={image} />
-      ) : (
-        <IdealImage
-          images={image}
-          size={size}
-          className={clsx(s.image, { [s.round]: round })}
-        />
-      )}
+      {cover ??
+        (playId && !big ? (
+          <PlayButton id={playId} covers={image} />
+        ) : (
+          <IdealImage
+            images={image}
+            size={size}
+            className={clsx(s.image, { [s.round]: round })}
+          />
+        ))}
       <div className={s.rowText}>
         {title}
         {typeof subtitle === "string" ? (
