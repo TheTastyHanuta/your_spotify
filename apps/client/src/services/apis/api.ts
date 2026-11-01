@@ -244,7 +244,7 @@ export type ForgottenResponse = {
 };
 // Months as "YYYY-MM" in the stats timezone, oldest era first. plays: the
 // artist's or genre's plays during the era, total: all plays during it
-type Era = { from: string; to: string; plays: number; total: number };
+export type Era = { from: string; to: string; plays: number; total: number };
 export type ErasResponse = {
   // First and last month with plays, null without listens
   first: string | null;

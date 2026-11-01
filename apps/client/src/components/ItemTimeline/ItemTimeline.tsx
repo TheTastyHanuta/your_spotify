@@ -7,15 +7,18 @@ import {
   BarChart,
   Cell,
   Legend,
+  ReferenceArea,
   ReferenceDot,
   ResponsiveContainer,
   Tooltip as RTooltip,
+  usePlotArea,
   XAxis,
   YAxis,
 } from "recharts";
 
 import {
   api,
+  Era,
   ItemType,
   itemPath,
   ItemPhases,
@@ -97,6 +100,64 @@ interface ItemTimelineProps {
   // A song's or artist's weeks and phases: adds the Weeks tab, opened first
   // when a song has a hook (an artist's months tell its story better)
   phases?: ItemPhases | null;
+  // An artist's eras ("YYYY-MM"), drawn as bands behind their months
+  eras?: Pick<Era, "from" | "to">[];
+  // Said right after the hook above the weeks
+  hookNote?: string;
+}
+
+// Room under the month labels for the eras' lane
+const ERA_LANE = 34;
+
+// An artist's eras as tinted lines under the months, like the phases under
+// the weeks. from and to: positions in the chart's months. Labels go newest
+// first; one that would run into another is left out (the band still shows).
+function EraLane({
+  eras,
+  count,
+}: {
+  eras: { from: number; to: number }[];
+  count: number;
+}) {
+  const plot = usePlotArea();
+  if (!plot) {
+    return null;
+  }
+  const width = plot.width / count;
+  const y = plot.y + plot.height + 30;
+  const taken: [number, number][] = [];
+  const labelX = new Map<number, number>();
+  for (const era of [...eras].reverse()) {
+    // shortcut: estimated width of "Your era" (11px bold); measure it if
+    // labels clip
+    const w = 52;
+    const x = Math.min(plot.x + era.from * width, plot.x + plot.width - w);
+    if (taken.every(([a, b]) => x + w + 8 <= a || x >= b + 8)) {
+      taken.push([x, x + w]);
+      labelX.set(era.from, x);
+    }
+  }
+  return (
+    <g>
+      {eras.map(({ from, to }) => (
+        <g key={from}>
+          <rect
+            x={plot.x + from * width}
+            y={y}
+            width={Math.max(2, (to - from + 1) * width - 1)}
+            height={4}
+            rx={2}
+            fill="var(--tint)"
+          />
+          {labelX.has(from) && (
+            <text x={labelX.get(from)} y={y + 18} className={s.laneName}>
+              Your era
+            </text>
+          )}
+        </g>
+      ))}
+    </g>
+  );
 }
 
 export default function ItemTimeline({
@@ -104,6 +165,8 @@ export default function ItemTimeline({
   id,
   data,
   phases,
+  eras = [],
+  hookNote,
 }: ItemTimelineProps) {
   const [fetched] = useConditionalAPI(
     data === undefined,
@@ -188,6 +251,24 @@ export default function ItemTimeline({
     : -1;
   const peakDate = peak >= 0 ? months[peak]!.dateWithPrecision.date : undefined;
 
+  // The chart's x of an era's first and last month
+  const xOf = (month: string) =>
+    months.find(
+      (m) =>
+        keyOf(m.dateWithPrecision.date) ===
+        monthKey({ year: +month.slice(0, 4), month: +month.slice(5, 7) }),
+    )?.x;
+  const bands = eras.flatMap((era) => {
+    const x1 = xOf(era.from);
+    const x2 = xOf(era.to);
+    if (x1 === undefined || x2 === undefined) {
+      return [];
+    }
+    const from = months.findIndex((m) => m.x === x1);
+    const to = months.findIndex((m) => m.x === x2);
+    return [{ x1, x2, from, to }];
+  });
+
   const barFill = (index: number) =>
     index === peak ? "var(--tint)" : "var(--tint-bar)";
 
@@ -260,6 +341,7 @@ export default function ItemTimeline({
           <WeeksChart
             song={phases}
             of={type === "artist" ? "artist" : "song"}
+            note={hookNote}
           />
         ) : (
           <Skeleton variant="rectangular" height={300} />
@@ -273,7 +355,13 @@ export default function ItemTimeline({
                 className={s.inner}
                 style={{ "--months": months.length } as CSSProperties}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={months} margin={{ top: 24, right: 24 }}>
+                  <BarChart
+                    data={months}
+                    margin={{
+                      top: 24,
+                      right: 24,
+                      bottom: bands.length > 0 ? ERA_LANE : 0,
+                    }}>
                     <XAxis
                       dataKey="x"
                       // Labels are set in the wider mono font after recharts
@@ -304,6 +392,17 @@ export default function ItemTimeline({
                         />
                       }
                     />
+                    {bands.map(({ x1, x2 }) => (
+                      <ReferenceArea
+                        key={x1}
+                        x1={x1}
+                        x2={x2}
+                        fill="color-mix(in srgb, var(--tint) 10%, transparent)"
+                      />
+                    ))}
+                    {bands.length > 0 && (
+                      <EraLane eras={bands} count={months.length} />
+                    )}
                     <Bar
                       dataKey="y"
                       maxBarSize={24}

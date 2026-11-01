@@ -114,9 +114,12 @@ function PhaseLane({
 export default function WeeksChart({
   song,
   of,
+  note,
 }: {
   song: ItemPhases;
   of: HookOf;
+  // Said right after the hook in the sentence above the weeks
+  note?: string;
 }) {
   const scroll = useRef<HTMLDivElement>(null);
   const [twoRows, setTwoRows] = useState(false);
@@ -140,7 +143,7 @@ export default function WeeksChart({
     )
     .map(({ x }) => x);
   const years = newYears.length > 0 ? newYears : [0];
-  const sentence = hookSentence(song, of);
+  const sentence = hookSentence(song, of, note);
 
   // On phones the weeks scroll sideways: start at the newest
   useLayoutEffect(() => {
