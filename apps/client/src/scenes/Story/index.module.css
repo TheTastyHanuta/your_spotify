@@ -26,46 +26,76 @@
   white-space: nowrap;
 }
 
-/* Eras: the artists' faces, the genres and the years under them. Below
-   640px the strip scrolls sideways. */
+/* Eras: the artists' faces, the years, then the genres. Below 640px the
+   strip scrolls sideways. */
 .stripScroll {
   overflow-x: auto;
 }
 
 .strip {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: repeat(3, auto);
+  row-gap: 10px;
+  align-items: center;
   min-width: 640px;
 }
 
-.lane {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
+.row1 {
+  grid-row: 1;
 }
 
-/* Stays in view while the strip scrolls on phones */
-.laneLabel {
+.row2 {
+  grid-row: 2;
+}
+
+.row3 {
+  grid-row: 3;
+}
+
+.plot {
+  grid-column: 2;
+}
+
+/* Hides the label column over every row and gap while the strip scrolls
+   on phones */
+.gutter {
   position: sticky;
   left: 0;
   z-index: 1;
+  grid-area: 1 / 1 / -1 / 2;
   align-self: stretch;
-  display: flex;
-  align-items: center;
   background: var(--bg);
+}
+
+.laneLabel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  grid-column: 1;
   white-space: nowrap;
 }
 
-.track,
+/* A faint line at each new year, behind the lanes */
+.yearLines {
+  position: relative;
+  grid-area: 1 / 2 / -1 / 3;
+  align-self: stretch;
+  pointer-events: none;
+}
+
+.yearLines span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.genres,
 .years,
 .faces {
   position: relative;
-}
-
-.track {
-  height: 20px;
 }
 
 .years {
@@ -128,14 +158,60 @@
 }
 
 /* 1px off each side (in the inline style), so eras next to each other are
-   2px apart */
+   2px apart. The button is the line plus a little room under it; its name
+   hangs below, and answers hover too. */
 .genreEra {
   position: absolute;
   top: 0;
-  bottom: 0;
+  height: 10px;
   min-width: 3px;
-  border-radius: var(--radius-s);
-  background-color: color-mix(in srgb, var(--text) 35%, transparent);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.genreEra:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.genreBar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.genreName {
+  position: absolute;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.faceStack {
+  display: flex;
+  isolation: isolate;
+  /* Three faces, so rows with fewer still line up */
+  width: 68px;
+}
+
+.faceStack img {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.faceStack img + img {
+  margin-left: -14px;
 }
 
 .year {
