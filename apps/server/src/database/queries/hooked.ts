@@ -1,15 +1,19 @@
 import { InfosModel } from "../Models";
 import { notRemoved } from "../schemas/info";
 import { User } from "../schemas/user";
-import { allListens, findTracks, keepOrder } from "./discoveries";
+import { matchArtistListens } from "./artist";
+import { allListens, findArtists, findTracks, keepOrder } from "./discoveries";
 import {
   dayIn,
+  findDives,
   findPhases,
+  listeningOf,
   LATE_DAYS,
   periodDays,
   Phase,
   PHASE_PLAYS,
   PlaysOnDay,
+  ItemPhases,
 } from "./hooks";
 import { dayString } from "./insights";
 import { getTimezone } from "./statsTools";
@@ -19,6 +23,7 @@ import { getTimezone } from "./statsTools";
 // phases found in findPhases.
 
 type Track = Awaited<ReturnType<typeof findTracks>>[number];
+type Artist = Awaited<ReturnType<typeof findArtists>>[number];
 // A hook or comeback of a song. knownDays and yearLater are the song's, they
 // only mean something for its hook.
 type Listed = Phase & {
@@ -27,18 +32,23 @@ type Listed = Phase & {
   yearLater: boolean | null;
 };
 
-// Plays per day of each song matching match, songs with fewer than minPlays
-// left out early
+// Plays per day of each song (or each credited artist) matching match, those
+// with fewer than minPlays left out early
 const playsPerDay = (
   match: Record<string, unknown>,
   timezone: string,
   minPlays: number,
+  of: "track" | "artist" = "track",
 ): Promise<{ _id: string; days: PlaysOnDay[] }[]> =>
   InfosModel.aggregate([
     { $match: match },
+    ...(of === "artist" ? [{ $unwind: "$artistIds" }] : []),
     {
       $group: {
-        _id: { track: "$id", day: dayString(timezone) },
+        _id: {
+          track: of === "artist" ? "$artistIds" : "$id",
+          day: dayString(timezone),
+        },
         plays: { $sum: 1 },
       },
     },
@@ -55,6 +65,31 @@ const playsPerDay = (
 const sortedDays = (days: PlaysOnDay[]) =>
   days.sort((a, b) => a.day.localeCompare(b.day));
 
+// All plays per day matching match, for an artist's share of them
+const allPerDay = async (match: Record<string, unknown>, timezone: string) => {
+  const days: { _id: string; plays: number }[] = await InfosModel.aggregate([
+    { $match: match },
+    { $group: { _id: dayString(timezone), plays: { $sum: 1 } } },
+  ]);
+  return days.map((d) => ({ day: d._id, plays: d.plays }));
+};
+
+const strongestFirst = (a: Listed, b: Listed) =>
+  b.plays - a.plays ||
+  a.start.localeCompare(b.start) ||
+  a.id.localeCompare(b.id);
+
+// The hooks and comebacks of one song or artist, "again" left out
+const listed = (id: string, found: ItemPhases | null) =>
+  (found?.phases ?? [])
+    .filter((p) => p.kind !== "again")
+    .map((p): Listed => ({
+      ...p,
+      id,
+      knownDays: found!.knownDays,
+      yearLater: found!.yearLater,
+    }));
+
 // Every hook and comeback in the whole history, as the weeks before and
 // after a period matter too. Strongest first.
 const findHooks = async (user: User) => {
@@ -66,23 +101,27 @@ const findHooks = async (user: User) => {
   );
   const today = dayIn(timezone)(new Date());
   return songs
-    .flatMap((song) => {
-      const found = findPhases(sortedDays(song.days), today);
-      return (found?.phases ?? [])
-        .filter((p) => p.kind !== "again")
-        .map((p): Listed => ({
-          ...p,
-          id: song._id,
-          knownDays: found!.knownDays,
-          yearLater: found!.yearLater,
-        }));
-    })
-    .sort(
-      (a, b) =>
-        b.plays - a.plays ||
-        a.start.localeCompare(b.start) ||
-        a.id.localeCompare(b.id),
-    );
+    .flatMap((song) =>
+      listed(song._id, findPhases(sortedDays(song.days), today)),
+    )
+    .sort(strongestFirst);
+};
+
+// Every deep dive and artist comeback in the whole history, strongest first
+const findArtistDives = async (user: User) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const match = allListens(user).$match;
+  const [artists, all] = await Promise.all([
+    playsPerDay(match, timezone, PHASE_PLAYS, "artist"),
+    allPerDay(match, timezone),
+  ]);
+  const today = dayIn(timezone)(new Date());
+  const listening = listeningOf(all, today);
+  return artists
+    .flatMap((artist) =>
+      listed(artist._id, findDives(sortedDays(artist.days), listening, today)),
+    )
+    .sort(strongestFirst);
 };
 
 // The whole history takes ~0.5 s for 127k listens, so the result is kept per
@@ -93,24 +132,31 @@ const findHooks = async (user: User) => {
 // that ever matters.
 const cache = new Map<string, { version: string; hooks: Promise<Listed[]> }>();
 
-const allHooks = async (user: User) => {
+const cached = async (
+  user: User,
+  kind: "songs" | "artists",
+  find: (user: User) => Promise<Listed[]>,
+) => {
   const timezone = getTimezone(user.settings.timezone);
   const listens = await InfosModel.countDocuments({
     owner: user._id,
     blacklistedBy: { $exists: false },
   });
   const version = `${listens}:${timezone}:${dayIn(timezone)(new Date())}`;
-  const key = user._id.toString();
-  const cached = cache.get(key);
-  if (cached?.version === version) {
-    return cached.hooks;
+  const key = `${kind}:${user._id.toString()}`;
+  const hit = cache.get(key);
+  if (hit?.version === version) {
+    return hit.hooks;
   }
-  const hooks = findHooks(user);
+  const hooks = find(user);
   // A failed query is not kept
   hooks.catch(() => cache.delete(key));
   cache.set(key, { version, hooks });
   return hooks;
 };
+
+const allHooks = (user: User) => cached(user, "songs", findHooks);
+const allDives = (user: User) => cached(user, "artists", findArtistDives);
 
 const withTracks = async (hooks: Listed[]) => {
   const docs = await findTracks(hooks.map((h) => h.id));
@@ -232,5 +278,45 @@ export const getSongPhases = async (user: User, trackId: string) => {
   );
   return song
     ? findPhases(sortedDays(song.days), dayIn(timezone)(new Date()))
+    : null;
+};
+
+// Artists the listener dove into or came back to in the period, strongest
+// first
+export const getHookedArtists = async (
+  user: User,
+  start: Date,
+  end: Date,
+  nb: number,
+) => {
+  const dives = (await allDives(user))
+    .filter(inPeriod(user, start, end))
+    .slice(0, nb);
+  const docs = await findArtists(dives.map((d) => d.id));
+  return keepOrder(
+    dives.map((d) => d.id),
+    docs,
+    (artist: Artist, index) => {
+      const { id: _id, ...dive } = dives[index]!;
+      return { ...dive, artist };
+    },
+  );
+};
+
+// An artist's plays per week and phases for its page. Its plays are counted
+// like its other numbers there (every credited listen but the removed ones),
+// the listening they are a share of like in the lists (without blacklisted
+// listens), so a dive in the lists is on the page too.
+export const getArtistPhases = async (user: User, artistId: string) => {
+  const timezone = getTimezone(user.settings.timezone);
+  const [artists, all] = await Promise.all([
+    playsPerDay(matchArtistListens(user, artistId), timezone, 1, "artist"),
+    allPerDay(allListens(user).$match, timezone),
+  ]);
+  // The listens' other credited artists come out too
+  const artist = artists.find((a) => a._id === artistId);
+  const today = dayIn(timezone)(new Date());
+  return artist
+    ? findDives(sortedDays(artist.days), listeningOf(all, today), today)
     : null;
 };

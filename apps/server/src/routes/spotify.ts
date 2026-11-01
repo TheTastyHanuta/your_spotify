@@ -35,6 +35,8 @@ import {
   getHookSummary,
   getHooksPerYear,
   getSongPhases,
+  getArtistPhases,
+  getHookedArtists,
 } from "../database/queries/hooked";
 import {
   getCalendar,
@@ -670,6 +672,22 @@ router.get("/hooks/song", isLoggedOrGuest, async (req, res) => {
     z.object({ id: z.string().min(1).max(64) }),
   );
   res.status(200).send({ song: await getSongPhases(user, id) });
+});
+
+// Artists the listener dove into or came back to in the period
+router.get("/hooks/artists", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { start, end, nb } = validate(req.query, listSchema);
+  res.status(200).send(await getHookedArtists(user, start, end, nb));
+});
+
+router.get("/hooks/artist", isLoggedOrGuest, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { id } = validate(
+    req.query,
+    z.object({ id: z.string().min(1).max(64) }),
+  );
+  res.status(200).send({ artist: await getArtistPhases(user, id) });
 });
 
 router.get("/discoveries/per", isLoggedOrGuest, async (req, res) => {

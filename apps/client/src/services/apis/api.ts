@@ -190,23 +190,25 @@ export type Phase = {
   breakDays: number;
   shape: number[];
 };
-// A song's plays per week from the Monday of its first listen to this week,
-// and its phases. knownDays: from the first listen to the hook; yearLater:
+// A song's or artist's plays per week from the Monday of its first listen to
+// this week, and its phases (an artist's first one is a deep dive). knownDays: from the first listen to the hook; yearLater:
 // null until a year and 3 months have passed since the hook
-export type SongPhases = {
+export type ItemPhases = {
   firstWeek: string;
   weeks: number[];
   phases: Phase[];
   knownDays: number;
   yearLater: boolean | null;
 };
-// A hook or comeback in a list; knownDays and yearLater are the song's
+// A hook or comeback in a list; knownDays and yearLater are the song's (or
+// artist's)
 export type Hook = Phase & {
   kind: "hook" | "comeback";
   knownDays: number;
   yearLater: boolean | null;
 };
 export type HookedSong = Hook & { track: ShortTrack };
+export type HookedArtist = Hook & { artist: ShortArtist };
 export type HookSummaryResponse = {
   // Hooks and comebacks
   hooks: number;
@@ -573,7 +575,12 @@ export const api = {
   getHooksPerYear: (nb: number) =>
     get<HooksPerYearResponse>("/spotify/hooks/years", { nb }),
   getSongPhases: (id: string) =>
-    get<{ song: SongPhases | null }>("/spotify/hooks/song", { id }),
+    get<{ song: ItemPhases | null }>("/spotify/hooks/song", { id }),
+  // Artists the listener dove into or came back to in the period
+  getHookedArtists: (start: Date, end: Date, nb: number) =>
+    get<HookedArtist[]>("/spotify/hooks/artists", { start, end, nb }),
+  getArtistPhases: (id: string) =>
+    get<{ artist: ItemPhases | null }>("/spotify/hooks/artist", { id }),
   getNewPlaysPer: (start: Date, end: Date, timeSplit: Timesplit) =>
     get<NewPlaysPerResponse>("/spotify/discoveries/per", {
       start,

@@ -108,7 +108,7 @@ export default function TrackStats({ trackId, stats }: TrackStatsProps) {
         type="track"
         id={trackId}
         data={timeline}
-        song={phases?.song ?? null}
+        phases={phases?.song ?? null}
       />
       <div className={clsx("ruled-columns", s.columns)}>
         <Section

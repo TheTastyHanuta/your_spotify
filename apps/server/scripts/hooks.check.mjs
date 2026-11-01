@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   dayIn,
+  findDives,
   findPhases,
+  listeningOf,
   periodDays,
 } from "../src/database/queries/hooks.ts";
 
@@ -129,6 +131,64 @@ assert.deepEqual(
     "Europe/Berlin",
   ),
   ["2024-06-01", "2024-06-03"],
+);
+
+// Artists: deep dives against all the listening, perWeek plays every Monday
+// from day `from` (a Monday) to today
+const listening = (today, perWeek = 100, from = 0) =>
+  Array.from({ length: Math.floor((today - from) / 7) + 1 }, (_, w) =>
+    on(from + 7 * w, perWeek),
+  );
+const dives = (counts, all, today = H + 400) =>
+  findDives(
+    weekly(counts),
+    listeningOf(all ?? listening(today), day(today)),
+    day(today),
+  ).phases;
+
+// 15 a week for 4 weeks is 15% of the listening: a deep dive of 60 plays
+const dive = dives([15, 15, 15, 15])[0];
+assert.equal(dive.kind, "hook");
+assert.equal(dive.weeks, 4);
+assert.equal(dive.plays, 60);
+
+// 30 a week is 6% of 500 a week but 3% of 1000: too small a share
+assert.equal(dives(Array(6).fill(30), listening(H + 400, 500)).length, 1);
+assert.deepEqual(dives(Array(6).fill(30), listening(H + 400, 1000)), []);
+
+// The floors grow with the listening: 15 plays are a dive for someone who
+// plays 25 a week, not for someone who plays 1000
+assert.equal(dives([5, 5, 5], listening(H + 400, 25)).length, 1);
+assert.deepEqual(dives([5, 5, 5], listening(H + 400, 1000)), []);
+// At 100 a week a dive needs 17 plays
+assert.deepEqual(dives([8, 8]), []);
+assert.equal(dives([9, 9]).length, 1);
+
+// A steady artist keeps no dive going: once 20 a week is usual, it is not
+// twice as much any more. The dive is the start only.
+const steady = dives(Array(80).fill(20));
+assert.equal(steady.length, 1);
+assert.ok(steady[0].weeks < 40, `${steady[0].weeks} weeks`);
+
+// Up to 4 quiet weeks stay inside a dive, like a song's hook
+assert.equal(dives([20, 20, 20, 0, 0, 0, 0, 20, 20, 20]).length, 1);
+
+// Back after half a year without a dive: a comeback; sooner it is "again"
+const gap = (n) => Array(n).fill(0);
+assert.deepEqual(
+  dives([20, 20, 20, ...gap(26), 20, 20, 20]).map((p) => p.kind),
+  ["hook", "comeback"],
+);
+assert.deepEqual(
+  dives([20, 20, 20, ...gap(10), 20, 20, 20]).map((p) => p.kind),
+  ["hook", "again"],
+);
+
+// No dives in the first half-year of all the listening: nothing is usual yet
+assert.deepEqual(dives([15, 15, 15, 15], listening(H + 400, 100, H)), []);
+assert.equal(
+  dives([...gap(26), 15, 15, 15, 15], listening(H + 400, 100, H)).length,
+  1,
 );
 
 console.log("hooks ok");

@@ -37,6 +37,7 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
   const rank = useAPI(api.getArtistRank, artistId);
   // Fetched here once: the strip sums its months, the chart draws them
   const timeline = useAPI(api.getTimeline, "artist", artistId);
+  const phases = useAPI(api.getArtistPhases, artistId);
   const { totalMs, best: bestMonth, bestNote } = useTimelineSummary(timeline);
   const recent = useAPI(
     api.getTracks,
@@ -120,7 +121,12 @@ export default function ArtistStats({ artistId, stats }: ArtistStatsProps) {
           },
         ]}
       />
-      <ItemTimeline type="artist" id={artistId} data={timeline} />
+      <ItemTimeline
+        type="artist"
+        id={artistId}
+        data={timeline}
+        phases={phases?.artist ?? null}
+      />
       <div className={clsx("ruled-columns", s.columns)}>
         <Section
           title="Most played songs"

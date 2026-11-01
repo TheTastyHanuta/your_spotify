@@ -41,6 +41,7 @@ import { medianYear, musicalAge } from "../../services/taste";
 import { getAtLeastImage, plural } from "../../services/tools";
 import { listeningTraits } from "../../services/traits";
 import { SpotifyImage, Timesplit } from "../../services/types";
+import { HOOKED_TABS } from "../Discoveries/Hooked";
 import Letter, { letterText, Paragraph } from "./Letter";
 import { DROPPED_FROM, droppedOut, NB_TOP, RANKED, withMoves } from "./movers";
 import { renderRecapImage, shareRecapImage } from "./recapImage";
@@ -52,6 +53,8 @@ import {
   discoveryInfo,
   DroppedLine,
   HOOKED_INFO,
+  diveYearRow,
+  DIVES_INFO,
   hookYearRow,
   movesInfo,
   songDiscoveryRow,
@@ -86,6 +89,7 @@ export default function Recap() {
   const dispatch = useAppDispatch();
   const [sharing, setSharing] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState("artists");
+  const [hookedTab, setHookedTab] = useState("songs");
 
   const yearState = useRecapYear();
   const { year, range } = yearState;
@@ -132,6 +136,7 @@ export default function Recap() {
     NB_SHOWN + 1,
   );
   const hooked = useAPI(api.getHookedSongs, start, end, NB_SHOWN + 1);
+  const dives = useAPI(api.getHookedArtists, start, end, NB_SHOWN + 1);
   const songDiscoveries = useAPI(
     api.getSongDiscoveries,
     start,
@@ -773,14 +778,32 @@ export default function Recap() {
           </Section>
           <Section
             title="Hooked this year"
-            info={HOOKED_INFO}
-            link={seeAll(hooked, `/recap/hooked?year=${year}`)}>
-            {hooked ? (
-              hooked.length > 0 ? (
-                hooked.slice(0, NB_SHOWN).map(hookYearRow)
+            info={hookedTab === "songs" ? HOOKED_INFO : DIVES_INFO}
+            tabs={HOOKED_TABS}
+            tab={hookedTab}
+            onTab={setHookedTab}
+            link={seeAll(
+              hookedTab === "songs" ? hooked : dives,
+              `/recap/hooked?year=${year}&tab=${hookedTab}`,
+            )}>
+            {hookedTab === "songs" ? (
+              hooked ? (
+                hooked.length > 0 ? (
+                  hooked.slice(0, NB_SHOWN).map(hookYearRow)
+                ) : (
+                  <Text size="normal" greyed>
+                    No song hooked you this year.
+                  </Text>
+                )
+              ) : (
+                <RowsSkeleton />
+              )
+            ) : dives ? (
+              dives.length > 0 ? (
+                dives.slice(0, NB_SHOWN).map(diveYearRow)
               ) : (
                 <Text size="normal" greyed>
-                  No song hooked you this year.
+                  You didn't dive into an artist this year.
                 </Text>
               )
             ) : (

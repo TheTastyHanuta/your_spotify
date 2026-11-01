@@ -9,11 +9,18 @@ import ItemRow, { ArtistNames } from "../../components/ItemRow";
 import Text from "../../components/Text";
 import {
   ArtistDiscoveriesResponse,
+  Hook,
+  HookedArtist,
   HookedSong,
   SongDiscoveriesResponse,
 } from "../../services/apis/api";
 import { DateFormatter, fromDay } from "../../services/date";
-import { breakText, isLate, phaseWeeks } from "../../services/hooked";
+import {
+  breakText,
+  isLate,
+  phaseNote,
+  phaseWeeks,
+} from "../../services/hooked";
 import { plural } from "../../services/tools";
 import { Artist, SpotifyImage, Track } from "../../services/types";
 import { Dropped, Move, RANKED } from "./movers";
@@ -82,6 +89,33 @@ export const songDiscoveryRow = (
 export const HOOKED_INFO =
   "The songs that took over this year, strongest first: weeks in a row with about 2 plays a week or more, 12 plays at least. Clicked late: you had known it for 2 months or more. Came back: played a lot again after at least 12 quiet weeks";
 
+export const DIVES_INFO =
+  "The artists you dove into this year, strongest first: weeks where they had, over 3 weeks at a time, at least 4% of your listening and twice their plays of the half-year before, with about a sixth of your average week in plays (40 at 240 plays a week). Again: another dive after at least half a year without one";
+
+// The month a hook or dive started and for how long, on the right
+const HookWhen = ({ item }: { item: Hook }) => (
+  <span className={s.hookWhen}>
+    {DateFormatter.toMonthString(fromDay(item.start)).slice(0, 3)}
+    <small>{phaseWeeks(item)}</small>
+  </span>
+);
+
+// "known 3 years" or "again after 2 years"
+export const diveYearRow = (item: HookedArtist, index: number) => (
+  <ItemRow
+    // An artist can dive and dive again in one year
+    key={`${item.artist.id}-${item.start}`}
+    rank={index + 1}
+    image={item.artist.images}
+    round
+    title={<InlineArtist artist={item.artist} size="normal" />}
+    subtitle={
+      item.kind === "comeback" ? `again ${phaseNote(item)}` : phaseNote(item)
+    }
+    right={<HookWhen item={item} />}
+  />
+);
+
 // "clicked late · artists" or "came back after 2 years · artists", the month
 // it started and for how long on the right
 export const hookYearRow = (item: HookedSong, index: number) => (
@@ -103,12 +137,7 @@ export const hookYearRow = (item: HookedSong, index: number) => (
         } · `}
       />
     }
-    right={
-      <span className={s.hookWhen}>
-        {DateFormatter.toMonthString(fromDay(item.start)).slice(0, 3)}
-        <small>{phaseWeeks(item)}</small>
-      </span>
-    }
+    right={<HookWhen item={item} />}
   />
 );
 
