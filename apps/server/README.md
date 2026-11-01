@@ -111,7 +111,8 @@ Get current user information.
 ```json
 {
   "status": boolean,
-  "user": UserObject // Only if status is true
+  "user": UserObject, // Only if status is true
+  "spotifyBlock": { "until": Date, "kind": "ban" | "quota" } | null // Only if status is true; null for share-link guests and when Spotify does not block the app
 }
 ```
 
@@ -533,7 +534,7 @@ Get top songs in a time period.
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of items to return (1-30)
+- `nb`: number - Number of items to return (1-500)
 - `offset`: number - Number of items to skip (default 0)
 - `sortKey`: string - Sort criteria (default "count")
 
@@ -549,7 +550,7 @@ Get top artists in a time period.
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of items to return (1-30)
+- `nb`: number - Number of items to return (1-500)
 - `offset`: number - Number of items to skip (default 0)
 - `sortKey`: string - Sort criteria (default "count")
 
@@ -565,13 +566,28 @@ Get top albums in a time period.
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
-- `nb`: number - Number of items to return (1-30)
+- `nb`: number - Number of items to return (1-500)
 - `offset`: number - Number of items to skip (default 0)
 - `sortKey`: string - Sort criteria (default "count")
 
 **Response:**
 
 - `200`: Array of top album objects
+
+#### `GET /spotify/top/ranks`
+
+Get the IDs of the top songs, artists or albums in a time period, in rank order, without the items themselves, so a long ranking stays small. Used by the Recap to compare ranks with the previous year.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `type`: string - `track`, `artist` or `album`
+- `nb`: number - Number of items to return (1-500, default 500)
+
+**Response:**
+
+- `200`: Array of Spotify IDs, best first
 
 #### `GET /spotify/top/part-of-day`
 
@@ -678,23 +694,28 @@ Get the plays of each time step, and the plays of songs heard for the first time
 
 - `200`: Array of steps with `count` and `newCount`
 
-### Hooked Songs
+### Hooked Songs and Artist Deep Dives
 
-A song hooked you when it got at least 6 plays in 7 days, more than four times its weekly average of the 60 days before. You stay hooked while a week has at least 3 plays (one quiet week allowed). A hook "clicked late" when the song was first heard at least 60 days before. Days are in the stats timezone. Each hook has `hook` (first day, `YYYY-MM-DD`), `weeks`, `plays` (plays while hooked, used for ranking), `peakDay`, `knownDays`, `stayedUntil` (`null` while the song is still with you), `comebacks`, `shape` (plays per week) and `yearLater` (played again a year later, `null` when it is too early to tell).
+Hooks are found in phases: stretches of heavy listening of one song or artist. A song's week is busy when it has a play and the song got at least 6 plays in that week and the weeks right before and after it. Up to 4 quiet weeks between busy ones stay in the same phase, and a phase needs at least 12 plays. A song's first phase is its hook. A later phase that starts at least 12 weeks after the previous one is a comeback; other later phases are not listed. A hook "clicked late" when the song was first heard at least 60 days before. Days are in the stats timezone.
+
+Artists follow the same idea against all the listening: a busy week also needs at least 4% of all plays in those three weeks and twice the artist's usual plays (the weekly average of the 26 weeks before). The play floors grow with how much the listener listens (6% of an average week for a busy week, 16.5% for a phase), never below a song's. An artist's first phase is a deep dive; a comeback needs 26 quiet weeks, and nothing counts in the first 26 weeks of the listening history.
+
+Each listed hook, comeback or deep dive has `kind` (`hook` or `comeback`), `start` (first day, `YYYY-MM-DD`), `weeks`, `plays` (used for ranking), `ongoing`, `breakDays` (days since the previous phase, `0` for the hook), `shape` (plays per week from 4 weeks before), `knownDays` (days from the first listen to the hook) and `yearLater` (played in the 90 days from a year after the hook, `null` when it is too early to tell). A hook or comeback counts for the period it starts in.
 
 #### `GET /spotify/hooks`
 
-Get the songs that hooked the listener in the period, strongest first.
+Get the songs that hooked the listener or came back in the period, most plays first.
 
 **Query Parameters:**
 
 - `start`: date - Start date
 - `end`: date - End date (defaults to current time)
 - `nb`: number - Number of songs to return (1-500, default 20)
+- `hooksOnly`: boolean - Leave the comebacks out (default false)
 
 **Response:**
 
-- `200`: Array of hooks, each with its `track`
+- `200`: Array of hooks and comebacks, each with its `track`
 
 #### `GET /spotify/hooks/summary`
 
@@ -708,11 +729,11 @@ Get how the listener got hooked in the period.
 
 **Response:**
 
-- `200`: Object with `hooks`, `clickedLate`, `averageWeeks` (`null` without hooks), `yearLater` (`kept` of `counted`) and `perStep` (`newFinds` and `clickedLate` per month or year)
+- `200`: Object with `hooks` (hooks and comebacks), `comebacks`, `clickedLate`, `averageWeeks` (`null` without hooks), `yearLater` (`kept` of `counted`) and `perStep` (`newFinds`, `clickedLate` and `cameBack` per month or year)
 
 #### `GET /spotify/hooks/years`
 
-Get the strongest hooks of every year, newest year first.
+Get the strongest hooks (no comebacks) of every year, newest year first.
 
 **Query Parameters:**
 
@@ -724,7 +745,7 @@ Get the strongest hooks of every year, newest year first.
 
 #### `GET /spotify/hooks/song`
 
-Get the hook of one song (a song has at most one), shown on the song page.
+Get a song's plays per week and its phases, shown in the Weeks tab of the song page.
 
 **Query Parameters:**
 
@@ -732,7 +753,33 @@ Get the hook of one song (a song has at most one), shown on the song page.
 
 **Response:**
 
-- `200`: `{ hook }`, `null` when the song never hooked the listener
+- `200`: `{ song }`, `null` when the song was never played. `song` has `firstWeek` (Monday of the week of the first listen), `weeks` (plays per week from then to this week), `phases` (every phase, in time order, with `kind` `hook`, `comeback` or `again`; empty when the song never hooked the listener), `knownDays` and `yearLater`
+
+#### `GET /spotify/hooks/artists`
+
+Get the artists the listener dove into or came back to in the period, most plays first.
+
+**Query Parameters:**
+
+- `start`: date - Start date
+- `end`: date - End date (defaults to current time)
+- `nb`: number - Number of artists to return (1-500, default 20)
+
+**Response:**
+
+- `200`: Array of deep dives and comebacks, each with its `artist`
+
+#### `GET /spotify/hooks/artist`
+
+Get an artist's plays per week and phases, shown in the Weeks tab of the artist page.
+
+**Query Parameters:**
+
+- `id`: string - Spotify artist ID
+
+**Response:**
+
+- `200`: `{ artist }`, shaped like `song` in `/spotify/hooks/song`, `null` when the artist was never played
 
 ### Your Story
 
@@ -831,7 +878,7 @@ Get shared top artists between multiple users.
 
 #### `GET /search/:query`
 
-Search across tracks, artists and albums.
+Search across tracks, artists and albums. Matches are ranked by name (exact match, then starts with the term, then a word starts with it, then anywhere; shorter names first) and at most 20 of each kind are returned, but exact matches are never cut. Artists only include those the user listened to.
 
 **Parameters:**
 
@@ -1054,9 +1101,18 @@ Update global preferences (admin only).
 
 ```json
 {
-  "allowRegistrations": boolean
+  "allowRegistrations": boolean,
+  "allowAffinity": boolean
 }
 ```
+
+#### `GET /global/spotify-usage`
+
+Get the requests the server sent to Spotify, counted per hour and kept 13 weeks (admin only). Shown in **Settings → Spotify API**.
+
+**Response:**
+
+- `200`: Object with `verdict` (`fine`, `watch` or `blocked`), the active `block` (or `null`), `lastHour`, `last24h` and `last7d` (each `{ value, usual }`, `usual` being the average of the same windows before, `null` before there is enough data), the rate limits and errors of the last 24 hours and 7 days, `sources7d` (requests per source: `polling`, `import`, `isrc`, `auth`, `other`) and the series `hourly` (48 hours), `daily` (30 days) and `weekly` (12 weeks), each entry with `total` and `limited` requests
 
 ## Account Settings
 
