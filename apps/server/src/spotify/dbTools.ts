@@ -11,6 +11,7 @@ import { Artist } from "../database/schemas/artist";
 import { Infos } from "../database/schemas/info";
 import { SpotifyTrack, Track } from "../database/schemas/track";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
+import { canonicalizeSpotifyTracks } from "../tools/canonicalTracks";
 import { longWriteDbLock } from "../tools/lock";
 import { logger } from "../tools/logger";
 import { Metrics } from "../tools/metrics";
@@ -22,11 +23,6 @@ interface TracksAlbumsArtistsResult {
   albums: Album[];
   artists: Artist[];
   tracksBySpotifyId: Map<string, Track>;
-}
-
-interface TrackCanonicalizationResult {
-  canonicalIdBySpotifyId: Map<string, string>;
-  missingTrackIds: string[];
 }
 
 const spotifyTrackToStoredTrack = (track: SpotifyTrack): Track => ({
@@ -54,72 +50,35 @@ const getStoredTracksByIdOrIsrc = (ids: string[], isrcs: string[]) =>
     ],
   });
 
-function canonicalizeSpotifyTracks(
-  spotifyTracks: SpotifyTrack[],
-  storedTracks: Track[],
-): TrackCanonicalizationResult {
-  const storedById = new Map(storedTracks.map((track) => [track.id, track]));
-  const storedByIsrc = new Map(
-    storedTracks
-      .filter((track) => track.isrc && !track.mergedInto)
-      .map((track) => [track.isrc!, track]),
-  );
-  const canonicalIdBySpotifyId = new Map<string, string>();
-  const pendingCanonicalIdByIsrc = new Map<string, string>();
-  const missingTrackIds: string[] = [];
-
-  for (const spotifyTrack of spotifyTracks) {
-    // Local files have no id and nothing on Spotify to look up
-    if (!spotifyTrack.id) {
-      continue;
-    }
-    const isrc = spotifyTrack.external_ids?.isrc;
-    const storedByMatchingIsrc = isrc ? storedByIsrc.get(isrc) : undefined;
-    if (storedByMatchingIsrc) {
-      canonicalIdBySpotifyId.set(spotifyTrack.id, storedByMatchingIsrc.id);
-      continue;
-    }
-
-    const storedByMatchingId = storedById.get(spotifyTrack.id);
-    if (storedByMatchingId) {
-      const canonicalId =
-        storedByMatchingId.mergedInto ?? storedByMatchingId.id;
-      canonicalIdBySpotifyId.set(spotifyTrack.id, canonicalId);
-      if (isrc && !pendingCanonicalIdByIsrc.has(isrc)) {
-        pendingCanonicalIdByIsrc.set(isrc, canonicalId);
-      }
-      continue;
-    }
-
-    const pendingCanonicalId = isrc
-      ? pendingCanonicalIdByIsrc.get(isrc)
-      : undefined;
-    if (pendingCanonicalId) {
-      canonicalIdBySpotifyId.set(spotifyTrack.id, pendingCanonicalId);
-      continue;
-    }
-
-    canonicalIdBySpotifyId.set(spotifyTrack.id, spotifyTrack.id);
-    missingTrackIds.push(spotifyTrack.id);
-    if (isrc) {
-      pendingCanonicalIdByIsrc.set(isrc, spotifyTrack.id);
-    }
-  }
-
-  return { canonicalIdBySpotifyId, missingTrackIds };
-}
-
+// The tracks the stored ones are merged into, following chains (a primary
+// merged again later) to their end, so a version reaches the current primary
+const MAX_CHAIN_PASSES = 10;
 const findMergedIntoTracks = async (storedTracks: Track[]) => {
-  const mergedIntoIds = [
-    ...new Set(
-      storedTracks
-        .map((track) => track.mergedInto)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  return mergedIntoIds.length > 0
-    ? TrackModel.find({ id: { $in: mergedIntoIds } })
-    : [];
+  const known = new Set(storedTracks.map((track) => track.id));
+  const found: Track[] = [];
+  let pending = storedTracks;
+  for (let pass = 0; pass < MAX_CHAIN_PASSES; pass += 1) {
+    const ids = [
+      ...new Set(
+        pending.flatMap((track) =>
+          track.mergedInto && !known.has(track.mergedInto)
+            ? [track.mergedInto]
+            : [],
+        ),
+      ),
+    ];
+    if (ids.length === 0) {
+      break;
+    }
+    pending = await TrackModel.find({ id: { $in: ids } });
+    for (const track of pending) {
+      known.add(track.id);
+      found.push(track);
+    }
+    // A missing target is not looked up again
+    ids.forEach((id) => known.add(id));
+  }
+  return found;
 };
 
 async function updateExistingTrackIsrcs(
@@ -341,11 +300,12 @@ export const getTracksAlbumsArtists = async (
   const ids = spotifyTracks.map((track) => track.id);
   const isrcs = getSpotifyTrackIsrcs(spotifyTracks);
   const storedTracks: Track[] = await getStoredTracksByIdOrIsrc(ids, isrcs);
-  const { canonicalIdBySpotifyId, missingTrackIds } = canonicalizeSpotifyTracks(
-    spotifyTracks,
-    storedTracks,
-  );
   const mergedIntoTracks: Track[] = await findMergedIntoTracks(storedTracks);
+  const { canonicalIdBySpotifyId, missingTrackIds, mergedVersionIds } =
+    canonicalizeSpotifyTracks(spotifyTracks, [
+      ...storedTracks,
+      ...mergedIntoTracks,
+    ]);
 
   await updateExistingTrackIsrcs(
     spotifyTracks,
@@ -402,8 +362,17 @@ export const getTracksAlbumsArtists = async (
       ? await getArtists(userId, missingArtistIds)
       : [];
 
+  // Keeps the version that was played, like the admin merge does
+  const mergedVersions = uniqBy(
+    spotifyTracks.filter((track) => mergedVersionIds.has(track.id)),
+    (track) => track.id,
+  ).map<Track>((track) => {
+    const { isrc: _isrc, ...version } = spotifyTrackToStoredTrack(track);
+    return { ...version, mergedInto: mergedVersionIds.get(track.id)! };
+  });
+
   return {
-    tracks,
+    tracks: [...tracks, ...mergedVersions],
     albums,
     artists,
     tracksBySpotifyId: mapSpotifyIdsToCanonicalTracks(
@@ -426,7 +395,12 @@ async function upsertById(model: mongoose.Model<any>, items: { id: string }[]) {
     uniqueItems.map((item) => ({
       updateOne: {
         filter: { id: item.id },
-        update: { $set: item },
+        // A merged version is only ever added: overwriting a stored track
+        // with it would turn a primary into a duplicate
+        update:
+          "mergedInto" in item && item.mergedInto
+            ? { $setOnInsert: item }
+            : { $set: item },
         upsert: true,
       },
     })),

@@ -42,6 +42,7 @@ jobs:
           node scripts/spotifyUsage.check.mjs
           node scripts/search.check.mjs
           node scripts/orphanTracks.check.mjs
+          node scripts/canonicalTracks.check.mjs
           pnpm build
 
       - name: Client
