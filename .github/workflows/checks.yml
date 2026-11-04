@@ -41,6 +41,7 @@ jobs:
           node scripts/isrcMerge.check.mjs
           node scripts/spotifyUsage.check.mjs
           node scripts/search.check.mjs
+          node scripts/orphanTracks.check.mjs
           pnpm build
 
       - name: Client

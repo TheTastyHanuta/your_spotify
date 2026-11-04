@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 
+import { chainEnds, unusedTracksToDelete } from "../../tools/orphanTracks";
 import {
   AlbumModel,
   ArtistModel,
@@ -332,9 +333,18 @@ export const deleteAllOrphanTracks = async () => {
       },
     },
     { $match: { $expr: { $eq: [{ $size: "$infos" }, 0] } } },
+    { $project: { _id: 1, id: 1, mergedInto: 1 } },
   ]);
+  const ends = chainEnds(tracks);
+  const existing = new Set(
+    ends.length > 0
+      ? await TrackModel.distinct("id", { id: { $in: ends } })
+      : [],
+  );
 
-  const tracksToDelete = tracks.map((tr) => tr._id);
+  const tracksToDelete = unusedTracksToDelete(tracks, existing).map(
+    (tr) => tr._id,
+  );
   await TrackModel.deleteMany({ _id: { $in: tracksToDelete } });
 
   const albums = await AlbumModel.aggregate([
@@ -349,7 +359,16 @@ export const deleteAllOrphanTracks = async () => {
     { $match: { $expr: { $eq: [{ $size: "$tracks" }, 0] } } },
   ]);
 
-  const albumsToDelete = albums.map((alb) => alb._id);
+  // A listen keeps the album it was played from, which can have no track of
+  // its own when the song was merged into a version on another release
+  const listenedAlbums = new Set(
+    await InfosModel.distinct("albumId", {
+      albumId: { $in: albums.map((alb) => alb.id) },
+    }),
+  );
+  const albumsToDelete = albums
+    .filter((alb) => !listenedAlbums.has(alb.id))
+    .map((alb) => alb._id);
   await AlbumModel.deleteMany({ _id: { $in: albumsToDelete } });
 
   const artists = await ArtistModel.aggregate([
@@ -381,7 +400,19 @@ export const deleteAllOrphanTracks = async () => {
     },
   ]);
 
-  const artistsToDelete = artists.map((art) => art._id);
+  // A listen keeps the artists of the version played, see albums above. A
+  // blacklist keeps its artists too, or Settings could no longer list them.
+  const artistIds = artists.map((art) => art.id);
+  const [listenedArtists, blacklistedArtists] = await Promise.all([
+    InfosModel.distinct("artistIds", { artistIds: { $in: artistIds } }),
+    UserModel.distinct("settings.blacklistedArtists", {
+      "settings.blacklistedArtists": { $in: artistIds },
+    }),
+  ]);
+  const keptArtists = new Set([...listenedArtists, ...blacklistedArtists]);
+  const artistsToDelete = artists
+    .filter((art) => !keptArtists.has(art.id))
+    .map((art) => art._id);
   await ArtistModel.deleteMany({ _id: { $in: artistsToDelete } });
 
   return { tracksToDelete, albumsToDelete, artistsToDelete };
