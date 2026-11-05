@@ -49,8 +49,14 @@ async function lookUpBatch() {
     await requestSource.run("isrc", () =>
       requestSlowdown.run(slowdownMsOf(job), async () => {
         for (const id of ids) {
-          // Gives way to an import started meanwhile
-          if (isAnyImportRunning()) {
+          // Gives way to an import started meanwhile, stops at once when
+          // paused, and leaves a resume by another admin to the next batch
+          const current = await getIsrcMergeJob();
+          if (
+            isAnyImportRunning() ||
+            current?.stoppedReason ||
+            !current?.startedBy.equals(job.startedBy)
+          ) {
             return;
           }
           // Spotify answers 404 for tracks it does not have anymore

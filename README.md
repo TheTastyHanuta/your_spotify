@@ -294,7 +294,7 @@ The [linuxserver.io image](https://github.com/linuxserver/docker-your_spotify) r
 
 New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
 
-1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs or Spotify blocks requests, continues after restarts, and nothing changes in your stats meanwhile.
+1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs or Spotify blocks requests, continues after restarts, and nothing changes in your stats meanwhile. **Pause** stops it until you press **Resume**, also after a block or a restart.
 2. Check the preview: every song with several versions, the version that stays (the one with the most listens) and how many listens move. It fills up while the lookup runs.
 3. **Merge** applies the preview for every user on the server. Take a backup first: only a backup can undo it. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
 
