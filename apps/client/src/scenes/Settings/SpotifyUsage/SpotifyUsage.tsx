@@ -1,3 +1,4 @@
+import { ExpandMore } from "@mui/icons-material";
 import { Input, Skeleton } from "@mui/material";
 import clsx from "clsx";
 import { useState } from "react";
@@ -18,6 +19,7 @@ import Text from "../../../components/Text";
 import ChartTooltip from "../../../components/Tooltip";
 import {
   api,
+  SpotifyLimitEvent,
   SpotifyUsageResponse,
   UsageSource,
 } from "../../../services/apis/api";
@@ -270,6 +272,163 @@ function Budget({ usage }: { usage: SpotifyUsageResponse["budget"] }) {
   );
 }
 
+// "15 h 20 min", "3 min", "12 s"
+const duration = (ms: number) => {
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 1) {
+    return `${Math.round(ms / 1000)} s`;
+  }
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) {
+    return `${m} min`;
+  }
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+};
+
+const sourceLabel = (source: UsageSource) =>
+  SOURCES.find((x) => x.source === source)?.label ?? source;
+
+const sum = (counts: Partial<Record<UsageSource, number>>) =>
+  Object.values(counts).reduce<number>((a, b) => a + (b ?? 0), 0);
+
+// In the zone the chart uses, so a limit and its bar show the same hour
+const dateTimeIn = (timeZone: string) =>
+  new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  });
+
+function limitTitle(limit: SpotifyLimitEvent, dateTime: Intl.DateTimeFormat) {
+  const until = limit.until && dateTime.format(new Date(limit.until));
+  if (limit.kind === "quota") {
+    return `Quota used up, blocked until ${until}`;
+  }
+  if (limit.kind === "ban") {
+    return `Blocked until ${until}`;
+  }
+  const times =
+    limit.count === 1 ? "" : ` ${limit.count.toLocaleString()} times`;
+  const gaveUp =
+    limit.gaveUp === 0
+      ? ", retried"
+      : `, retries ran out ${limit.gaveUp === 1 ? "once" : `${limit.gaveUp.toLocaleString()} times`}`;
+  return `Asked to slow down${times}${gaveUp}`;
+}
+
+// Spotify's Retry-After is in seconds, or a date
+function retryAfterText(limit: SpotifyLimitEvent) {
+  if (limit.retryAfter === null) {
+    return "not sent";
+  }
+  const seconds = Number(limit.retryAfter);
+  return Number.isNaN(seconds)
+    ? limit.retryAfter
+    : `${seconds.toLocaleString()} s (${duration(seconds * 1000)})`;
+}
+
+function LimitRow({
+  limit,
+  timeZone,
+}: {
+  limit: SpotifyLimitEvent;
+  timeZone: string;
+}) {
+  const dateTime = dateTimeIn(timeZone);
+  const at = new Date(limit.at);
+  const lastAt = new Date(limit.lastAt);
+  const time = dateTime.format(at);
+  const span =
+    lastAt.getTime() - at.getTime() >= 60_000
+      ? ` – ${new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", timeZone }).format(lastAt)}`
+      : "";
+  const sources = SOURCES.filter(({ source }) => limit.requests24h[source]);
+  return (
+    <details className={s.limit}>
+      <summary className={s.limitHead}>
+        <div>
+          <Text element="div" size="normal" className={s.limitTitle}>
+            {limitTitle(limit, dateTime)}
+          </Text>
+          <Text element="div" size="normal" greyed>
+            {time}
+            {span} · {sourceLabel(limit.source)} ·{" "}
+            <code className={s.code}>{limit.endpoint}</code> ·{" "}
+            {num(sum(limit.requests24h))} requests in 24 h
+            {limit.sinceBan !== null && (
+              <> · {num(limit.sinceBan)} since the previous ban</>
+            )}
+          </Text>
+        </div>
+        <ExpandMore className={s.chevron} fontSize="small" />
+      </summary>
+      <dl className={s.limitBody}>
+        {limit.until && (
+          <>
+            <dt>Blocked for</dt>
+            <dd className="num">
+              {duration(new Date(limit.until).getTime() - at.getTime())}
+            </dd>
+          </>
+        )}
+        <dt>Requests in the 24 hours before</dt>
+        <dd>
+          {sources.length === 0
+            ? "None counted"
+            : sources.map(({ source, label }, i) => (
+                <span key={source}>
+                  {i > 0 && " · "}
+                  {label} {num(limit.requests24h[source] ?? 0)}
+                </span>
+              ))}
+        </dd>
+        <dt>Since the previous ban ended</dt>
+        <dd>
+          {limit.sinceBan === null
+            ? "No earlier ban recorded"
+            : num(limit.sinceBan)}
+        </dd>
+        <dt>Retry-After</dt>
+        <dd className="num">{retryAfterText(limit)}</dd>
+        <dt>Spotify's answer</dt>
+        <dd>
+          {limit.body ? <pre className={s.answer}>{limit.body}</pre> : "Empty"}
+        </dd>
+      </dl>
+    </details>
+  );
+}
+
+// What Spotify said each time it limited the server, to tell how far its
+// limits reach
+function RecentLimits({
+  limits,
+  timeZone,
+}: {
+  limits: SpotifyLimitEvent[];
+  timeZone: string;
+}) {
+  return (
+    <Section title="Recent rate limits" info="The last 50, kept for 13 weeks">
+      {limits.length === 0 ? (
+        <Text size="normal" greyed>
+          No rate limits recorded.
+        </Text>
+      ) : (
+        limits.map((limit) => (
+          <LimitRow key={limit._id} limit={limit} timeZone={timeZone} />
+        ))
+      )}
+      <Text element="p" size="normal" greyed className={s.note}>
+        Short limits of the same endpoint within 5 minutes are one entry.
+        Request counts go by whole hours, so they can include up to an hour more
+        than the moment itself. Times are in {timeZone}.
+      </Text>
+    </Section>
+  );
+}
+
 export default function SpotifyUsage() {
   const usage = useAPI(api.spotifyUsage);
   const [range, setRange] = useState<Range>("hours");
@@ -405,6 +564,7 @@ export default function SpotifyUsage() {
           </Text>
         </Section>
       </div>
+      <RecentLimits limits={usage.limits} timeZone={usage.timeZone} />
     </div>
   );
 }
