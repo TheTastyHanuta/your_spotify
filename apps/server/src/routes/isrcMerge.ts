@@ -6,6 +6,7 @@ import {
   claimIsrcMergeApply,
   getIsrcMergeJob,
   getLookupProgress,
+  pauseIsrcMergeJob,
   startIsrcMergeJob,
   updateIsrcMergeJob,
 } from "../database/queries/isrcMerge";
@@ -42,6 +43,12 @@ router.get("/", logged, admin, async (_req, res) => {
 router.post("/start", logged, admin, async (req, res) => {
   const { user } = req as LoggedRequest;
   await startIsrcMergeJob(user._id);
+  res.status(204).end();
+});
+
+// Stays paused, also after a ban or a restart, until an admin starts it again
+router.post("/pause", logged, admin, async (_req, res) => {
+  await pauseIsrcMergeJob();
   res.status(204).end();
 });
 

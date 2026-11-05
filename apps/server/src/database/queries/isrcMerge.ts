@@ -85,6 +85,13 @@ export const startIsrcMergeJob = (userId: Types.ObjectId) =>
     { upsert: true },
   );
 
+// Keeps a reason it stopped for already, which the admin needs to see
+export const pauseIsrcMergeJob = () =>
+  IsrcMergeJobModel.updateOne(
+    { ...JOB, stoppedReason: { $exists: false } },
+    { $set: { stoppedReason: "paused" } },
+  );
+
 export const updateIsrcMergeJob = (update: UpdateQuery<IsrcMergeJob>) =>
   IsrcMergeJobModel.updateOne(JOB, update);
 

@@ -16,7 +16,7 @@ export const IsrcLookupSchema = new Schema<IsrcLookup>({
   fetchedAt: { type: Date, required: true },
 });
 
-export type IsrcMergeStoppedReason = "reauth" | "user-missing";
+export type IsrcMergeStoppedReason = "reauth" | "user-missing" | "paused";
 
 export interface IsrcMergeApplyResult {
   at: Date;
@@ -41,7 +41,7 @@ export const IsrcMergeJobSchema = new Schema<IsrcMergeJob>({
   startedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   slowdownMs: Number,
   rateLimitedUntil: Date,
-  stoppedReason: { type: String, enum: ["reauth", "user-missing"] },
+  stoppedReason: { type: String, enum: ["reauth", "user-missing", "paused"] },
   applying: { type: Boolean, default: false },
   lastApply: new Schema<IsrcMergeApplyResult>(
     { at: Date, tracksMerged: Number, listensRepointed: Number },

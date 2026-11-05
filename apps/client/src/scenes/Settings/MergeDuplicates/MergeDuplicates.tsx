@@ -25,7 +25,7 @@ const num = (value: number) => (
   <span className="num">{value.toLocaleString()}</span>
 );
 
-// "Paused until …", "12 of 300 songs checked", …
+// "Waiting until …", "12 of 300 songs checked", …
 function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   const total = progress.checked + progress.remaining;
   if (!job) {
@@ -40,10 +40,17 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   if (progress.remaining === 0) {
     return <>All {num(total)} songs checked</>;
   }
+  if (job.stoppedReason === "paused") {
+    return (
+      <>
+        Paused, {num(progress.checked)} of {num(total)} songs checked
+      </>
+    );
+  }
   if (job.rateLimitedUntil && new Date(job.rateLimitedUntil) > new Date()) {
     return (
       <>
-        Paused until {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))},
+        Waiting until {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))},
         Spotify is blocking requests
       </>
     );
@@ -144,14 +151,17 @@ export default function MergeDuplicates() {
     return () => clearInterval(interval);
   }, [active, load]);
 
-  const start = async () => {
+  const control = async (pause: boolean) => {
     setSending(true);
     try {
-      await api.startIsrcMerge();
+      await (pause ? api.pauseIsrcMerge() : api.startIsrcMerge());
     } catch (e) {
       console.error(e);
       dispatch(
-        alertMessage({ level: "error", message: "Could not start the lookup" }),
+        alertMessage({
+          level: "error",
+          message: `Could not ${pause ? "pause" : "start"} the lookup`,
+        }),
       );
     }
     setSending(false);
@@ -189,6 +199,14 @@ export default function MergeDuplicates() {
 
   const { job, progress, plan } = state;
   const canStart = !job || Boolean(job.stoppedReason);
+  // Also while Spotify blocks requests, so the lookup does not go on after it
+  const canPause = Boolean(job && !job.stoppedReason && progress.remaining > 0);
+  let startLabel = "Start";
+  if (job?.stoppedReason === "paused") {
+    startLabel = "Resume";
+  } else if (job) {
+    startLabel = "Restart";
+  }
   const hasWork = plan.groups.length > 0 || plan.isrcsToStore > 0;
   const groups = showAll ? plan.groups : plan.groups.slice(0, SHOWN);
 
@@ -223,8 +241,13 @@ export default function MergeDuplicates() {
           <span className={s.status}>
             {lookupStatus(state)}
             {canStart && (
-              <Button onClick={() => void start()} disabled={sending}>
-                {job ? "Restart" : "Start"}
+              <Button onClick={() => void control(false)} disabled={sending}>
+                {startLabel}
+              </Button>
+            )}
+            {canPause && (
+              <Button onClick={() => void control(true)} disabled={sending}>
+                Pause
               </Button>
             )}
           </span>

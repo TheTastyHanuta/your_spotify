@@ -325,7 +325,7 @@ export interface IsrcMergeTrack {
 export interface IsrcMergeState {
   job: {
     rateLimitedUntil?: string;
-    stoppedReason?: "reauth" | "user-missing";
+    stoppedReason?: "reauth" | "user-missing" | "paused";
     applying: boolean;
     lastApply?: { at: string; tracksMerged: number; listensRepointed: number };
   } | null;
@@ -441,6 +441,7 @@ export const api = {
   isrcMerge: () => get<IsrcMergeState>("/isrc-merge"),
   spotifyUsage: () => get<SpotifyUsageResponse>("/global/spotify-usage"),
   startIsrcMerge: () => post("/isrc-merge/start"),
+  pauseIsrcMerge: () => post("/isrc-merge/pause"),
   applyIsrcMerge: () => post("/isrc-merge/apply"),
   setGlobalPreferences: (preferences: Partial<GlobalPreferences>) =>
     post<GlobalPreferences>("/global/preferences", preferences),
