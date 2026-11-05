@@ -24,7 +24,11 @@ import { logger } from "../logger";
 import { minOfArray, retryPromise } from "../misc";
 import { Unpack } from "../types";
 import { getFromCacheString, setToCacheString } from "./cache";
-import { FullPrivacyImporterState, HistoryImporter } from "./types";
+import {
+  FullPrivacyImporterState,
+  HistoryImporter,
+  stopIfPauseRequested,
+} from "./types";
 
 const fullPrivacyFileSchema = z.array(
   z.object({
@@ -245,6 +249,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       return false;
     }
     for (let i = this.currentItem; i < this.elements.length; i += 1) {
+      stopIfPauseRequested();
       this.currentItem = i;
       if (i % 1000 === 0) {
         logger.info(`Importing... (${i}/${this.elements.length})`);
