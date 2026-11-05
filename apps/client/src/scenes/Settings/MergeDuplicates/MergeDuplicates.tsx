@@ -25,7 +25,7 @@ const num = (value: number) => (
   <span className="num">{value.toLocaleString()}</span>
 );
 
-// "Waiting until …", "12 of 300 songs checked", …
+// "Waiting, Spotify is blocking …", "12 of 300 songs checked", …
 function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   const total = progress.checked + progress.remaining;
   if (!job) {
@@ -50,8 +50,8 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   if (job.rateLimitedUntil && new Date(job.rateLimitedUntil) > new Date()) {
     return (
       <>
-        Waiting until {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))},
-        Spotify is blocking requests
+        Waiting, Spotify is blocking requests until{" "}
+        {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))}
       </>
     );
   }
