@@ -46,6 +46,12 @@ const SOURCES: { source: UsageSource; label: string; title: string }[] = [
     title: "Lookups for merging duplicate songs (Settings, Admin)",
   },
   {
+    source: "albums",
+    label: "Album tracklists",
+    title:
+      "An album's songs, fetched once when its page is first opened, to show plays from other releases",
+  },
+  {
     source: "auth",
     label: "Logins, tokens",
     title: "Logins and access-token refreshes",

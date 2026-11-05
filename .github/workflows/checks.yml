@@ -43,6 +43,7 @@ jobs:
           node scripts/search.check.mjs
           node scripts/orphanTracks.check.mjs
           node scripts/canonicalTracks.check.mjs
+          node scripts/albumTracklist.check.mjs
           pnpm build
 
       - name: Client

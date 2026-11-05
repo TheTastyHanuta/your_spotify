@@ -5,10 +5,11 @@ import { api } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { msToDuration } from "../../services/stats";
 import { plural } from "../../services/tools";
-import { albumSongRow } from "./rows";
+import { albumSongRow, albumSongs } from "./rows";
 
-// All the songs played from an album, behind the album page's "See all", at
-// /album/:id/songs. The album's stats already hold every song.
+// All the album's songs heard, behind the album page's "See all", at
+// /album/:id/songs, ranked by all their plays like the album page. The
+// album's stats already hold every song.
 export default function AlbumSongs() {
   const { id = "" } = useParams();
   const stats = useAPI(api.getAlbumStats, id);
@@ -20,17 +21,17 @@ export default function AlbumSongs() {
       title="Most played songs"
       back={{ to: `/album/${id}`, label: found?.album.name ?? "Album" }}
       hideInterval
-      items={stats && (found?.tracks ?? [])}
+      items={stats && (found ? albumSongs(found) : [])}
       count={(n) => plural(n, "song")}
       empty="No song of this album played yet."
       row={albumSongRow(images)}
-      lead={({ track, count }) => ({
+      lead={({ track, total }) => ({
         images,
         name: <Link to={`/song/${track.id}`}>{track.name}</Link>,
         nameText: track.name,
         meta: (
           <>
-            <span className="num">{count.toLocaleString()}</span> plays ·{" "}
+            <span className="num">{total.toLocaleString()}</span> plays ·{" "}
             <span className="num">{msToDuration(track.duration_ms)}</span>
           </>
         ),

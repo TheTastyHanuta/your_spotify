@@ -2,6 +2,7 @@ import { escapeRegExp } from "../../tools/misc";
 import { bestNameMatches } from "../../tools/search";
 import { InfosModel, TrackModel } from "../Models";
 import { notRemoved } from "../schemas/info";
+import { Track } from "../schemas/track";
 import { User } from "../schemas/user";
 
 export const getTracks = (tracksId: string[]) =>
@@ -101,4 +102,38 @@ export const blacklistByArtist = async (userId: string, artistId: string) => {
     { owner: userId, id: { $in: trackIds } },
     { $addToSet: { blacklistedBy: "artist" } },
   );
+};
+
+// The tracks the stored ones are merged into, following chains (a primary
+// merged again later) to their end, so a version reaches the current primary
+const MAX_CHAIN_PASSES = 10;
+export const findMergedIntoTracks = async (
+  storedTracks: Pick<Track, "id" | "mergedInto">[],
+) => {
+  const known = new Set(storedTracks.map((track) => track.id));
+  const found: Track[] = [];
+  let pending: Pick<Track, "id" | "mergedInto">[] = storedTracks;
+  for (let pass = 0; pass < MAX_CHAIN_PASSES; pass += 1) {
+    const ids = [
+      ...new Set(
+        pending.flatMap((track) =>
+          track.mergedInto && !known.has(track.mergedInto)
+            ? [track.mergedInto]
+            : [],
+        ),
+      ),
+    ];
+    if (ids.length === 0) {
+      break;
+    }
+    const tracks: Track[] = await TrackModel.find({ id: { $in: ids } });
+    for (const track of tracks) {
+      known.add(track.id);
+      found.push(track);
+    }
+    pending = tracks;
+    // A missing target is not looked up again
+    ids.forEach((id) => known.add(id));
+  }
+  return found;
 };

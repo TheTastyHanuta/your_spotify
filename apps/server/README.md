@@ -970,7 +970,9 @@ Get album details.
 
 #### `GET /album/:id/stats`
 
-Get album statistics.
+Get album statistics. `tracks` counts the plays of each song from this album only; `elsewhere` adds the plays of the album's songs from other releases (mostly singles), which never count for the album itself.
+
+To know the album's songs that were never played from it, the first call for an album the user played from fetches its tracklist from Spotify and stores it (not for share links, nor for accounts that need to log in to Spotify again); it waits at most 3 seconds for it, and a slower fetch goes on for the next call. Songs of the tracklist stored under another Spotify ID are recognised by the same first artist, name, version words (remix, instrumental, live, acoustic, …) and length (within 3 seconds). If Spotify can't be reached or blocks requests, a later call tries again.
 
 **Parameters:**
 
@@ -983,9 +985,14 @@ Get album statistics.
   "album": AlbumObject,
   "artists": Artist[],
   "firstLast": FirstLastObject,
-  "tracks": Track[]
+  "tracks": Track[],
+  "elsewhere": [{ "trackId": string, "count": number, "album": { "id": string, "name": string, "album_type": string } }],
+  "onlyElsewhere": Track[]
 }
 ```
+
+- `elsewhere`: plays per song and other release, most first
+- `onlyElsewhere`: the album's songs never played from it, only from other releases
 
 #### `GET /album/:id/rank`
 
@@ -1112,7 +1119,7 @@ Get the requests the server sent to Spotify, counted per hour and kept 13 weeks 
 
 **Response:**
 
-- `200`: Object with `verdict` (`fine`, `watch` or `blocked`), the active `block` (or `null`), `lastHour`, `last24h` and `last7d` (each `{ value, usual }`, `usual` being the average of the same windows before, `null` before there is enough data), the rate limits and errors of the last 24 hours and 7 days, `sources7d` (requests per source: `polling`, `import`, `isrc`, `auth`, `other`) and the series `hourly` (48 hours), `daily` (30 days) and `weekly` (12 weeks), each entry with `total` and `limited` requests
+- `200`: Object with `verdict` (`fine`, `watch` or `blocked`), the active `block` (or `null`), `lastHour`, `last24h` and `last7d` (each `{ value, usual }`, `usual` being the average of the same windows before, `null` before there is enough data), the rate limits and errors of the last 24 hours and 7 days, `sources7d` (requests per source: `polling`, `import`, `isrc`, `albums`, `auth`, `other`) and the series `hourly` (48 hours), `daily` (30 days) and `weekly` (12 weeks), each entry with `total` and `limited` requests
 
 ## Account Settings
 
