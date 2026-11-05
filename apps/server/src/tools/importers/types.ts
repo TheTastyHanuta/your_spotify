@@ -48,6 +48,8 @@ export interface BaseImporterState {
   status: ImporterStateStatus;
   // Set while the import waits for Spotify to stop blocking the requests
   rateLimitedUntil?: Date;
+  // rateLimitedUntil is the end of a wait for the daily request budget
+  budgetWait?: boolean;
   // Extra wait before each Spotify request, raised after every ban
   slowdownMs?: number;
 }

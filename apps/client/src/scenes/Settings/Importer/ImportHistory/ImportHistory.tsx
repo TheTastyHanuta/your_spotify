@@ -55,7 +55,10 @@ export default function ImportHistory() {
                 {DateFormatter.toDateTime(new Date(st.createdAt))}
               </Text>
               <Text element="div" size="normal" greyed>
-                {st.type} · {statusToString[st.status]}
+                {st.type} ·{" "}
+                {st.status === "waiting" && st.budgetWait
+                  ? "Waiting for the daily request budget"
+                  : statusToString[st.status]}
               </Text>
             </>
           }
@@ -68,7 +71,7 @@ export default function ImportHistory() {
                 {st.status === "waiting" && (
                   <Text className={s.ratelimited} size="small">
                     {st.rateLimitedUntil
-                      ? `Spotify blocks requests until ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
+                      ? `${st.budgetWait ? "Budget frees up around" : "Spotify blocks requests until"} ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
                       : ""}
                     continues on its own
                   </Text>

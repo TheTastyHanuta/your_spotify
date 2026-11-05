@@ -45,6 +45,11 @@
   text-align: right;
 }
 
+.budgetInput {
+  width: 9ch;
+  margin-right: 8px;
+}
+
 .loading {
   padding: 18px 28px;
 }

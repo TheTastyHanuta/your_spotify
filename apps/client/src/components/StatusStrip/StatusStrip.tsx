@@ -91,7 +91,7 @@ export default function StatusStrip() {
         Import paused at <span className="num">{paused.current}</span> of{" "}
         <span className="num">{paused.total}</span>
         {!block && blockedUntil && blockedUntil > new Date()
-          ? `, Spotify is blocking requests until ${DateFormatter.toDateTime(blockedUntil)}`
+          ? `, ${paused.budgetWait ? "waiting for the daily request budget until about" : "Spotify is blocking requests until"} ${DateFormatter.toDateTime(blockedUntil)}`
           : ""}
         . It continues on its own.
       </>

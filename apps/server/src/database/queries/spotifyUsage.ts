@@ -1,6 +1,8 @@
 import { OutcomeObserver } from "../../tools/apis/queueHttpClient";
 import { logger } from "../../tools/logger";
 import {
+  budgetUsage,
+  DEFAULT_DAILY_BUDGET,
   HOUR_MS,
   summarize,
   USAGE_SOURCES,
@@ -51,6 +53,22 @@ export const getStoredSpotifyBlock = async () =>
   (await GlobalPreferencesModel.findOne().select("+spotifyBlock").lean())
     ?.spotifyBlock;
 
+export const getBudgetUsage = async () => {
+  const now = new Date();
+  const [hours, prefs] = await Promise.all([
+    SpotifyUsageModel.find(
+      { hour: { $gte: new Date(now.getTime() - 25 * HOUR_MS) } },
+      { _id: 0, hour: 1, sources: 1, outcomes: 1 },
+    ).lean(),
+    GlobalPreferencesModel.findOne().lean(),
+  ]);
+  return budgetUsage(
+    hours,
+    now,
+    prefs?.spotifyDailyBudget ?? DEFAULT_DAILY_BUDGET,
+  );
+};
+
 export const getSpotifyUsage = async (
   user: User,
   block: Parameters<typeof summarize>[3],
@@ -60,5 +78,8 @@ export const getSpotifyUsage = async (
     { hour: { $gte: new Date(now.getTime() - 91 * 24 * HOUR_MS) } },
     { _id: 0, hour: 1, sources: 1, outcomes: 1 },
   ).lean();
-  return summarize(hours, now, getTimezone(user.settings.timezone), block);
+  return {
+    ...summarize(hours, now, getTimezone(user.settings.timezone), block),
+    budget: await getBudgetUsage(),
+  };
 };

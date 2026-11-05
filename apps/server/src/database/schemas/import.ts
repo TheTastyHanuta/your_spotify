@@ -23,6 +23,7 @@ export const ImporterStateSchema = new Schema<ImporterState>(
     },
     rateLimitedUntil: { type: Date },
     slowdownMs: { type: Number },
+    budgetWait: { type: Boolean },
   },
   { timestamps: true },
 );

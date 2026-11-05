@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 
 import {
+  budgetUsage,
   HOUR_MS,
   summarize,
   WATCH_ERRORS,
@@ -112,6 +113,38 @@ assert.equal(run([ago(8 * 24, { quota: 1 })]).verdict, "fine");
   };
   assert.equal(run([late]).daily.at(-2).total, 5);
   assert.equal(run([late], null, "Europe/Berlin").daily.at(-1).total, 5);
+}
+
+// The budget counts the last 24 hours and the current one, and frees up as
+// the oldest hours leave that window
+{
+  const hours = [
+    ago(25, { ok: 1000 }),
+    ago(24, { ok: 300 }, { polling: 100, isrc: 200 }),
+    ago(10, { ok: 200, ban: 1 }),
+    ago(0, { ok: 100 }, { import: 60, polling: 40 }),
+  ];
+  const fine = budgetUsage(hours, now, 1000);
+  assert.equal(fine.used, 601);
+  assert.equal(fine.background, 260);
+  assert.equal(fine.until, null);
+  // Used up: waits until 250 are free again, which takes the hour 24 ago
+  // (300) leaving the window when the hour after the current one starts
+  const over = budgetUsage(hours, now, 601);
+  assert.equal(over.until.getTime(), current + HOUR_MS);
+  // With 290 left after it that is not enough room, the hour 10 ago has to
+  // go as well
+  assert.equal(
+    budgetUsage(hours, now, 540).until.getTime(),
+    current + 15 * HOUR_MS,
+  );
+  // A budget under the room waits until nothing is counted
+  assert.equal(
+    budgetUsage(hours, now, 100).until.getTime(),
+    current + 25 * HOUR_MS,
+  );
+  // Nothing counted, nothing to wait for
+  assert.deepEqual(budgetUsage([], now, 0).until, null);
 }
 
 console.log("spotifyUsage checks passed");

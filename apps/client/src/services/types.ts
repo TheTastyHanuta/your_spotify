@@ -6,6 +6,8 @@ export type UnboxPromise<T extends Promise<any>> =
 export interface GlobalPreferences {
   allowRegistrations: boolean;
   allowAffinity: boolean;
+  // Spotify requests a day that imports and duplicate lookups stay under
+  spotifyDailyBudget: number;
 }
 
 export enum Timesplit {

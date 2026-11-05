@@ -180,3 +180,47 @@ export function summarize(
 }
 
 export type UsageSummary = ReturnType<typeof summarize>;
+
+// Spotify allows an app a few thousand requests a day and bans it until its
+// daily reset once they are used up. Background jobs
+// stay under this many, polling and the pages are never held back.
+export const DEFAULT_DAILY_BUDGET = 4500;
+export const BACKGROUND_SOURCES: UsageSource[] = ["import", "isrc"];
+// A job that waited continues once this many requests are free again. An
+// import stores its songs about every 45 lookups and fetches them again after
+// a wait, so a few free requests would be spent without progress.
+export const BUDGET_RESUME_ROOM = 250;
+export const MIN_DAILY_BUDGET = 2 * BUDGET_RESUME_ROOM;
+
+// The requests of the hours starting in the last 24 hours and the current
+// one. Whenever Spotify's day resets, it counts no more than these. until is
+// when enough hours leave that window to free BUDGET_RESUME_ROOM requests.
+export function budgetUsage(hours: UsageHour[], now: Date, budget: number) {
+  const currentHour = Math.floor(now.getTime() / HOUR_MS) * HOUR_MS;
+  const counted = hours
+    .filter((h) => {
+      const t = h.hour.getTime();
+      return t >= currentHour - 24 * HOUR_MS && t <= currentHour;
+    })
+    .sort((a, b) => a.hour.getTime() - b.hour.getTime());
+  let used = 0;
+  let background = 0;
+  for (const h of counted) {
+    used += total(h.outcomes);
+    for (const source of BACKGROUND_SOURCES) {
+      background += h.sources?.[source] ?? 0;
+    }
+  }
+  let until: Date | null = null;
+  let left = used;
+  const target = Math.max(budget - BUDGET_RESUME_ROOM, 0);
+  for (const h of counted) {
+    if (left < budget && left <= target) {
+      break;
+    }
+    left -= total(h.outcomes);
+    // An hour is out of the window once the hour 25 hours after it starts
+    until = new Date(h.hour.getTime() + 25 * HOUR_MS);
+  }
+  return { budget, used, background, until };
+}
