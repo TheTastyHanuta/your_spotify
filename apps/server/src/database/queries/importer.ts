@@ -43,10 +43,11 @@ export const setImporterStateWaiting = (
   id: string,
   rateLimitedUntil: Date,
   slowdownMs: number,
+  budgetWait: boolean,
 ) =>
   ImporterStateModel.findOneAndUpdate(
     { _id: id, status: "progress" },
-    { $set: { status: "waiting", rateLimitedUntil, slowdownMs } },
+    { $set: { status: "waiting", rateLimitedUntil, slowdownMs, budgetWait } },
   );
 
 export const getImporterState = <T extends ImporterStateType>(id: string) =>
@@ -69,6 +70,9 @@ export const getUserImporterState = async (userId: string) =>
   ImporterStateModel.find({ user: userId }).sort({ createdAt: -1 });
 
 // Imports that were running when the server stopped wait like a paused one
+export const getImportsWaitingForBudget = () =>
+  ImporterStateModel.find({ status: "waiting", budgetWait: true });
+
 export const getImportsToResumeAtStart = async () => {
   await ImporterStateModel.updateMany(
     { status: "progress" },

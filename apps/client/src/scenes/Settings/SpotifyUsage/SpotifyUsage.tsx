@@ -1,4 +1,4 @@
-import { Skeleton } from "@mui/material";
+import { Input, Skeleton } from "@mui/material";
 import clsx from "clsx";
 import { useState } from "react";
 import {
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
+import LoadingButton from "../../../components/LoadingButton";
 import Section from "../../../components/Section";
 import StatStrip, { formatDelta } from "../../../components/StatStrip";
 import Text from "../../../components/Text";
@@ -22,7 +23,10 @@ import {
 } from "../../../services/apis/api";
 import { DateFormatter } from "../../../services/date";
 import { useAPI } from "../../../services/hooks/hooks";
+import { alertMessage } from "../../../services/redux/modules/message/reducer";
+import { useAppDispatch } from "../../../services/redux/tools";
 import { ShareRow } from "../../Taste/rows";
+import SettingLine from "../SettingLine";
 
 import s from "./index.module.css";
 
@@ -197,6 +201,75 @@ const usualNote = (cell: SpotifyUsageResponse["lastHour"], what: string) => {
   );
 };
 
+// Spotify bans the app until its daily reset once a few thousand requests a
+// day are used up, so imports and duplicate lookups stay under this
+function Budget({ usage }: { usage: SpotifyUsageResponse["budget"] }) {
+  const dispatch = useAppDispatch();
+  const [saved, setSaved] = useState(usage.budget);
+  const [value, setValue] = useState(String(usage.budget));
+  const [saving, setSaving] = useState(false);
+  const parsed = Number(value);
+  // The server's minimum, below it an import has too little room to store
+  // anything between waits
+  const valid = value !== "" && Number.isInteger(parsed) && parsed >= 500;
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { data } = await api.setGlobalPreferences({
+        spotifyDailyBudget: parsed,
+      });
+      setSaved(data.spotifyDailyBudget);
+    } catch (e) {
+      console.error(e);
+      dispatch(
+        alertMessage({ level: "error", message: "Could not save the budget" }),
+      );
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Section title="Daily request budget">
+      <SettingLine
+        left={
+          <>
+            {num(usage.used)} of {num(saved)} requests used, this hour and the
+            24 before
+            {usage.used >= saved && ", imports and lookups are waiting"}
+          </>
+        }
+        right={
+          <>
+            <Input
+              className={s.budgetInput}
+              type="number"
+              inputProps={{ min: 500, step: 500, "aria-label": "Daily budget" }}
+              value={value}
+              onChange={(ev) => setValue(ev.target.value)}
+            />
+            <LoadingButton
+              variant="contained"
+              loading={saving}
+              disabled={!valid || parsed === saved}
+              onClick={save}>
+              Save
+            </LoadingButton>
+          </>
+        }
+      />
+      <Text element="p" size="normal" greyed className={s.note}>
+        Imports and duplicate lookups wait once the requests of the last 24
+        hours reach this, and continue on their own as older requests drop out.
+        Polling and pages are never held back, but count towards it. Spotify
+        bans the app until the next day once its daily limit is used up, and
+        does not publish that limit. The default is 4,500, at least 500; raise
+        it at your own risk.
+      </Text>
+    </Section>
+  );
+}
+
 export default function SpotifyUsage() {
   const usage = useAPI(api.spotifyUsage);
   const [range, setRange] = useState<Range>("hours");
@@ -251,6 +324,7 @@ export default function SpotifyUsage() {
           },
         ]}
       />
+      <Budget usage={usage.budget} />
       <div className={clsx("ruled-columns", s.work)}>
         <Section
           title="Requests"

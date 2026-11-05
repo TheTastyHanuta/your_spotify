@@ -325,11 +325,14 @@ export interface IsrcMergeTrack {
 export interface IsrcMergeState {
   job: {
     rateLimitedUntil?: string;
+    budgetWait?: boolean;
     stoppedReason?: "reauth" | "user-missing" | "paused";
     applying: boolean;
     lastApply?: { at: string; tracksMerged: number; listensRepointed: number };
   } | null;
   progress: { checked: number; found: number; none: number; remaining: number };
+  // Songs the daily request budget lets the lookups check in a day
+  perDay: number;
   plan: {
     groups: {
       isrc: string;
@@ -366,6 +369,8 @@ export interface SpotifyUsageResponse {
   hourly: (UsageBar & { hour: number })[];
   daily: (UsageBar & { day: string })[];
   weekly: (UsageBar & { from: string; to: string })[];
+  // Requests of the last 24 hours (and the current hour) against the budget
+  budget: { budget: number; used: number; background: number };
 }
 
 export type DiscoveriesResponse = {

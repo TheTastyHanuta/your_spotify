@@ -26,8 +26,31 @@ const num = (value: number) => (
 );
 
 // "Waiting, Spotify is blocking …", "12 of 300 songs checked", …
-function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
+function lookupStatus({
+  job,
+  progress,
+  perDay,
+  importRunning,
+}: IsrcMergeState) {
   const total = progress.checked + progress.remaining;
+  // What the daily request budget lets through, so a wait for it is part of
+  // the estimate
+  // Counted from the end of a budget wait, the lookups send nothing before
+  const start = Math.max(
+    Date.now(),
+    job?.budgetWait && job.rateLimitedUntil
+      ? new Date(job.rateLimitedUntil).getTime()
+      : 0,
+  );
+  const estimate =
+    perDay > 0 ? (
+      <>
+        , about {num(perDay)} a day, done around{" "}
+        {DateFormatter.toDayMonthYear(
+          new Date(start + (progress.remaining / perDay) * 86_400_000),
+        )}
+      </>
+    ) : null;
   if (!job) {
     return "Not started";
   }
@@ -47,6 +70,19 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
       </>
     );
   }
+  if (
+    job.budgetWait &&
+    job.rateLimitedUntil &&
+    new Date(job.rateLimitedUntil) > new Date()
+  ) {
+    return (
+      <>
+        Waiting for the daily request budget, continues around{" "}
+        {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))}
+        {estimate}
+      </>
+    );
+  }
   if (job.rateLimitedUntil && new Date(job.rateLimitedUntil) > new Date()) {
     return (
       <>
@@ -61,6 +97,7 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   return (
     <>
       {num(progress.checked)} of {num(total)} songs checked
+      {estimate}
     </>
   );
 }

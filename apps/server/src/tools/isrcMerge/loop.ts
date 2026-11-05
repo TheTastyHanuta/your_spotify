@@ -7,6 +7,7 @@ import {
 } from "../../database/queries/isrcMerge";
 import { RateLimitedError, requestSource } from "../apis/queueHttpClient";
 import {
+  BudgetExceededError,
   RESUME_MARGIN_MS,
   SpotifyAPI,
   nextSlowdownMs,
@@ -31,7 +32,7 @@ async function lookUpBatch() {
   }
   // A restart forgets the ban in memory, the job still knows it
   const banOver = (job.rateLimitedUntil?.getTime() ?? 0) + RESUME_MARGIN_MS;
-  if (banOver > Date.now()) {
+  if (!job.budgetWait && banOver > Date.now()) {
     return banOver - Date.now();
   }
   const ids = await getTrackIdsToLookUp(BATCH_SIZE);
@@ -62,20 +63,34 @@ async function lookUpBatch() {
           // Spotify answers 404 for tracks it does not have anymore
           const track = await spotifyApi.getTrack(id);
           await storeIsrcLookup(id, track?.external_ids?.isrc ?? null);
+          // The first answer ends a wait, so the panel stops showing it
+          if (done === 0 && job.rateLimitedUntil) {
+            await updateIsrcMergeJob({
+              $unset: { rateLimitedUntil: 1, budgetWait: 1 },
+            });
+          }
           done += 1;
         }
       }),
     );
-    if (job.rateLimitedUntil) {
-      await updateIsrcMergeJob({ $unset: { rateLimitedUntil: 1 } });
-    }
     logger.info(`[isrc] looked up ${done} tracks on Spotify`);
     return 0;
   } catch (e) {
+    if (e instanceof BudgetExceededError) {
+      await updateIsrcMergeJob({
+        $set: { rateLimitedUntil: e.until, budgetWait: true },
+      });
+      logger.info(
+        `[isrc] daily request budget used up, lookups continue around ${e.until.toISOString()}`,
+      );
+      // Checked again now and then, so a budget the admin raised counts
+      return Math.min(Math.max(e.until.getTime() - Date.now(), 0), IDLE_MS);
+    }
     if (e instanceof RateLimitedError) {
       const slowdownMs = nextSlowdownMs(job);
       await updateIsrcMergeJob({
         $set: { rateLimitedUntil: e.until, slowdownMs },
+        $unset: { budgetWait: 1 },
       });
       logger.warn(
         `[isrc] lookups paused until Spotify stops blocking requests at ${e.until.toISOString()}, they continue a few minutes later with at least ${slowdownMs}ms between requests`,
