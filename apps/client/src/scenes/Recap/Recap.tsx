@@ -36,7 +36,7 @@ import { useOpenPeriod } from "../../services/hooks/useOpenPeriod";
 import { alertMessage } from "../../services/redux/modules/message/reducer";
 import { selectUser } from "../../services/redux/modules/user/selector";
 import { useAppDispatch } from "../../services/redux/tools";
-import { formatHours, getPercentMore } from "../../services/stats";
+import { formatHours, getPercentMore, msToMinutes } from "../../services/stats";
 import { medianYear, musicalAge } from "../../services/taste";
 import { getAtLeastImage, plural } from "../../services/tools";
 import { listeningTraits } from "../../services/traits";
@@ -178,6 +178,9 @@ export default function Recap() {
   const hours = overview
     ? Math.round(overview.durationMs / 3_600_000).toLocaleString()
     : "";
+  const minutes = overview
+    ? msToMinutes(overview.durationMs).toLocaleString()
+    : "";
   const durationChange =
     overview && hasPrevious && previous
       ? change(previous.durationMs, overview.durationMs)
@@ -261,40 +264,55 @@ export default function Recap() {
     }
     setSharing(true);
     try {
+      // Minutes like Wrapped, with the change under them
+      const percent =
+        hasPrevious && previous
+          ? getPercentMore(previous.durationMs, overview.durationMs)
+          : undefined;
       const facts = [
+        {
+          value: `${minutes} minutes`,
+          label:
+            percent === undefined
+              ? "listened"
+              : `${percent > 0 ? "+" : percent < 0 ? "−" : ""}${Math.abs(percent)}% vs ${previousYear}`,
+        },
+        topAlbum && {
+          value: topAlbum.album.name,
+          label: "top album",
+          image: imageOf(topAlbum.album.images, 120),
+        },
         timeOfDay && {
           value: timeOfDay.title,
           label: timeOfDay.short ?? "time of day",
         },
-        age !== undefined && {
-          value: plural(age, "year"),
-          label: "musical age",
-        },
-        topGenre && { value: topGenre.genre, label: "top genre" },
         longest && {
           value: plural(longest.days, "day"),
           label: "longest streak",
         },
-      ].filter((fact): fact is { value: string; label: string } => !!fact);
+        topGenre && { value: topGenre.genre, label: "top genre" },
+        age !== undefined && {
+          value: plural(age, "year"),
+          label: "musical age",
+        },
+      ].filter((fact) => !!fact);
       const blob = await renderRecapImage({
         title: yearTitle,
-        hours,
-        change: durationChange,
         color,
-        topArtist: topArtist && {
-          name: topArtist.artist.name,
-          image: imageOf(topArtist.artist.images, 300),
-        },
-        topSong: topSong && {
-          name: topSong.track.name,
-          artist: topSong.track_artists.map((a) => a.name).join(", "),
-          image: imageOf(topSong.album.images, 300),
-        },
-        topAlbum: topAlbum && {
-          name: topAlbum.album.name,
-          artist: topAlbum.album_artists.map((a) => a.name).join(", "),
-          image: imageOf(topAlbum.album.images, 300),
-        },
+        artists: (artists ?? [])
+          .slice(0, 5)
+          .map((a, index) => ({
+            name: a.artist.name,
+            image:
+              index === 0 ? imageOf(a.artist.images, PICTURE_PX) : undefined,
+          })),
+        songs: (songs ?? [])
+          .slice(0, 5)
+          .map((song, index) => ({
+            name: song.track.name,
+            image:
+              index === 0 ? imageOf(song.album.images, PICTURE_PX) : undefined,
+          })),
         facts,
       });
       await shareRecapImage(blob, year);
@@ -506,7 +524,11 @@ export default function Recap() {
       {hero}
       <StatStrip
         stats={[
-          stat("Time listened", (o) => o.durationMs, formatHours),
+          {
+            ...stat("Time listened", (o) => o.durationMs, formatHours),
+            // Minutes too, to compare with Wrapped
+            extra: overview && `${minutes} min`,
+          },
           stat("Plays", (o) => o.plays),
           {
             ...stat("Artists", (o) => o.artists),
@@ -843,6 +865,9 @@ export default function Recap() {
     </div>
   );
 }
+
+// The share image draws the top artist and song 372px wide
+const PICTURE_PX = 400;
 
 const imageOf = (images: SpotifyImage[], size: number) =>
   images.length > 0 ? getAtLeastImage(images, size) : undefined;

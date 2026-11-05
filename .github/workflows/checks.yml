@@ -53,4 +53,5 @@ jobs:
           node scripts/coverColor.check.mjs
           node scripts/apiCache.check.mjs
           node scripts/eraFaces.check.mjs
+          node scripts/fitLines.check.mjs
           pnpm build

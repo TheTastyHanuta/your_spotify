@@ -1,26 +1,29 @@
 import { Rgb, shadeOf } from "../../services/coverColor";
+import { fitLines } from "./fitLines";
 
 // Draws the recap as a 1080×1920 image, the size of a phone story, lit by the
 // page's cover colour like the hero. The pictures are the only other colour.
 export interface RecapImageData {
   // Like "2026 so far"
   title: string;
-  // Whole hours
-  hours: string;
-  // Like "12% more than in 2024"
-  change?: string;
   // The page's cover colour, null for neutral
   color: Rgb | null;
-  topArtist?: { name: string; image?: string };
-  topSong?: { name: string; artist: string; image?: string };
-  topAlbum?: { name: string; artist: string; image?: string };
-  // Up to four short answers, like "Night owl" over "62% at night"
-  facts: { value: string; label: string }[];
+  // Up to five each; the picture of the first one heads the column
+  artists: { name: string; image?: string }[];
+  songs: { name: string; image?: string }[];
+  // Up to six short answers, like "Night owl" over "62% at night"; a fact
+  // with an image (the top album) shows it as a small cover
+  facts: { value: string; label: string; image?: string }[];
 }
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
 const MARGIN = 86;
+const COLUMN_GAP = 48;
+const COLUMN = (WIDTH - 2 * MARGIN - COLUMN_GAP) / 2;
+const PICTURE = 372;
+const RANK = 56;
+const COVER = 114;
 const WHITE = "#ffffff";
 const GREY = "rgba(255, 255, 255, 0.72)";
 const LINE = "rgba(255, 255, 255, 0.2)";
@@ -42,18 +45,7 @@ function loadImage(url: string | undefined): Promise<HTMLImageElement | null> {
   });
 }
 
-function fitText(ctx: CanvasRenderingContext2D, text: string, width: number) {
-  if (ctx.measureText(text).width <= width) {
-    return text;
-  }
-  let cut = text;
-  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > width) {
-    cut = cut.slice(0, -1);
-  }
-  return `${cut}…`;
-}
-
-// The picture with a soft shadow under it, like the hero's cover
+// The picture, with a soft shadow under it like the hero's cover when lifted
 function drawPicture(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement | null,
@@ -61,6 +53,7 @@ function drawPicture(
   y: number,
   size: number,
   round: boolean,
+  lifted: boolean,
 ) {
   const shape = () => {
     ctx.beginPath();
@@ -71,9 +64,11 @@ function drawPicture(
     }
   };
   ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-  ctx.shadowBlur = 60;
-  ctx.shadowOffsetY = 28;
+  if (lifted) {
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowBlur = 60;
+    ctx.shadowOffsetY = 28;
+  }
   shape();
   ctx.fillStyle = LINE;
   ctx.fill();
@@ -89,7 +84,9 @@ function drawPicture(
 
 export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
   await document.fonts.ready;
-  const font = getComputedStyle(document.body).fontFamily;
+  const style = getComputedStyle(document.body);
+  const font = style.fontFamily;
+  const mono = style.getPropertyValue("--font-num") || "monospace";
   const canvas = document.createElement("canvas");
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
@@ -97,24 +94,40 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
   if (!ctx) {
     throw new Error("Canvas is not supported");
   }
-  const [artistImage, songImage, albumImage] = await Promise.all([
-    loadImage(data.topArtist?.image),
-    loadImage(data.topSong?.image),
-    loadImage(data.topAlbum?.image),
+  const artists = data.artists.slice(0, 5);
+  const songs = data.songs.slice(0, 5);
+  const facts = data.facts.slice(0, 6);
+  const [artistImage, songImage, ...factImages] = await Promise.all([
+    loadImage(artists[0]?.image),
+    loadImage(songs[0]?.image),
+    ...facts.map((fact) => loadImage(fact.image)),
   ]);
 
-  const text = (
-    value: string,
+  ctx.textBaseline = "top";
+  const measure = (weight: number) => (value: string, size: number) => {
+    ctx.font = `${weight} ${size}px ${font}`;
+    return ctx.measureText(value).width;
+  };
+  // Lines of a fitted name from y down; returns the height used
+  const lines = (
+    fit: { size: number; lines: string[] },
     x: number,
     y: number,
-    size: number,
     weight: number,
-    color = WHITE,
-    width = WIDTH - x - MARGIN,
+    color: string,
+    lineHeight: number,
   ) => {
-    ctx.font = `${weight} ${size}px ${font}`;
+    ctx.font = `${weight} ${fit.size}px ${font}`;
     ctx.fillStyle = color;
-    ctx.fillText(fitText(ctx, value, width), x, y);
+    fit.lines.forEach((line, index) => {
+      ctx.fillText(line, x, y + index * fit.size * lineHeight);
+    });
+    return fit.lines.length * fit.size * lineHeight;
+  };
+  const text = (value: string, x: number, y: number, size: number) => {
+    ctx.font = `500 ${size}px ${font}`;
+    ctx.fillStyle = GREY;
+    ctx.fillText(value, x, y);
   };
 
   const background = ctx.createLinearGradient(0, 0, 0, HEIGHT);
@@ -124,54 +137,84 @@ export async function renderRecapImage(data: RecapImageData): Promise<Blob> {
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  text(data.title, MARGIN, 150, 40, 500, GREY);
-  text(data.hours, MARGIN - 6, 360, 200, 800);
-  text("hours listened", MARGIN, 440, 60, 700);
-  if (data.change) {
-    text(data.change, MARGIN, 505, 38, 500, GREY);
+  text(data.title, MARGIN, 112, 40);
+  const footerY = HEIGHT - 110;
+  text("Your Spotify", MARGIN, footerY, 40);
+
+  // The facts sit on the footer, two per row, each row as tall as its
+  // taller cell; measured first so the lists know how far they can go
+  const cells = facts.map((fact, index) => {
+    const textWidth = COLUMN - (fact.image ? COVER + 28 : 0);
+    const value = fitLines(fact.value, textWidth, 2, [54, 46], measure(800));
+    const label = fitLines(fact.label, textWidth, 2, [34], measure(500));
+    const height = Math.max(
+      value.lines.length * value.size * 1.08 + 10 + label.lines.length * 42,
+      fact.image ? COVER : 0,
+    );
+    return { fact, value, label, height, image: factImages[index] ?? null };
+  });
+  const rows: (typeof cells)[] = [];
+  for (let index = 0; index < cells.length; index += 2) {
+    rows.push(cells.slice(index, index + 2));
+  }
+  const rowGap = 40;
+  const rowHeights = rows.map((row) => Math.max(...row.map((c) => c.height)));
+  const factsHeight =
+    rowHeights.reduce((sum, height) => sum + height, 0) +
+    rowGap * Math.max(rows.length - 1, 0);
+  const factsTop = footerY - 90 - factsHeight;
+  let y = factsTop;
+  rows.forEach((row, rowIndex) => {
+    row.forEach((cell, column) => {
+      const x = MARGIN + column * (COLUMN + COLUMN_GAP);
+      let textX = x;
+      if (cell.fact.image) {
+        drawPicture(ctx, cell.image, x, y, COVER, false, false);
+        textX += COVER + 28;
+      }
+      const used = lines(cell.value, textX, y, 800, WHITE, 1.08);
+      lines(cell.label, textX, y + used + 10, 500, GREY, 42 / 34);
+    });
+    y += rowHeights[rowIndex]! + rowGap;
+  });
+  const ruleY = factsTop - 50;
+  if (facts.length > 0) {
+    ctx.fillStyle = LINE;
+    ctx.fillRect(MARGIN, ruleY, WIDTH - 2 * MARGIN, 2);
   }
 
-  let y = 590;
-  if (data.topArtist) {
-    drawPicture(ctx, artistImage, MARGIN, y, 260, true);
-    text("Top artist", MARGIN + 300, y + 110, 40, 500, GREY);
-    text(data.topArtist.name, MARGIN + 300, y + 200, 88, 800);
-    y += 320;
-  }
-
-  const item = (
-    label: string,
-    entry: { name: string; artist: string } | undefined,
+  // Two columns, each headed by its number one's picture, then the ranked
+  // names; a name that no longer fits above the rule is left out with the
+  // ones after it
+  const column = (
+    title: string,
+    items: { name: string }[],
     image: HTMLImageElement | null,
+    x: number,
+    round: boolean,
   ) => {
-    if (!entry) {
+    if (items.length === 0) {
       return;
     }
-    drawPicture(ctx, image, MARGIN, y, 220, false);
-    text(label, MARGIN + 260, y + 70, 38, 500, GREY);
-    text(entry.name, MARGIN + 260, y + 140, 60, 700);
-    text(entry.artist, MARGIN + 260, y + 196, 40, 500, GREY);
-    y += 260;
+    const top = 196;
+    drawPicture(ctx, image, x, top, PICTURE, round, true);
+    text(title, x, top + PICTURE + 52, 38);
+    let rowY = top + PICTURE + 116;
+    for (const [index, item] of items.entries()) {
+      const fit = fitLines(item.name, COLUMN - RANK, 2, [44, 38], measure(700));
+      const height = fit.lines.length * fit.size * 1.12;
+      if (rowY + height > ruleY - 50) {
+        break;
+      }
+      ctx.font = `400 34px ${mono}`;
+      ctx.fillStyle = GREY;
+      ctx.fillText(String(index + 1), x, rowY + (fit.size - 34) / 2 + 2);
+      lines(fit, x + RANK, rowY, 700, WHITE, 1.12);
+      rowY += height + 16;
+    }
   };
-  item("Top song", data.topSong, songImage);
-  item("Top album", data.topAlbum, albumImage);
-
-  // Two rows of two short answers above the name of the app
-  const facts = data.facts.slice(0, 4);
-  if (facts.length > 0) {
-    const top = Math.max(y + 30, 1490);
-    const width = (WIDTH - 2 * MARGIN) / 2;
-    ctx.fillStyle = LINE;
-    ctx.fillRect(MARGIN, top, WIDTH - 2 * MARGIN, 2);
-    facts.forEach((fact, index) => {
-      const x = MARGIN + (index % 2) * width;
-      const rowY = top + 100 + Math.floor(index / 2) * 150;
-      text(fact.value, x, rowY, 64, 800, WHITE, width - 40);
-      text(fact.label, x, rowY + 50, 36, 500, GREY, width - 40);
-    });
-  }
-
-  text("Your Spotify", MARGIN, HEIGHT - 70, 40, 700, GREY);
+  column("Top artists", artists, artistImage, MARGIN, true);
+  column("Top songs", songs, songImage, MARGIN + COLUMN + COLUMN_GAP, false);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
