@@ -224,3 +224,48 @@ export function budgetUsage(hours: UsageHour[], now: Date, budget: number) {
   }
   return { budget, used, background, until };
 }
+
+// The endpoint of a request without IDs or query, e.g. /tracks/{id}. Requests
+// to other hosts than the Web API keep their host.
+export function endpointOf(url: string) {
+  const { host, pathname } = new URL(url);
+  const path = pathname
+    .replace(/^\/v1(?=\/)/, "")
+    .replace(/\/users\/[^/]+/, "/users/{id}")
+    .replace(/\/[0-9A-Za-z]{22}(?=\/|$)/g, "/{id}");
+  return host === "api.spotify.com" ? path : `${host}${path}`;
+}
+
+// What led up to a rate limit at `at`: the requests of the hours starting in
+// the 24 hours before and the current one by source, and those since the
+// previous ban ended (null without one). Hourly buckets, so both may include
+// up to an hour more; nothing is sent during a ban, so its last hour adds
+// little to the second.
+export function requestsBefore(
+  hours: UsageHour[],
+  at: Date,
+  previousBanEnd: Date | null,
+) {
+  const currentHour = Math.floor(at.getTime() / HOUR_MS) * HOUR_MS;
+  const from = previousBanEnd
+    ? Math.floor(previousBanEnd.getTime() / HOUR_MS) * HOUR_MS
+    : null;
+  const last24h: Partial<Record<UsageSource, number>> = {};
+  let sinceBan = from === null ? null : 0;
+  for (const h of hours) {
+    const t = h.hour.getTime();
+    if (t > currentHour) {
+      continue;
+    }
+    if (t >= currentHour - 24 * HOUR_MS) {
+      for (const [source, n] of Object.entries(h.sources ?? {})) {
+        last24h[source as UsageSource] =
+          (last24h[source as UsageSource] ?? 0) + (n ?? 0);
+      }
+    }
+    if (sinceBan !== null && from !== null && t >= from) {
+      sinceBan += total(h.outcomes);
+    }
+  }
+  return { requests24h: last24h, sinceBan };
+}

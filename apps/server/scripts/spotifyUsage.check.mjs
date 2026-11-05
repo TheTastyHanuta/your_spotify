@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   budgetUsage,
+  endpointOf,
   HOUR_MS,
+  requestsBefore,
   summarize,
   WATCH_ERRORS,
 } from "../src/tools/spotifyUsage/summary.ts";
@@ -148,3 +150,50 @@ assert.equal(run([ago(8 * 24, { quota: 1 })]).verdict, "fine");
 }
 
 console.log("spotifyUsage checks passed");
+
+// Endpoints without IDs or query, other hosts keep theirs
+assert.equal(
+  endpointOf(
+    "https://api.spotify.com/v1/tracks/4uLU6hMCjMI75M1A2tKUQC?market=DE",
+  ),
+  "/tracks/{id}",
+);
+assert.equal(
+  endpointOf("https://api.spotify.com/v1/me/player/recently-played"),
+  "/me/player/recently-played",
+);
+assert.equal(
+  endpointOf("https://api.spotify.com/v1/users/some.user/playlists"),
+  "/users/{id}/playlists",
+);
+assert.equal(
+  endpointOf(
+    "https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M/tracks",
+  ),
+  "/playlists/{id}/tracks",
+);
+assert.equal(
+  endpointOf("https://accounts.spotify.com/api/token"),
+  "accounts.spotify.com/api/token",
+);
+
+// Requests before a limit: the 24 hours before and the current hour by
+// source, and those from the hour the previous ban ended on
+{
+  const hours = [
+    ago(0, { ok: 3 }, { isrc: 2, polling: 1 }),
+    ago(5, { ok: 10 }, { isrc: 10 }),
+    ago(24, { ok: 1 }, { polling: 1 }),
+    ago(25, { ok: 100 }, { isrc: 100 }),
+    ago(-1, { ok: 7 }, { polling: 7 }),
+  ];
+  const r = requestsBefore(
+    hours,
+    now,
+    new Date(current - 5 * HOUR_MS + 600_000),
+  );
+  assert.deepEqual(r.requests24h, { isrc: 12, polling: 2 });
+  assert.equal(r.sinceBan, 13);
+  assert.equal(requestsBefore(hours, now, null).sinceBan, null);
+  assert.equal(requestsBefore([], now, null).requests24h.isrc, undefined);
+}

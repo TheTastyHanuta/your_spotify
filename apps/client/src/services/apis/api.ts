@@ -351,6 +351,26 @@ export type UsageSource = "polling" | "import" | "isrc" | "auth" | "other";
 type UsageCell = { value: number; usual: number | null };
 type UsageBar = { total: number; limited: number };
 
+// A ban, a quota block, or nearby short 429s of one endpoint ("retried")
+export interface SpotifyLimitEvent {
+  _id: string;
+  at: string;
+  lastAt: string;
+  kind: "ban" | "quota" | "retried";
+  source: UsageSource;
+  endpoint: string;
+  count: number;
+  // 429s whose retries ran out, pausing their job
+  gaveUp: number;
+  until?: string;
+  retryAfter: string | null;
+  body: string;
+  // Whole hours: the 24 before and the current one
+  requests24h: Partial<Record<UsageSource, number>>;
+  // Since the previous ban ended, null without one
+  sinceBan: number | null;
+}
+
 export interface SpotifyUsageResponse {
   // The zone the days were grouped in
   timeZone: string;
@@ -371,6 +391,8 @@ export interface SpotifyUsageResponse {
   weekly: (UsageBar & { from: string; to: string })[];
   // Requests of the last 24 hours (and the current hour) against the budget
   budget: { budget: number; used: number; background: number };
+  // The latest first
+  limits: SpotifyLimitEvent[];
 }
 
 export type DiscoveriesResponse = {
