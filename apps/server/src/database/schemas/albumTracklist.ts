@@ -9,6 +9,9 @@ export interface AlbumTracklistEntry {
   ms: number;
   // Spotify id of the song's first artist
   artist: string;
+  // Looked up on Spotify when a stored song might be this one under another
+  // id: null when Spotify has none, missing when not looked up
+  isrc?: string | null;
 }
 
 // An album's songs, fetched once the first time its page asks for them

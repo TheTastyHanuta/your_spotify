@@ -972,7 +972,7 @@ Get album details.
 
 Get album statistics. `tracks` counts the plays of each song from this album only; `elsewhere` adds the plays of the album's songs from other releases (mostly singles), which never count for the album itself.
 
-To know the album's songs that were never played from it, the first call for an album the user played from fetches its tracklist from Spotify and stores it (not for share links, nor for accounts that need to log in to Spotify again); it waits at most 3 seconds for it, and a slower fetch goes on for the next call. Songs of the tracklist stored under another Spotify ID are recognised by the same first artist, name, version words (remix, instrumental, live, acoustic, …) and length (within 3 seconds). If Spotify can't be reached or blocks requests, a later call tries again.
+To know the album's songs that were never played from it, the first call for an album the user played from fetches its tracklist from Spotify and stores it (not for share links, nor for accounts that need to log in to Spotify again); it waits at most 3 seconds for it, and a slower fetch goes on for the next call. A song of the tracklist the server doesn't know by its Spotify ID, but whose name matches a stored song by the same first artist, gets its ISRC looked up on Spotify once (one request per song). It counts as that song only if the ISRCs match; it is then stored as a merged version of it, like a newly played version of a known song. If Spotify can't be reached or blocks requests, a later call tries again.
 
 **Parameters:**
 

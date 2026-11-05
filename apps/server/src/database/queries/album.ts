@@ -85,23 +85,21 @@ const albumSongIds = async (albumId: string) => {
   const chains = await findMergedIntoTracks(stored);
   const storedById = new Map([...stored, ...chains].map((t) => [t.id, t]));
   const storedIds = new Set(stored.map((track) => track.id));
-  const unknown = entries.filter((entry) => !storedIds.has(entry.id));
-  const primaries = unknown.length
+  // Also finds a song that got its ISRC after the lookup (the admin merge)
+  const isrcs = entries.flatMap((entry) =>
+    entry.isrc && !storedIds.has(entry.id) ? [entry.isrc] : [],
+  );
+  const byIsrc = isrcs.length
     ? await TrackModel.find(
-        {
-          // Any position, so the artists index is used; isSameSong checks the
-          // first artist
-          artists: { $in: [...new Set(unknown.map((entry) => entry.artist))] },
-          mergedInto: { $exists: false },
-        },
-        { id: 1, name: 1, duration_ms: 1, artists: 1 },
+        { isrc: { $in: isrcs }, mergedInto: { $exists: false } },
+        { id: 1, isrc: 1 },
       ).lean()
     : [];
   return resolveEntries(
     entries,
     storedIds,
     (id) => primaryIdOf(storedById.get(id)!, storedById),
-    primaries,
+    new Map(byIsrc.map((track) => [track.isrc!, track.id])),
   );
 };
 
