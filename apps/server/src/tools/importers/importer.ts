@@ -26,6 +26,8 @@ import {
   HistoryImporter,
   ImporterStateFromType,
   ImporterStateType,
+  importRun,
+  pauseRequests,
 } from "./types";
 
 const importers: {
@@ -94,10 +96,28 @@ export function isAnyImportRunning() {
 export function canUserImport(userId: string) {
   return !(userId in userImporters);
 }
+// A running import stops before its next item, a waiting one loses its resume
+// timer. Either way only a resume by the user continues it.
+export async function pauseImport(stateId: string) {
+  const state = await claimImporterState(
+    stateId,
+    ["progress", "waiting"],
+    "paused",
+  );
+  if (!state) {
+    return false;
+  }
+  cancelResume(stateId);
+  if (state.status === "progress") {
+    pauseRequests.add(stateId);
+  }
+  return true;
+}
+
 export async function cleanupImport(existingStateId: string) {
   const importState = await claimImporterState(
     existingStateId,
-    ["failure", "waiting"],
+    ["failure", "waiting", "paused"],
     "failure-removed",
   );
   if (!importState) {
@@ -221,8 +241,10 @@ async function startImport<T extends ImporterStateType>(
     );
     const stateId = existingState._id.toString();
     const slowdownMs = slowdownMsOf(existingState);
-    await requestSource.run("import", () =>
-      requestSlowdown.run(slowdownMs, () => instance.run(stateId)),
+    await importRun.run(stateId, () =>
+      requestSource.run("import", () =>
+        requestSlowdown.run(slowdownMs, () => instance.run(stateId)),
+      ),
     );
     await instance.cleanup(requiredInitData);
     await setImporterStateStatus(existingState._id.toString(), "success");
@@ -231,11 +253,19 @@ async function startImport<T extends ImporterStateType>(
       .labels({ status: "success", user: userId, type: name })
       .inc();
   } catch (e) {
+    // A pause the user asked for wins over a ban or an error meanwhile. The
+    // pause already stored the status, and a cancel since then must stay.
+    if (existingState && pauseRequests.has(existingState._id.toString())) {
+      logger.info(`[${user.username}]: ${name} import paused`);
+      return;
+    }
     if (existingState && e instanceof RateLimitedError) {
       const stateId = existingState._id.toString();
       const slowdownMs = nextSlowdownMs(existingState);
-      await setImporterStateWaiting(stateId, e.until, slowdownMs);
-      scheduleResume(stateId, e.until);
+      // Not when the user paused it meanwhile, it then stays paused
+      if (await setImporterStateWaiting(stateId, e.until, slowdownMs)) {
+        scheduleResume(stateId, e.until);
+      }
       logger.warn(
         `Import paused until Spotify stops blocking requests at ${e.until.toISOString()}, it resumes on its own a few minutes later with at least ${slowdownMs}ms between its requests`,
       );
@@ -256,5 +286,8 @@ async function startImport<T extends ImporterStateType>(
     // to skip this and keep the user flagged as importing until a restart.
     clearCache(userId);
     delete userImporters[userId];
+    if (existingState) {
+      pauseRequests.delete(existingState._id.toString());
+    }
   }
 }

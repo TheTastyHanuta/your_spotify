@@ -11,6 +11,7 @@ import {
 import {
   canUserImport,
   cleanupImport,
+  pauseImport,
   runImporter,
 } from "../tools/importers/importer";
 import { ImporterStateType } from "../tools/importers/types";
@@ -95,7 +96,8 @@ router.post("/import/retry", logged, notAlreadyImporting, async (req, res) => {
     return;
   }
 
-  if (importState.status !== "failure") {
+  // A paused import resumes the same way a failed one is retried
+  if (importState.status !== "failure" && importState.status !== "paused") {
     res.status(400).end();
     return;
   }
@@ -133,6 +135,18 @@ router.delete("/import/clean/:id", logged, async (req, res) => {
   }
   await cleanupImport(importState._id.toString());
   res.status(204).end();
+});
+
+router.post("/import/pause/:id", logged, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const { id } = validate(req.params, cleanupImportSchema);
+
+  const importState = await getImporterState(id);
+  if (!importState || importState.user.toString() !== user._id.toString()) {
+    res.status(404).end();
+    return;
+  }
+  res.status((await pauseImport(id)) ? 204 : 409).end();
 });
 
 router.get("/imports", logged, async (req, res) => {

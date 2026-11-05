@@ -25,7 +25,11 @@ import {
 } from "../misc";
 import { Unpack } from "../types";
 import { getFromCache, setToCache, SpotifyTrackCacheItem } from "./cache";
-import { HistoryImporter, PrivacyImporterState } from "./types";
+import {
+  HistoryImporter,
+  PrivacyImporterState,
+  stopIfPauseRequested,
+} from "./types";
 
 const privacyFileSchema = z.array(
   z.object({
@@ -200,6 +204,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
       return false;
     }
     for (let i = this.currentItem; i < this.elements.length; i += 1) {
+      stopIfPauseRequested();
       this.currentItem = i;
       if (i % 1000 === 0) {
         logger.info(`Importing... (${i}/${this.elements.length})`);

@@ -9,6 +9,7 @@ import { SpotifyTrack } from "../../database/schemas/track";
 import { User } from "../../database/schemas/user";
 import { getWithDefault } from "../env";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
+import { stopIfPauseRequested } from "../importers/types";
 import { logger } from "../logger";
 import { chunk, wait } from "../misc";
 import { spotifyProvider } from "../oauth/Provider";
@@ -75,6 +76,9 @@ export class SpotifyAPI {
     if (slowdown) {
       await wait(slowdown);
     }
+    // Every request of an import comes here, also the album and artist
+    // lookups while storing its listens
+    stopIfPauseRequested();
     const user = await getUserFromField(
       "_id",
       new Types.ObjectId(this.userId),

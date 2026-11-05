@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "async_hooks";
+
 import { Types } from "mongoose";
 
 export interface HistoryImporter<T extends ImporterStateType> {
@@ -17,7 +19,25 @@ export type ImporterStateStatus =
   | "failure"
   | "failure-removed"
   // Paused while Spotify blocks the requests, resumes on its own
-  | "waiting";
+  | "waiting"
+  // Paused by the user, resumes only when they ask
+  | "paused";
+
+// The id of the import the current code runs for
+export const importRun = new AsyncLocalStorage<string>();
+
+// Imports the user paused while they ran. They stop before their next item or
+// Spotify request, the progress stored so far is where a resume starts.
+export const pauseRequests = new Set<string>();
+
+export class ImportPausedError extends Error {}
+
+export const stopIfPauseRequested = () => {
+  const stateId = importRun.getStore();
+  if (stateId && pauseRequests.has(stateId)) {
+    throw new ImportPausedError("The import was paused");
+  }
+};
 
 export interface BaseImporterState {
   _id: Types.ObjectId;

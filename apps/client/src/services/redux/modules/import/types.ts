@@ -4,7 +4,9 @@ export type ImporterStateStatus =
   | "failure"
   | "failure-removed"
   // Paused while Spotify blocks the requests, resumes on its own
-  | "waiting";
+  | "waiting"
+  // Paused by the user, resumes only when they ask
+  | "paused";
 
 export enum ImporterStateType {
   privacy = "privacy",

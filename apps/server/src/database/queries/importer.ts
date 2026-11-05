@@ -38,14 +38,16 @@ export const claimImporterState = (
     { $set: { status }, $unset: { rateLimitedUntil: 1 } },
   );
 
+// Only a running import starts waiting, returns null for one paused meanwhile
 export const setImporterStateWaiting = (
   id: string,
   rateLimitedUntil: Date,
   slowdownMs: number,
 ) =>
-  ImporterStateModel.findByIdAndUpdate(id, {
-    $set: { status: "waiting", rateLimitedUntil, slowdownMs },
-  });
+  ImporterStateModel.findOneAndUpdate(
+    { _id: id, status: "progress" },
+    { $set: { status: "waiting", rateLimitedUntil, slowdownMs } },
+  );
 
 export const getImporterState = <T extends ImporterStateType>(id: string) =>
   ImporterStateModel.findById<ImporterStateFromType<T>>(id);

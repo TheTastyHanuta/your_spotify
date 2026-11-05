@@ -8,6 +8,7 @@ import { DateFormatter } from "../../../../services/date";
 import { selectImportStates } from "../../../../services/redux/modules/import/selector";
 import {
   cleanupImport,
+  pauseImport,
   startImportPrivacy,
 } from "../../../../services/redux/modules/import/thunk";
 import { ImporterStateStatus } from "../../../../services/redux/modules/import/types";
@@ -22,7 +23,8 @@ const statusToString: Record<ImporterStateStatus, string> = {
   failure: "Failed",
   progress: "In progress",
   success: "Success",
-  waiting: "Paused",
+  waiting: "Waiting for Spotify",
+  paused: "Paused",
 };
 
 export default function ImportHistory() {
@@ -74,12 +76,23 @@ export default function ImportHistory() {
               </Text>
               <ThreePoints
                 items={compact([
-                  st.status === "failure"
-                    ? { label: "Retry", onClick: () => onImport(st._id) }
-                    : undefined,
-                  st.status === "failure" || st.status === "waiting"
+                  st.status === "progress" || st.status === "waiting"
                     ? {
-                        label: st.status === "waiting" ? "Cancel" : "Clean up",
+                        label: "Pause",
+                        onClick: () => dispatch(pauseImport(st._id)),
+                      }
+                    : undefined,
+                  st.status === "failure" || st.status === "paused"
+                    ? {
+                        label: st.status === "paused" ? "Resume" : "Retry",
+                        onClick: () => onImport(st._id),
+                      }
+                    : undefined,
+                  st.status === "failure" ||
+                  st.status === "waiting" ||
+                  st.status === "paused"
+                    ? {
+                        label: st.status === "failure" ? "Clean up" : "Cancel",
                         onClick: () => cleanImport(st._id),
                         style: "destructive",
                       }

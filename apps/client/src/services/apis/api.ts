@@ -676,6 +676,7 @@ export const api = {
   retryImport: (existingStateId: string) =>
     post("/import/retry", { existingStateId }),
   cleanupImport: (id: string) => delet(`/import/clean/${id}`),
+  pauseImport: (id: string) => post(`/import/pause/${id}`),
   collaborativeBestSongs: (
     ids: string[],
     start: Date,

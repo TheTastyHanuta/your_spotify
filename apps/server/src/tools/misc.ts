@@ -1,5 +1,6 @@
 import { HttpError } from "./apis/queueHttpClient";
 import { SpotifyReauthRequiredError } from "./errors/Spotify";
+import { ImportPausedError } from "./importers/types";
 import { logger } from "./logger";
 
 export const wait = (ms: number) =>
@@ -296,6 +297,7 @@ export const retryPromise = async <T>(
       // the short ones and turns the rest into a RateLimitedError.
       if (
         e instanceof SpotifyReauthRequiredError ||
+        e instanceof ImportPausedError ||
         (e instanceof HttpError && e.status < 500)
       ) {
         throw e;
