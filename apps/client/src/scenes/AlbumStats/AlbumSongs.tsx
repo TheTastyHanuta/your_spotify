@@ -5,7 +5,7 @@ import { api } from "../../services/apis/api";
 import { useAPI } from "../../services/hooks/hooks";
 import { msToDuration } from "../../services/stats";
 import { plural } from "../../services/tools";
-import { albumSongRow, albumSongs } from "./rows";
+import { ALBUM_SONGS_INFO, albumSongRow, albumSongs } from "./rows";
 
 // All the album's songs heard, behind the album page's "See all", at
 // /album/:id/songs, ranked by all their plays like the album page. The
@@ -19,6 +19,7 @@ export default function AlbumSongs() {
   return (
     <ListPage
       title="Most played songs"
+      info={ALBUM_SONGS_INFO}
       back={{ to: `/album/${id}`, label: found?.album.name ?? "Album" }}
       hideInterval
       items={stats && (found ? albumSongs(found) : [])}

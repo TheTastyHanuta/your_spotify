@@ -21,7 +21,7 @@ import {
 } from "../../services/stats";
 import { playRow } from "../ArtistStats/rows";
 import AlbumRank from "./AlbumRank";
-import { albumSongRow, albumSongs } from "./rows";
+import { ALBUM_SONGS_INFO, albumSongRow, albumSongs } from "./rows";
 
 // Same layout as the artist page
 import s from "../../styles/detail.module.css";
@@ -126,6 +126,7 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
       <div className={clsx("ruled-columns", s.columns)}>
         <Section
           title="Most played songs"
+          info={ALBUM_SONGS_INFO}
           link={seeAll(songs, `/album/${albumId}/songs`)}>
           {songs.slice(0, NB_SHOWN).map(albumSongRow(stats.album.images))}
         </Section>

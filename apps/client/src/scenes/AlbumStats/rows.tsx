@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-
+import InlineAlbum from "../../components/InlineAlbum";
 import InlineTrack from "../../components/InlineTrack";
 import ItemRow from "../../components/ItemRow";
 import Text from "../../components/Text";
@@ -15,6 +14,9 @@ export type AlbumSong = {
   others: Other[];
   total: number;
 };
+
+export const ALBUM_SONGS_INFO =
+  "The number is all your plays of the song, also from singles and other releases, as on the song's page. The album's own plays only count plays from this album.";
 
 const sum = (others: Other[]) =>
   others.reduce((total, other) => total + other.count, 0);
@@ -38,52 +40,46 @@ export function albumSongs(stats: AlbumStatsResponse): AlbumSong[] {
     .sort((a, b) => b.total - a.total);
 }
 
-// "9 from this album · 12 from the single Faded", "all from the single
-// Darkside" or "… 20 from 2 other releases"
-function SourcesNote({ here, others }: Pick<AlbumSong, "here" | "others">) {
+// "12 plays from the single Faded" or "20 plays from 2 other releases": the
+// plays not from this album (the count on the right holds all of them)
+function sourcesNote(others: Other[]) {
   const [first] = others;
-  const from =
-    others.length > 1 || !first ? (
-      `from ${others.length} other releases`
-    ) : (
-      <>
-        from the {first.album.album_type}{" "}
-        <Link to={`/album/${first.album.id}`}>{first.album.name}</Link>
-      </>
-    );
+  const count = sum(others);
   return (
-    <Text size="normal" greyed>
-      {here > 0 ? (
+    <>
+      {" · "}
+      <span className="num">{count.toLocaleString()}</span>
+      {count === 1 ? " play" : " plays"}
+      {first && others.length === 1 ? (
         <>
-          <span className="num">{here.toLocaleString()}</span> from this album ·{" "}
-          <span className="num">{sum(others).toLocaleString()}</span> {from}
+          {` from the ${first.album.album_type} `}
+          <InlineAlbum album={first.album} size="normal" greyed />
         </>
       ) : (
-        <>all {from}</>
+        <>
+          {" from "}
+          <span className="num">{others.length}</span> other releases
+        </>
       )}
-    </Text>
+    </>
   );
 }
 
 // A row of the album page's songs and of their "See all" list. A song played
-// from other releases too says where its plays came from instead of its
-// length.
+// from other releases too adds how many plays came from them.
 export const albumSongRow =
   (images: SpotifyImage[]) =>
-  ({ track, here, others, total }: AlbumSong, index: number) => (
+  ({ track, others, total }: AlbumSong, index: number) => (
     <ItemRow
       key={track.id}
       rank={index + 1}
       image={images}
       title={<InlineTrack track={track} size="normal" />}
       subtitle={
-        others.length > 0 ? (
-          <SourcesNote here={here} others={others} />
-        ) : (
-          <Text size="normal" greyed className="num">
-            {msToDuration(track.duration_ms)}
-          </Text>
-        )
+        <Text size="normal" greyed>
+          <span className="num">{msToDuration(track.duration_ms)}</span>
+          {others.length > 0 && sourcesNote(others)}
+        </Text>
       }
       right={
         <Text size="normal" greyed className="num">
