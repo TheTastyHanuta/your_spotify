@@ -7,7 +7,7 @@ import { TextProps } from "../Text/Text";
 import s from "./index.module.css";
 
 type InlineAlbumProps<T extends HTMLTag> = Omit<TextProps<T>, "children"> & {
-  album: Album;
+  album: Pick<Album, "id" | "name">;
 };
 
 export default function InlineAlbum<T extends HTMLTag = "div">({

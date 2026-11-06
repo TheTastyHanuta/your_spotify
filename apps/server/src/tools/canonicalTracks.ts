@@ -10,6 +10,26 @@ interface TrackCanonicalizationResult {
   mergedVersionIds: Map<string, string>;
 }
 
+// Follows mergedInto to the current primary: a primary can be merged into
+// another one later, and its versions keep pointing at it. Further steps are
+// only taken to stored tracks, so a broken chain ends on one.
+export function primaryIdOf(
+  track: Pick<Track, "id" | "mergedInto">,
+  storedById: Map<string, Pick<Track, "mergedInto">>,
+) {
+  const seen = new Set([track.id]);
+  let id = track.mergedInto ?? track.id;
+  while (!seen.has(id)) {
+    seen.add(id);
+    const next = storedById.get(id)?.mergedInto;
+    if (!next || !storedById.has(next)) {
+      break;
+    }
+    id = next;
+  }
+  return id;
+}
+
 // storedTracks: the stored tracks with these ids or ISRCs, and the tracks
 // they are merged into down to the end of each chain
 export function canonicalizeSpotifyTracks(
@@ -26,22 +46,6 @@ export function canonicalizeSpotifyTracks(
   const pendingCanonicalIdByIsrc = new Map<string, string>();
   const missingTrackIds: string[] = [];
   const mergedVersionIds = new Map<string, string>();
-  // Follows mergedInto to the current primary: a primary can be merged into
-  // another one later, and its versions keep pointing at it. Further steps are
-  // only taken to stored tracks, so a broken chain ends on one.
-  const primaryIdOf = (track: Pick<Track, "id" | "mergedInto">) => {
-    const seen = new Set([track.id]);
-    let id = track.mergedInto ?? track.id;
-    while (!seen.has(id)) {
-      seen.add(id);
-      const next = storedById.get(id)?.mergedInto;
-      if (!next || !storedById.has(next)) {
-        break;
-      }
-      id = next;
-    }
-    return id;
-  };
   // A version merged into another track is stored as a duplicate of it, like
   // the admin merge leaves them, unless its id is stored already
   const mergeVersion = (id: string, canonicalId: string) => {
@@ -65,7 +69,7 @@ export function canonicalizeSpotifyTracks(
 
     const storedByMatchingId = storedById.get(spotifyTrack.id);
     if (storedByMatchingId) {
-      const canonicalId = primaryIdOf(storedByMatchingId);
+      const canonicalId = primaryIdOf(storedByMatchingId, storedById);
       canonicalIdBySpotifyId.set(spotifyTrack.id, canonicalId);
       if (isrc && !pendingCanonicalIdByIsrc.has(isrc)) {
         pendingCanonicalIdByIsrc.set(isrc, canonicalId);

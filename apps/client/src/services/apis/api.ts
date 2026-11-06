@@ -347,7 +347,13 @@ export interface IsrcMergeState {
 }
 
 export type SpotifyBlock = { until: string; kind: "ban" | "quota" };
-export type UsageSource = "polling" | "import" | "isrc" | "auth" | "other";
+export type UsageSource =
+  | "polling"
+  | "import"
+  | "isrc"
+  | "albums"
+  | "auth"
+  | "other";
 type UsageCell = { value: number; usual: number | null };
 type UsageBar = { total: number; limited: number };
 
@@ -432,11 +438,20 @@ export type TrackStatsResponse = {
 export type AlbumStatsResponse = {
   album: Album;
   artists: Artist[];
+  // Plays of each song from this album only
   tracks: { track: Track; count: number }[];
   firstLast: {
     first: TrackInfo & { track: Track };
     last: TrackInfo & { track: Track };
   };
+  // Plays of the album's songs from other releases, per song and release
+  elsewhere: {
+    trackId: string;
+    count: number;
+    album: Pick<Album, "id" | "name" | "album_type">;
+  }[];
+  // The album's songs only ever played from other releases
+  onlyElsewhere: Track[];
 };
 
 // The item's place in the user's all-time chart (index 0 is first) and its

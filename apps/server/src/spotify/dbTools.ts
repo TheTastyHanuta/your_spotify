@@ -6,6 +6,7 @@ import {
   storeFirstListenedAtIfLess,
 } from "../database";
 import { TrackModel, AlbumModel, ArtistModel } from "../database/Models";
+import { findMergedIntoTracks } from "../database/queries/track";
 import { Album, SpotifyAlbum } from "../database/schemas/album";
 import { Artist } from "../database/schemas/artist";
 import { Infos } from "../database/schemas/info";
@@ -49,37 +50,6 @@ const getStoredTracksByIdOrIsrc = (ids: string[], isrcs: string[]) =>
         : []),
     ],
   });
-
-// The tracks the stored ones are merged into, following chains (a primary
-// merged again later) to their end, so a version reaches the current primary
-const MAX_CHAIN_PASSES = 10;
-const findMergedIntoTracks = async (storedTracks: Track[]) => {
-  const known = new Set(storedTracks.map((track) => track.id));
-  const found: Track[] = [];
-  let pending = storedTracks;
-  for (let pass = 0; pass < MAX_CHAIN_PASSES; pass += 1) {
-    const ids = [
-      ...new Set(
-        pending.flatMap((track) =>
-          track.mergedInto && !known.has(track.mergedInto)
-            ? [track.mergedInto]
-            : [],
-        ),
-      ),
-    ];
-    if (ids.length === 0) {
-      break;
-    }
-    pending = await TrackModel.find({ id: { $in: ids } });
-    for (const track of pending) {
-      known.add(track.id);
-      found.push(track);
-    }
-    // A missing target is not looked up again
-    ids.forEach((id) => known.add(id));
-  }
-  return found;
-};
 
 async function updateExistingTrackIsrcs(
   spotifyTracks: SpotifyTrack[],

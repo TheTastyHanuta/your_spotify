@@ -6,6 +6,7 @@ export const USAGE_SOURCES = [
   "polling",
   "import",
   "isrc",
+  "albums",
   "auth",
   "other",
 ] as const;
