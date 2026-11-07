@@ -13,6 +13,8 @@ export default defineConfig({
       NODE_ENV: "development",
       // Tests trigger warnings on purpose (rate limits, for instance)
       LOG_LEVEL: "error",
+      // The default, pinned so a value set in the shell changes no test
+      SPOTIFY_API_DELAY_MS: "2000",
     },
     // Undo vi.stubGlobal and vi.spyOn before each test, so no test sees
     // another one's stubs
