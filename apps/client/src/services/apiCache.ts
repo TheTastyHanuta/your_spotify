@@ -1,7 +1,5 @@
 // Last answers of useAPI (hooks/hooks.ts), so a page seen before shows at once
-// and refreshes in the background. Only lost on reload. Checked by
-// scripts/apiCache.check.mjs, so no imports and only TypeScript that Node can
-// strip.
+// and refreshes in the background. Only lost on reload.
 
 const CACHE_SIZE = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;

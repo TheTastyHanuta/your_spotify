@@ -9,7 +9,8 @@
     "dev": "concurrently \"rsbuild build -w\" \"nodemon build/index.js\"",
     "migrate": "node ./build/index.js --migrate",
     "lint": "oxlint -c ../dev/.oxlintrc.json . && oxfmt -c ../dev/.oxfmtrc.json --check .",
-    "lint:fix": "oxlint -c ../dev/.oxlintrc.json --fix . && oxfmt -c ../dev/.oxfmtrc.json ."
+    "lint:fix": "oxlint -c ../dev/.oxlintrc.json --fix . && oxfmt -c ../dev/.oxfmtrc.json .",
+    "test": "vitest run"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -38,6 +39,7 @@
     "concurrently": "^10.0.6",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

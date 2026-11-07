@@ -1,7 +1,6 @@
 // Hooked songs: a song's stretches of heavy listening (phases). The first is
 // the hook, a later one after a long break a comeback. Artists get the same
-// with their own rules (findDives): their first phase is a deep dive. No
-// imports, so scripts/hooks.check.mjs can run it directly.
+// with their own rules (findDives): their first phase is a deep dive.
 
 export interface PlaysOnDay {
   // "YYYY-MM-DD" in the stats timezone

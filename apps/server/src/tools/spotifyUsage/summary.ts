@@ -1,7 +1,6 @@
 import type { RequestOutcome } from "../apis/queueHttpClient";
 
-// What made a Spotify request. Pure module: node scripts/spotifyUsage.check.mjs
-// imports it without a build.
+// What made a Spotify request
 export const USAGE_SOURCES = [
   "polling",
   "import",

@@ -1,4 +1,4 @@
-// Pure part of the ISRC merge, checked by scripts/isrcMerge.check.mjs
+// Pure part of the ISRC merge
 
 export interface PlanTrack {
   id: string;

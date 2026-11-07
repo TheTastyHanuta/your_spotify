@@ -1,4 +1,4 @@
-// Pure part of the orphan cleanup, checked by scripts/orphanTracks.check.mjs
+// Pure part of the orphan cleanup
 
 export interface UnusedTrack {
   id: string;
