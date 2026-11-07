@@ -1,8 +1,8 @@
+import { DAY_MS, dayIn } from "../../tools/date";
 import { genresOf } from "../../tools/genres";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
 import { allListens, findArtists, findTracks, keepOrder } from "./discoveries";
-import { DAY_MS } from "./insights";
 import { getTimezone } from "./statsTools";
 import { getTracks } from "./track";
 
@@ -313,9 +313,7 @@ export const getEras = async (user: User) => {
 // played song that day. Today is in the stats timezone.
 export const getOnThisDay = async (user: User) => {
   const timezone = getTimezone(user.settings.timezone);
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(
-    new Date(),
-  );
+  const today = dayIn(timezone)(new Date());
   const [year, month, day] = today.split("-").map(Number) as [
     number,
     number,

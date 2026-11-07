@@ -1,4 +1,5 @@
 import { ArtistModel } from "../database/Models";
+import { DAY_MS } from "./date";
 import { logger } from "./logger";
 import { wait } from "./misc";
 import { Version } from "./version";
@@ -12,7 +13,7 @@ const REQUEST_INTERVAL_MS = 1100;
 const REQUEST_TIMEOUT_MS = 30_000;
 const BATCH = 30;
 const IDLE_MS = 10 * 60 * 1000;
-const RETRY_EMPTY_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+const RETRY_EMPTY_AFTER_MS = 30 * DAY_MS;
 const MAX_GENRES = 6;
 
 async function request<T>(path: string): Promise<T | null> {
