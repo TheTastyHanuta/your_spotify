@@ -10,6 +10,6 @@ export function useArtistGrid() {
     title: { unit: commonUnits.mainTitle, key: "title" },
     genres: { unit: "2fr", key: "genres" },
     count: { unit: commonUnits.percentage(isMobile), key: "count" },
-    total: { unit: commonUnits.percentage(isMobile), key: "total" },
+    total: { unit: commonUnits.time(isMobile), key: "total" },
   } as const;
 }

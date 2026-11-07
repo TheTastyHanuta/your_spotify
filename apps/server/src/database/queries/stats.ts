@@ -244,6 +244,7 @@ export const getBest = (
   end: Date,
   nb: number,
   offset: number,
+  sort = user.settings.metricUsed,
 ) =>
   InfosModel.aggregate([
     ...basicMatch(user._id, start, end),
@@ -262,7 +263,7 @@ export const getBest = (
     {
       $facet: {
         infos: [
-          { $sort: { [getTrackSortType(user)]: -1, _id: 1 } },
+          { $sort: { [getTrackSortType(sort)]: -1, _id: 1 } },
           { $skip: offset },
           { $limit: nb },
         ],
@@ -357,7 +358,7 @@ export const getRanks = async (
         primaryArtistId: { $first: "$primaryArtistId" },
       },
     },
-    { $sort: { [getTrackSortType(user)]: -1, _id: 1 } },
+    { $sort: { [getTrackSortType(user.settings.metricUsed)]: -1, _id: 1 } },
     ...existsIn("tracks", "$trackId"),
     ...existsIn(
       "albums",

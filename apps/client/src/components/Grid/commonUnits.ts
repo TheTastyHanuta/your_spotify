@@ -8,4 +8,6 @@ export const commonUnits = {
   mainTitle: "3fr",
   secondaryTitle: "2fr",
   percentage: (isMobile: boolean) => (isMobile ? "50px" : "140px"),
+  // "100d 23h 59m 59s" next to the share bar, "1,234h 5m" on phones
+  time: (isMobile: boolean) => (isMobile ? "80px" : "200px"),
 } as const;

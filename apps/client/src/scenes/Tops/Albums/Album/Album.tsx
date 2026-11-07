@@ -6,9 +6,8 @@ import InlineAlbum from "../../../../components/InlineAlbum";
 import InlineArtist from "../../../../components/InlineArtist";
 import Text from "../../../../components/Text";
 import { useMobile } from "../../../../services/hooks/hooks";
-import { msToDuration } from "../../../../services/stats";
 import { Artist, Album as AlbumType } from "../../../../services/types";
-import ShareCount from "../../ShareCount";
+import { measureCells, TopSort } from "../../measure";
 import { useAlbumGrid } from "./AlbumGrid";
 
 import s from "./index.module.css";
@@ -18,9 +17,11 @@ interface AlbumProps {
   album: AlbumType;
   count: number;
   totalCount: number;
-  // The number one\'s count, for the share bar
-  maxCount: number;
   duration: number;
+  totalDuration: number;
+  // The number one's value in the sorted measure, for the share bar
+  max: number;
+  sort: TopSort;
   rank: number;
 }
 
@@ -30,11 +31,21 @@ export default function Album({
   duration,
   count,
   totalCount,
-  maxCount,
+  max,
+  totalDuration,
+  sort,
   rank,
 }: AlbumProps) {
   const [isMobile] = useMobile();
   const albumGrid = useAlbumGrid();
+
+  const measures = measureCells(sort, isMobile, {
+    count,
+    duration,
+    totalCount,
+    totalDuration,
+    max,
+  });
 
   const columns: ColumnDescription[] = [
     {
@@ -76,18 +87,8 @@ export default function Album({
         </div>
       ),
     },
-    {
-      ...albumGrid.count,
-      node: <ShareCount count={count} total={totalCount} max={maxCount} />,
-    },
-    {
-      ...albumGrid.total,
-      node: !isMobile && (
-        <Text element="div" size="normal" className="num">
-          {msToDuration(duration)}
-        </Text>
-      ),
-    },
+    { ...albumGrid.count, node: measures.count },
+    { ...albumGrid.total, node: measures.total },
   ];
 
   return <GridRowWrapper columns={columns} />;

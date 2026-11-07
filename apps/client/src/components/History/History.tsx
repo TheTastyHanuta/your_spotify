@@ -69,7 +69,10 @@ export default function History({
   };
 
   const { anchor, selectedTracks, setAnchor, setSelectedTracks, uniqSongIds } =
-    useSelectTracks({ tracks: items });
+    useSelectTracks({
+      tracks: items,
+      listKey: `${listInterval.start.getTime()}-${listInterval.end.getTime()}`,
+    });
 
   // The last removed listens, for Undo; kept while the message closes. Undo
   // puts them back into the list they were removed from, so the message is

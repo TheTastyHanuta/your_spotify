@@ -19,6 +19,7 @@ import { getPeriodName } from "../../../services/periodName";
 import { PlaylistContext } from "../../../services/redux/modules/playlist/types";
 import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
 import ChartsHero from "../ChartsHero";
+import { heroMeasure, useTopSort } from "../measure";
 import Track from "./Track";
 import TrackHeader from "./Track/TrackHeader";
 
@@ -28,9 +29,12 @@ export default function Songs() {
   const rawInterval = useSelector(selectRawIntervalDetail);
   const { interval } = rawInterval;
 
+  const [sort, setSort] = useTopSort();
   const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     interval,
-    api.getBestSongs,
+    (start, end, nb, offset) => api.getBestSongs(start, end, nb, offset, sort),
+    undefined,
+    sort,
   );
 
   const top = items[0];
@@ -39,10 +43,14 @@ export default function Songs() {
     type: "top",
     nb: DEFAULT_PLAYLIST_NB,
     interval: { start: interval.start.getTime(), end: interval.end.getTime() },
+    sort,
   };
 
   const { anchor, selectedTracks, setAnchor, setSelectedTracks, uniqSongIds } =
-    useSelectTracks({ tracks: items.map((item) => item.track) });
+    useSelectTracks({
+      tracks: items.map((item) => item.track),
+      listKey: `${interval.start.getTime()}-${interval.end.getTime()}-${sort}`,
+    });
 
   return (
     <>
@@ -59,8 +67,7 @@ export default function Songs() {
                 <>
                   Your number one {getPeriodName(rawInterval)} ·{" "}
                   {top.track_artists.map((artist) => artist.name).join(", ")} ·{" "}
-                  <span className="num">{top.count.toLocaleString()}</span>{" "}
-                  plays
+                  {heroMeasure(sort, top.count, top.duration_ms)}
                 </>
               ),
             }
@@ -78,7 +85,7 @@ export default function Songs() {
               hasChildren={items.length > 0}
               loader={<Loader />}>
               <GridWrapper>
-                <TrackHeader />
+                <TrackHeader sort={sort} setSort={setSort} />
                 {items.map((item, index) => (
                   <Selectable key={item.track.id} index={index}>
                     <RightClickable index={index} onRightClick={setAnchor}>
@@ -94,8 +101,13 @@ export default function Songs() {
                         }
                         count={item.count}
                         totalCount={item.total_count}
-                        maxCount={top?.count ?? 0}
                         duration={item.duration_ms}
+                        totalDuration={item.total_duration_ms}
+                        max={
+                          (sort === "number" ? top?.count : top?.duration_ms) ??
+                          0
+                        }
+                        sort={sort}
                       />
                     </RightClickable>
                   </Selectable>

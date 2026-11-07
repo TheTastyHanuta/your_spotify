@@ -9,6 +9,6 @@ export function useAlbumGrid() {
     cover: { unit: commonUnits.cover, key: "cover" },
     title: { unit: commonUnits.mainTitle, key: "title" },
     count: { unit: commonUnits.percentage(isMobile), key: "count" },
-    total: { unit: commonUnits.percentage(isMobile), key: "total" },
+    total: { unit: commonUnits.time(isMobile), key: "total" },
   } as const;
 }

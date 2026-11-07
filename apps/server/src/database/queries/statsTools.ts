@@ -135,14 +135,8 @@ export const getTrackSumType = (user: User, idField = "$track.duration_ms") => {
   return 1;
 };
 
-export function getTrackSortType(user: User) {
-  if (user.settings.metricUsed === "number") {
-    return "count";
-  }
-  if (user.settings.metricUsed === "duration") {
-    return "duration_ms";
-  }
-  return "duration_ms";
+export function getTrackSortType(metric: User["settings"]["metricUsed"]) {
+  return metric === "number" ? "count" : "duration_ms";
 }
 
 export const lightTrackLookupPipeline = (idField = "id") => ({

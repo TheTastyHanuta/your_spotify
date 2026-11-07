@@ -281,36 +281,56 @@ const intervalPerSchemaNbOffset = z.object({
   offset: z.preprocess(toNumber, z.number().min(0).default(0)),
 });
 
+// The top lists can be sorted another way than the user's setting
+const topSchema = intervalPerSchemaNbOffset.extend({
+  sort: z.enum(["number", "duration"]).optional(),
+});
+
 router.get("/top/songs", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end, nb, offset } = validate(
-    req.query,
-    intervalPerSchemaNbOffset,
-  );
+  const { start, end, nb, offset, sort } = validate(req.query, topSchema);
 
-  const result = await getBest(ItemType.track, user, start, end, nb, offset);
+  const result = await getBest(
+    ItemType.track,
+    user,
+    start,
+    end,
+    nb,
+    offset,
+    sort,
+  );
   res.status(200).send(result);
 });
 
 router.get("/top/artists", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end, nb, offset } = validate(
-    req.query,
-    intervalPerSchemaNbOffset,
-  );
+  const { start, end, nb, offset, sort } = validate(req.query, topSchema);
 
-  const result = await getBest(ItemType.artist, user, start, end, nb, offset);
+  const result = await getBest(
+    ItemType.artist,
+    user,
+    start,
+    end,
+    nb,
+    offset,
+    sort,
+  );
   res.status(200).send(result);
 });
 
 router.get("/top/albums", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
-  const { start, end, nb, offset } = validate(
-    req.query,
-    intervalPerSchemaNbOffset,
-  );
+  const { start, end, nb, offset, sort } = validate(req.query, topSchema);
 
-  const result = await getBest(ItemType.album, user, start, end, nb, offset);
+  const result = await getBest(
+    ItemType.album,
+    user,
+    start,
+    end,
+    nb,
+    offset,
+    sort,
+  );
   res.status(200).send(result);
 });
 
@@ -449,6 +469,7 @@ const createPlaylistFromTop = z.object({
     ),
   }),
   nb: z.number(),
+  sort: z.enum(["number", "duration"]).optional(),
 });
 
 const createPlaylistFromAffinity = z.object({
@@ -503,6 +524,7 @@ router.post("/playlist/create", logged, withHttpClient, async (req, res) => {
       intervalData.end,
       nb,
       0,
+      body.sort,
     );
     spotifyIds = items.map((item) => item.track.id);
     if (!playlistName) {
