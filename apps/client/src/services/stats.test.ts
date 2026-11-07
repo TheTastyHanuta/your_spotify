@@ -13,6 +13,12 @@ describe("getPercentMore", () => {
     expect(getPercentMore(10, 10)).toBe(0);
   });
 
+  test("whole percentages come out whole", () => {
+    expect(getPercentMore(100, 120)).toBe(20);
+    expect(getPercentMore(100, 90)).toBe(-10);
+    expect(getPercentMore(50, 57)).toBe(14);
+  });
+
   test("from or to nothing is a full 100%", () => {
     expect(getPercentMore(0, 5)).toBe(100);
     expect(getPercentMore(5, 0)).toBe(-100);
