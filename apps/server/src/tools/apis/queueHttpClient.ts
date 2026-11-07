@@ -231,7 +231,15 @@ export class QueuedHttpClient {
       return;
     }
 
-    const next = this.dequeueNext();
+    let next = this.dequeueNext();
+    // Sending requests during the ban would only collect more 429s. They fail
+    // unsent, so all at once: the delay between requests is for sent ones.
+    while (next && Date.now() < this.queueState.rateLimitedUntil) {
+      next.reject(
+        new RateLimitedError(new Date(this.queueState.rateLimitedUntil)),
+      );
+      next = this.dequeueNext();
+    }
     if (!next) {
       return;
     }
@@ -253,11 +261,6 @@ export class QueuedHttpClient {
   }
 
   private async execute<T = any>(queueItem: QueueItem<T>) {
-    // Sending requests during the ban would only collect more 429s
-    if (Date.now() < this.queueState.rateLimitedUntil) {
-      throw new RateLimitedError(new Date(this.queueState.rateLimitedUntil));
-    }
-
     const url = new URL(queueItem.config.url);
 
     if (queueItem.config.params) {

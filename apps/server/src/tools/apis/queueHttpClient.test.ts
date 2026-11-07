@@ -420,6 +420,34 @@ describe("bans and an exhausted quota", () => {
     });
   });
 
+  // With 30 requests waiting, the last one would otherwise fail after a minute
+  test("requests waiting when a ban starts fail at once, without the delay between requests", async () => {
+    const { client, fetchMock } = setup([tooMany("3600")], 2000);
+    let failed = 0;
+    const requests = ["/banned", "/a", "/b", "/c"].map((path) =>
+      settle(client.get(path)).then((result) => {
+        failed += result.error instanceof RateLimitedError ? 1 : 0;
+        return result;
+      }),
+    );
+
+    // The banned request was sent, so the delay still follows it
+    await advance(1999);
+    expect(failed).toBe(1);
+    await advance(1);
+    expect(failed).toBe(4);
+
+    // Requests made later in the ban fail at once too
+    const later = ["/d", "/e"].map((path) => settle(client.get(path)));
+    await advance();
+    expect((await Promise.all(later)).map((r) => r.error)).toEqual([
+      expect.any(RateLimitedError),
+      expect.any(RateLimitedError),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await Promise.all(requests);
+  });
+
   test("QUOTA_EXCEEDED blocks for at least a minute, even with a short Retry-After", async () => {
     const { client, factory, outcomes } = setup([tooMany("1", QUOTA_BODY)]);
     const until = new Date(START + 60_000);
