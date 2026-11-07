@@ -1,6 +1,4 @@
-import assert from "node:assert/strict";
-
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { canonicalizeSpotifyTracks } from "./canonicalTracks";
 
@@ -18,7 +16,7 @@ const run = (spotifyTracks: Args[0], storedTracks: Args[1]) => {
 };
 
 test("a new recording is stored as it is, no version", () => {
-  assert.deepEqual(run([played("a", "X")], []), {
+  expect(run([played("a", "X")], [])).toStrictEqual({
     canonical: { a: "a" },
     missing: ["a"],
     versions: {},
@@ -26,7 +24,7 @@ test("a new recording is stored as it is, no version", () => {
 });
 
 test("played again: the stored track, nothing new", () => {
-  assert.deepEqual(run([played("a", "X")], [{ id: "a", isrc: "X" }]), {
+  expect(run([played("a", "X")], [{ id: "a", isrc: "X" }])).toStrictEqual({
     canonical: { a: "a" },
     missing: [],
     versions: {},
@@ -34,7 +32,9 @@ test("played again: the stored track, nothing new", () => {
 });
 
 test("another version of a stored recording: merged into it and kept as version", () => {
-  assert.deepEqual(run([played("album", "X")], [{ id: "single", isrc: "X" }]), {
+  expect(
+    run([played("album", "X")], [{ id: "single", isrc: "X" }]),
+  ).toStrictEqual({
     canonical: { album: "single" },
     missing: [],
     versions: { album: "single" },
@@ -42,7 +42,7 @@ test("another version of a stored recording: merged into it and kept as version"
 });
 
 test("a version already stored as a duplicate is not added again", () => {
-  assert.deepEqual(
+  expect(
     run(
       [played("album", "X")],
       [
@@ -50,20 +50,22 @@ test("a version already stored as a duplicate is not added again", () => {
         { id: "album", mergedInto: "single" },
       ],
     ),
-    { canonical: { album: "single" }, missing: [], versions: {} },
-  );
+  ).toStrictEqual({
+    canonical: { album: "single" },
+    missing: [],
+    versions: {},
+  });
 });
 
 // It is never turned into a duplicate here
 test("a stored track without ISRC that now matches another one keeps its own entry", () => {
-  assert.deepEqual(
+  expect(
     run([played("old", "X")], [{ id: "single", isrc: "X" }, { id: "old" }]),
-    { canonical: { old: "single" }, missing: [], versions: {} },
-  );
+  ).toStrictEqual({ canonical: { old: "single" }, missing: [], versions: {} });
 });
 
 test("two new versions in one batch: the first is stored, the second merged into it", () => {
-  assert.deepEqual(run([played("a", "X"), played("b", "X")], []), {
+  expect(run([played("a", "X"), played("b", "X")], [])).toStrictEqual({
     canonical: { a: "a", b: "a" },
     missing: ["a"],
     versions: { b: "a" },
@@ -71,7 +73,7 @@ test("two new versions in one batch: the first is stored, the second merged into
 });
 
 test("the same new track twice in one batch is no version of itself", () => {
-  assert.deepEqual(run([played("a", "X"), played("a", "X")], []), {
+  expect(run([played("a", "X"), played("a", "X")], [])).toStrictEqual({
     canonical: { a: "a" },
     missing: ["a"],
     versions: {},
@@ -79,7 +81,7 @@ test("the same new track twice in one batch is no version of itself", () => {
 });
 
 test("without an ISRC nothing can be merged", () => {
-  assert.deepEqual(run([played("b")], [{ id: "a", isrc: "X" }]), {
+  expect(run([played("b")], [{ id: "a", isrc: "X" }])).toStrictEqual({
     canonical: { b: "b" },
     missing: ["b"],
     versions: {},
@@ -87,15 +89,14 @@ test("without an ISRC nothing can be merged", () => {
 });
 
 test("local files have no id", () => {
-  assert.deepEqual(
+  expect(
     run([{ id: null, external_ids: {} } as unknown as Args[0][number]], []),
-    { canonical: {}, missing: [], versions: {} },
-  );
+  ).toStrictEqual({ canonical: {}, missing: [], versions: {} });
 });
 
 // An import reuses the stored version, which has no ISRC
 test("a version of a primary that was merged again later reaches the new primary", () => {
-  assert.deepEqual(
+  expect(
     run(
       [played("v")],
       [
@@ -104,12 +105,11 @@ test("a version of a primary that was merged again later reaches the new primary
         { id: "q", isrc: "X" },
       ],
     ),
-    { canonical: { v: "q" }, missing: [], versions: {} },
-  );
+  ).toStrictEqual({ canonical: { v: "q" }, missing: [], versions: {} });
 });
 
 test("a chain whose end is not stored stops at the last stored track", () => {
-  assert.deepEqual(
+  expect(
     run(
       [played("v")],
       [
@@ -117,12 +117,11 @@ test("a chain whose end is not stored stops at the last stored track", () => {
         { id: "p", mergedInto: "gone" },
       ],
     ),
-    { canonical: { v: "p" }, missing: [], versions: {} },
-  );
+  ).toStrictEqual({ canonical: { v: "p" }, missing: [], versions: {} });
 });
 
 test("a loop of merged tracks ends instead of running forever", () => {
-  assert.notEqual(
+  expect(
     run(
       [played("a")],
       [
@@ -130,6 +129,5 @@ test("a loop of merged tracks ends instead of running forever", () => {
         { id: "b", mergedInto: "a" },
       ],
     ).canonical.a,
-    undefined,
-  );
+  ).not.toBe(undefined);
 });

@@ -1,6 +1,4 @@
-import assert from "node:assert/strict";
-
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { longestSessions } from "./sessions";
 
@@ -19,22 +17,20 @@ test("a single 60-minute song beats five short sessions: the last song counts", 
     ]),
   ];
   const top = longestSessions(plays, 10 * minute, 5);
-  assert.equal(top[0]!.sessionLength, 60 * minute);
-  assert.equal(top[0]!.plays.length, 1);
-  assert.equal(top.length, 5);
+  expect(top[0]!.sessionLength).toBe(60 * minute);
+  expect(top[0]!.plays).toHaveLength(1);
+  expect(top).toHaveLength(5);
 });
 
 test("a pause up to the gap keeps the session going, a longer one splits it", () => {
-  assert.equal(
-    longestSessions([play(0, 3), play(13, 3)], 10 * minute, 5).length,
-    1,
-  );
-  assert.equal(
-    longestSessions([play(0, 3), play(14, 3)], 10 * minute, 5).length,
-    2,
-  );
+  expect(
+    longestSessions([play(0, 3), play(13, 3)], 10 * minute, 5),
+  ).toHaveLength(1);
+  expect(
+    longestSessions([play(0, 3), play(14, 3)], 10 * minute, 5),
+  ).toHaveLength(2);
 });
 
 test("no plays, no sessions", () => {
-  assert.deepEqual(longestSessions([], 10 * minute, 5), []);
+  expect(longestSessions([], 10 * minute, 5)).toStrictEqual([]);
 });

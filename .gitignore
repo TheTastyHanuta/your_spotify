@@ -13,3 +13,6 @@ docker-compose-personal.yml
 db_data*
 your_spotify_db
 *.gz
+
+# Test coverage reports (pnpm coverage)
+coverage/

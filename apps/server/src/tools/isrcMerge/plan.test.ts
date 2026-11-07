@@ -1,6 +1,4 @@
-import assert from "node:assert/strict";
-
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import { planMerge } from "./plan";
 
@@ -12,27 +10,25 @@ const track = (id: string, isrc: string, plays: number, createdAtMs = 0) => ({
 });
 
 test("a recording with a single track is not a duplicate", () => {
-  assert.deepEqual(planMerge([track("a", "X", 5)]), []);
+  expect(planMerge([track("a", "X", 5)])).toStrictEqual([]);
 });
 
 test("the track with the most plays stays", () => {
-  assert.deepEqual(planMerge([track("b", "X", 20), track("a", "X", 300)]), [
+  expect(planMerge([track("b", "X", 20), track("a", "X", 300)])).toStrictEqual([
     { isrc: "X", primaryId: "a", secondaryIds: ["b"] },
   ]);
 });
 
 test("equal plays: the oldest track stays", () => {
-  assert.deepEqual(
+  expect(
     planMerge([track("a", "X", 10, 2000), track("b", "X", 10, 1000)]),
-    [{ isrc: "X", primaryId: "b", secondaryIds: ["a"] }],
-  );
+  ).toStrictEqual([{ isrc: "X", primaryId: "b", secondaryIds: ["a"] }]);
 });
 
 test("equal plays and age: the smallest id stays", () => {
-  assert.deepEqual(
+  expect(
     planMerge([track("b", "X", 10, 1000), track("a", "X", 10, 1000)]),
-    [{ isrc: "X", primaryId: "a", secondaryIds: ["b"] }],
-  );
+  ).toStrictEqual([{ isrc: "X", primaryId: "a", secondaryIds: ["b"] }]);
 });
 
 test("three versions make one group with two secondaries", () => {
@@ -41,12 +37,12 @@ test("three versions make one group with two secondaries", () => {
     track("b", "X", 50),
     track("c", "X", 3),
   ]);
-  assert.equal(group!.primaryId, "b");
-  assert.deepEqual([...group!.secondaryIds].sort(), ["a", "c"]);
+  expect(group!.primaryId).toBe("b");
+  expect([...group!.secondaryIds].sort()).toStrictEqual(["a", "c"]);
 });
 
 test("groups come ordered by the plays of the track that stays", () => {
-  assert.deepEqual(
+  expect(
     planMerge([
       track("a", "X", 5),
       track("b", "X", 1),
@@ -54,6 +50,5 @@ test("groups come ordered by the plays of the track that stays", () => {
       track("d", "Y", 2),
       track("e", "Z", 1),
     ]).map((g) => g.isrc),
-    ["Y", "X"],
-  );
+  ).toStrictEqual(["Y", "X"]);
 });
