@@ -3,6 +3,7 @@ import {
   OutcomeObserver,
   RequestOutcome,
 } from "../../tools/apis/queueHttpClient";
+import { DAY_MS } from "../../tools/date";
 import { logger } from "../../tools/logger";
 import {
   budgetUsage,
@@ -161,7 +162,7 @@ export const getSpotifyUsage = async (
 ) => {
   const now = new Date();
   const hours = await SpotifyUsageModel.find(
-    { hour: { $gte: new Date(now.getTime() - 91 * 24 * HOUR_MS) } },
+    { hour: { $gte: new Date(now.getTime() - 91 * DAY_MS) } },
     { _id: 0, hour: 1, sources: 1, outcomes: 1 },
   ).lean();
   const [budget, limits] = await Promise.all([

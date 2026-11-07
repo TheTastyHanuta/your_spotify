@@ -2,6 +2,8 @@
 // the hook, a later one after a long break a comeback. Artists get the same
 // with their own rules (findDives): their first phase is a deep dive.
 
+import { dayIn, dayNumber, dayOfNumber } from "../../tools/date";
+
 export interface PlaysOnDay {
   // "YYYY-MM-DD" in the stats timezone
   day: string;
@@ -116,27 +118,12 @@ const artistRules = (weekly: number): Rules => {
   };
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// "YYYY-MM-DD" of a date in the timezone
-export const dayIn = (timezone: string) => {
-  const format = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return (date: Date) => format.format(date);
-};
-
 // The first and last day of a period. Its end is exclusive: a period ending
 // at local midnight (a finished year) leaves that day out.
 export const periodDays = (start: Date, end: Date, timezone: string) => {
   const day = dayIn(timezone);
   return [day(start), day(new Date(end.getTime() - 1))] as const;
 };
-const toNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / DAY_MS;
-const toDay = (n: number) => new Date(n * DAY_MS).toISOString().slice(0, 10);
 // 1970-01-01 was a Thursday
 const mondayOf = (n: number) => n - ((n + 3) % 7);
 
@@ -159,10 +146,10 @@ export const listeningOf = (
   allDays: PlaysOnDay[],
   today: string,
 ): Listening => {
-  const days = allDays.map((d) => ({ n: toNumber(d.day), plays: d.plays }));
+  const days = allDays.map((d) => ({ n: dayNumber(d.day), plays: d.plays }));
   const start = days.reduce((min, d) => Math.min(min, d.n), Infinity);
   const plays = days.reduce((sum, d) => sum + d.plays, 0);
-  const weeks = Math.max(1, (toNumber(today) - start + 1) / 7);
+  const weeks = Math.max(1, (dayNumber(today) - start + 1) / 7);
   return { days, start, weekly: plays / weeks };
 };
 
@@ -182,9 +169,9 @@ function phasesOf(
   if (days.length === 0) {
     return null;
   }
-  const numbers = days.map((d) => toNumber(d.day));
+  const numbers = days.map((d) => dayNumber(d.day));
   const first = mondayOf(numbers[0]!);
-  const last = toNumber(today);
+  const last = dayNumber(today);
   const weekOf = (n: number) => Math.floor((n - first) / 7);
   const weeks: number[] = Array.from(
     { length: Math.max(weekOf(last), weekOf(numbers.at(-1)!)) + 1 },
@@ -249,17 +236,17 @@ function phasesOf(
   const hook = phases[0];
   let yearLater: boolean | null = null;
   if (hook) {
-    const from = toNumber(hook.start) + 365;
+    const from = dayNumber(hook.start) + 365;
     yearLater =
       from + YEAR_LATER_DAYS - 1 > last
         ? null
         : numbers.some((n) => n >= from && n < from + YEAR_LATER_DAYS);
   }
   return {
-    firstWeek: toDay(first),
+    firstWeek: dayOfNumber(first),
     weeks,
     phases,
-    knownDays: hook ? toNumber(hook.start) - numbers[0]! : 0,
+    knownDays: hook ? dayNumber(hook.start) - numbers[0]! : 0,
     yearLater,
   };
 }

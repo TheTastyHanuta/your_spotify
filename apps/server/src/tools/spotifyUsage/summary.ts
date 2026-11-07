@@ -1,4 +1,5 @@
 import type { RequestOutcome } from "../apis/queueHttpClient";
+import { dayIn, dayNumber, dayOfNumber } from "../date";
 
 // What made a Spotify request
 export const USAGE_SOURCES = [
@@ -111,29 +112,19 @@ export function summarize(
 
   // Days in the user's time zone. shortcut: hours are UTC hours, so in a
   // zone with a half-hour offset a day takes half an hour of its neighbour.
-  const dayOf = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const dayOf = dayIn(timeZone);
   const perDay = new Map<string, { total: number; limited: number }>();
   for (const h of hours) {
-    const key = dayOf.format(h.hour);
+    const key = dayOf(h.hour);
     const o = h.outcomes ?? {};
     const day = perDay.get(key) ?? { total: 0, limited: 0 };
     day.total += total(o);
     day.limited += (o.retried429 ?? 0) + (o.ban ?? 0) + (o.quota ?? 0);
     perDay.set(key, day);
   }
-  const [y, m, d] = dayOf.format(now).split("-").map(Number) as [
-    number,
-    number,
-    number,
-  ];
   // Calendar arithmetic on the local date, independent of the zone
-  const dayBefore = (n: number) =>
-    new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+  const today = dayNumber(dayOf(now));
+  const dayBefore = (n: number) => dayOfNumber(today - n);
   const dayEntry = (n: number) => {
     const day = dayBefore(n);
     return { day, ...(perDay.get(day) ?? { total: 0, limited: 0 }) };

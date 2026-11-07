@@ -12,6 +12,7 @@ import {
 } from "../database/queries/isrcMerge";
 import { getBudgetUsage } from "../database/queries/spotifyUsage";
 import { slowdownMsOf } from "../tools/apis/spotifyApi";
+import { DAY_MS } from "../tools/date";
 import { isAnyImportRunning } from "../tools/importers/importer";
 import { logger } from "../tools/logger";
 import { admin, logged } from "../tools/middleware";
@@ -34,7 +35,7 @@ router.get("/", logged, admin, async (_req, res) => {
     Math.round(
       Math.min(
         usage.budget - (usage.used - usage.background),
-        (24 * 60 * 60 * 1000) / slowdownMsOf(job ?? {}),
+        DAY_MS / slowdownMsOf(job ?? {}),
       ),
     ),
   );

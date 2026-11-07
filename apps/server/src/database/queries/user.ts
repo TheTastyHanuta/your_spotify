@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 
+import { DAY_MS } from "../../tools/date";
 import { chainEnds, unusedTracksToDelete } from "../../tools/orphanTracks";
 import {
   AlbumModel,
@@ -37,7 +38,7 @@ export const createUser = (
     refreshToken: "",
     expiresIn: 0,
     // Set last timestamp to yesterday so that we already have a pull of tracks
-    lastTimestamp: Date.now() - 1000 * 60 * 60 * 24,
+    lastTimestamp: Date.now() - DAY_MS,
     settings: {
       historyLine: false,
       preferredStatsPeriod: "month",

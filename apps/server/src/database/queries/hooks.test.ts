@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { describe, test } from "vitest";
 
 import {
-  dayIn,
   findDives,
   findPhases,
   listeningOf,
@@ -135,14 +134,7 @@ describe("songs", () => {
   });
 });
 
-describe("days", () => {
-  test("days are the stats timezone's: 23:30 UTC is already the next day in Berlin", () => {
-    assert.equal(
-      dayIn("Europe/Berlin")(new Date("2024-03-09T23:30:00Z")),
-      "2024-03-10",
-    );
-  });
-
+describe("periods", () => {
   // Recap 2024 ends on 1 Jan 2025 00:00 in Berlin
   test("a period ending at local midnight leaves that day out", () => {
     assert.deepEqual(

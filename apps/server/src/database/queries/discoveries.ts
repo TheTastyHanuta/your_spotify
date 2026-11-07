@@ -1,7 +1,7 @@
+import { DAY_MS } from "../../tools/date";
 import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
 import { User } from "../schemas/user";
-import { DAY_MS } from "./insights";
 import {
   getDateParts,
   getGroupingByTimeSplit,
