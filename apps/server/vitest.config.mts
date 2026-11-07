@@ -11,6 +11,8 @@ export default defineConfig({
       SPOTIFY_SECRET: "test",
       // Vitest's own "test" is no value env.ts accepts
       NODE_ENV: "development",
+      // Tests trigger warnings on purpose (rate limits, for instance)
+      LOG_LEVEL: "error",
     },
   },
 });
