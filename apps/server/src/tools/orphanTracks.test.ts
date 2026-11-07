@@ -1,6 +1,4 @@
-import assert from "node:assert/strict";
-
-import { test } from "vitest";
+import { expect, test } from "vitest";
 
 import {
   chainEnds,
@@ -11,30 +9,30 @@ import {
 const ids = (tracks: UnusedTrack[]) => tracks.map((track) => track.id).sort();
 
 test("a track without listens that is no duplicate goes", () => {
-  assert.deepEqual(ids(unusedTracksToDelete([{ id: "a" }], new Set())), ["a"]);
+  expect(ids(unusedTracksToDelete([{ id: "a" }], new Set()))).toStrictEqual([
+    "a",
+  ]);
 });
 
 test("a duplicate of a primary with listens stays", () => {
-  assert.deepEqual(
+  expect(
     ids(unusedTracksToDelete([{ id: "d", mergedInto: "p" }], new Set(["p"]))),
-    [],
-  );
+  ).toStrictEqual([]);
 });
 
 test("a duplicate of a primary that is deleted goes with it", () => {
-  assert.deepEqual(
+  expect(
     ids(
       unusedTracksToDelete(
         [{ id: "p" }, { id: "d", mergedInto: "p" }],
         new Set(),
       ),
     ),
-    ["d", "p"],
-  );
+  ).toStrictEqual(["d", "p"]);
 });
 
 test("a chain d1 → d2 → p stays while p is kept", () => {
-  assert.deepEqual(
+  expect(
     ids(
       unusedTracksToDelete(
         [
@@ -44,19 +42,17 @@ test("a chain d1 → d2 → p stays while p is kept", () => {
         new Set(["p"]),
       ),
     ),
-    [],
-  );
+  ).toStrictEqual([]);
 });
 
 test("a duplicate whose primary is not stored at all goes", () => {
-  assert.deepEqual(
+  expect(
     ids(unusedTracksToDelete([{ id: "d", mergedInto: "gone" }], new Set())),
-    ["d"],
-  );
+  ).toStrictEqual(["d"]);
 });
 
 test("a loop of duplicates ends and goes", () => {
-  assert.deepEqual(
+  expect(
     ids(
       unusedTracksToDelete(
         [
@@ -66,18 +62,16 @@ test("a loop of duplicates ends and goes", () => {
         new Set(),
       ),
     ),
-    ["a", "b"],
-  );
+  ).toStrictEqual(["a", "b"]);
 });
 
 test("only chain ends outside the unused tracks are looked up", () => {
-  assert.deepEqual(
+  expect(
     chainEnds([
       { id: "d1", mergedInto: "d2" },
       { id: "d2", mergedInto: "p" },
       { id: "d3", mergedInto: "p" },
       { id: "x" },
     ]),
-    ["p"],
-  );
+  ).toStrictEqual(["p"]);
 });
