@@ -9,6 +9,7 @@ import { InfosSchema } from "./schemas/info";
 import { IsrcLookupSchema, IsrcMergeJobSchema } from "./schemas/isrcMerge";
 import { MigrationSchema } from "./schemas/migration";
 import { PrivateDataSchema } from "./schemas/privateData";
+import { SpotifyLimitEventSchema } from "./schemas/spotifyLimitEvent";
 import { SpotifyUsageSchema } from "./schemas/spotifyUsage";
 import { TrackSchema } from "./schemas/track";
 import { UserSchema } from "./schemas/user";
@@ -32,3 +33,7 @@ export const PrivateDataModel = model("PrivateData", PrivateDataSchema);
 export const IsrcLookupModel = model("IsrcLookup", IsrcLookupSchema);
 export const IsrcMergeJobModel = model("IsrcMergeJob", IsrcMergeJobSchema);
 export const SpotifyUsageModel = model("SpotifyUsage", SpotifyUsageSchema);
+export const SpotifyLimitEventModel = model(
+  "SpotifyLimitEvent",
+  SpotifyLimitEventSchema,
+);

@@ -9,7 +9,9 @@
     "dev": "concurrently \"rsbuild build -w\" \"nodemon build/index.js\"",
     "migrate": "node ./build/index.js --migrate",
     "lint": "oxlint -c ../dev/.oxlintrc.json . && oxfmt -c ../dev/.oxfmtrc.json --check .",
-    "lint:fix": "oxlint -c ../dev/.oxlintrc.json --fix . && oxfmt -c ../dev/.oxfmtrc.json ."
+    "lint:fix": "oxlint -c ../dev/.oxlintrc.json --fix . && oxfmt -c ../dev/.oxfmtrc.json .",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
@@ -34,10 +36,12 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^26.0.0",
+    "@vitest/coverage-v8": "catalog:",
     "@your_spotify/dev": "workspace:*",
     "concurrently": "^10.0.6",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

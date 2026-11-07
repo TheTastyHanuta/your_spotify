@@ -1,14 +1,21 @@
 import { GridRowWrapper } from "../../../../components/Grid";
 import Text from "../../../../components/Text";
 import { useMobile } from "../../../../services/hooks/hooks";
+import { sortHeaders, TopSort } from "../../measure";
 import { useTrackGrid } from "./TrackGrid";
 
 import s from "./index.module.css";
 
-export default function TrackHeader() {
+interface TrackHeaderProps {
+  sort: TopSort;
+  setSort: (sort: TopSort) => void;
+}
+
+export default function TrackHeader({ sort, setSort }: TrackHeaderProps) {
   const [isMobile, isTablet] = useMobile();
 
   const trackGrid = useTrackGrid();
+  const sorts = sortHeaders(sort, setSort, isMobile);
 
   const columns = [
     { ...trackGrid.rank, node: <div /> },
@@ -37,26 +44,8 @@ export default function TrackHeader() {
         </Text>
       ),
     },
-    {
-      ...trackGrid.count,
-      node: (
-        <div className={s.count}>
-          <Text element="div" size="normal">
-            Plays ↓
-          </Text>
-        </div>
-      ),
-    },
-    {
-      ...trackGrid.total,
-      node: !isMobile && (
-        <div className={s.total}>
-          <Text element="div" size="normal">
-            Time
-          </Text>
-        </div>
-      ),
-    },
+    { ...trackGrid.count, node: sorts.count },
+    { ...trackGrid.total, node: sorts.total },
     {
       ...trackGrid.options,
       node: !isMobile && <div aria-label="option-menu" />,

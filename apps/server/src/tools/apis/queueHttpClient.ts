@@ -15,10 +15,19 @@ export type RequestOutcome =
   | "error"
   | "clientError";
 
+// What Spotify said with a 429. until is set for bans and quota blocks,
+// gaveUp when the retries of a short 429 ran out.
+export interface LimitDetails {
+  until?: Date;
+  retryAfter: string | null;
+  body: string;
+  gaveUp?: boolean;
+}
+
 export type OutcomeObserver = (
   outcome: RequestOutcome,
   request: { url: string; source?: string; sentAt: Date },
-  rateLimitedUntil?: Date,
+  limit?: LimitDetails,
 ) => void;
 
 // Names what is making the requests started inside run(), for the observer
@@ -222,7 +231,15 @@ export class QueuedHttpClient {
       return;
     }
 
-    const next = this.dequeueNext();
+    let next = this.dequeueNext();
+    // Sending requests during the ban would only collect more 429s. They fail
+    // unsent, so all at once: the delay between requests is for sent ones.
+    while (next && Date.now() < this.queueState.rateLimitedUntil) {
+      next.reject(
+        new RateLimitedError(new Date(this.queueState.rateLimitedUntil)),
+      );
+      next = this.dequeueNext();
+    }
     if (!next) {
       return;
     }
@@ -244,11 +261,6 @@ export class QueuedHttpClient {
   }
 
   private async execute<T = any>(queueItem: QueueItem<T>) {
-    // Sending requests during the ban would only collect more 429s
-    if (Date.now() < this.queueState.rateLimitedUntil) {
-      throw new RateLimitedError(new Date(this.queueState.rateLimitedUntil));
-    }
-
     const url = new URL(queueItem.config.url);
 
     if (queueItem.config.params) {
@@ -295,6 +307,10 @@ export class QueuedHttpClient {
       }
 
       const retryAfterMs = this.parseRetryAfterHeader(response);
+      const limit = {
+        retryAfter: response.headers.get("retry-after"),
+        body: text,
+      };
       // An exhausted quota does not come back within a few retries, and
       // every retry is counted against it again.
       const quotaExceeded = isQuotaExceeded(text);
@@ -311,17 +327,21 @@ export class QueuedHttpClient {
             ? `The request quota of this Spotify app is used up until ${until.toISOString()}, requests fail until then instead of waiting`
             : `Rate limited by ${url.host} until ${until.toISOString()}, requests fail until then instead of waiting`,
         );
-        this.report(quotaExceeded ? "quota" : "ban", queueItem, sentAt, until);
+        this.report(quotaExceeded ? "quota" : "ban", queueItem, sentAt, {
+          ...limit,
+          until,
+        });
         throw new RateLimitedError(until);
       }
 
-      this.report("retried429", queueItem, sentAt);
       const maxAttempts =
         queueItem.config.retry429MaxAttempts ?? DEFAULT_RETRY_429_MAX_ATTEMPTS;
+      const gaveUp = queueItem.retry429AttemptCount >= maxAttempts;
+      this.report("retried429", queueItem, sentAt, { ...limit, gaveUp });
 
       // Spotify keeps limiting, so the caller pauses like on a ban (imports
       // and ISRC lookups slow down) instead of asking again right away
-      if (queueItem.retry429AttemptCount >= maxAttempts) {
+      if (gaveUp) {
         logger.warn(
           `Still rate limited by ${url.host} after ${maxAttempts} retries, the request fails`,
         );
@@ -352,13 +372,13 @@ export class QueuedHttpClient {
     outcome: RequestOutcome,
     queueItem: QueueItem<any>,
     sentAt: Date,
-    rateLimitedUntil?: Date,
+    limit?: LimitDetails,
   ) {
     try {
       this.onOutcome?.(
         outcome,
         { url: queueItem.config.url, source: queueItem.source, sentAt },
-        rateLimitedUntil,
+        limit,
       );
     } catch (e) {
       logger.warn("Could not count a request", e);

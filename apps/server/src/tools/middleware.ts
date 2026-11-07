@@ -59,6 +59,13 @@ export const validate = <
   }
 };
 
+// Past half of its lifetime the session is renewed, so a device that is used
+// regularly never has to go through Spotify again. iat and exp in seconds.
+export const needsRenewal = (
+  { iat, exp }: { iat?: number; exp?: number },
+  nowMs = Date.now(),
+) => !!iat && !!exp && nowMs / 1000 > iat + (exp - iat) / 2;
+
 // Behind an HTTPS reverse proxy req.secure is false (no "trust proxy"), so the
 // public API URL decides whether cookies need the Secure flag.
 export const needsSecureCookies = (req: Request) =>
@@ -129,10 +136,7 @@ const baselogged = async (
     if (!user) {
       return null;
     }
-    // Past half of its lifetime the session is renewed, so a device that is
-    // used regularly never has to go through Spotify again.
-    const { iat, exp } = jwtUser;
-    if (iat && exp && Date.now() / 1000 > iat + (exp - iat) / 2) {
+    if (needsRenewal(jwtUser)) {
       storeSessionCookie(req, res, jwtUser.userId, privateData.jwtPrivateKey);
     }
     return user;

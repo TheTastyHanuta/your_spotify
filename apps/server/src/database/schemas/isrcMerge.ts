@@ -16,7 +16,7 @@ export const IsrcLookupSchema = new Schema<IsrcLookup>({
   fetchedAt: { type: Date, required: true },
 });
 
-export type IsrcMergeStoppedReason = "reauth" | "user-missing";
+export type IsrcMergeStoppedReason = "reauth" | "user-missing" | "paused";
 
 export interface IsrcMergeApplyResult {
   at: Date;
@@ -31,6 +31,9 @@ export interface IsrcMergeJob {
   // Extra wait before each Spotify request, raised after every ban
   slowdownMs?: number;
   rateLimitedUntil?: Date;
+  // rateLimitedUntil is the end of a wait for the daily request budget, not
+  // of a Spotify ban
+  budgetWait?: boolean;
   stoppedReason?: IsrcMergeStoppedReason;
   applying: boolean;
   lastApply?: IsrcMergeApplyResult;
@@ -41,7 +44,8 @@ export const IsrcMergeJobSchema = new Schema<IsrcMergeJob>({
   startedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   slowdownMs: Number,
   rateLimitedUntil: Date,
-  stoppedReason: { type: String, enum: ["reauth", "user-missing"] },
+  budgetWait: Boolean,
+  stoppedReason: { type: String, enum: ["reauth", "user-missing", "paused"] },
   applying: { type: Boolean, default: false },
   lastApply: new Schema<IsrcMergeApplyResult>(
     { at: Date, tracksMerged: Number, listensRepointed: Number },

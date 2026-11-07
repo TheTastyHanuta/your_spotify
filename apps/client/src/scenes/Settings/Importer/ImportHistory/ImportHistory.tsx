@@ -8,6 +8,7 @@ import { DateFormatter } from "../../../../services/date";
 import { selectImportStates } from "../../../../services/redux/modules/import/selector";
 import {
   cleanupImport,
+  pauseImport,
   startImportPrivacy,
 } from "../../../../services/redux/modules/import/thunk";
 import { ImporterStateStatus } from "../../../../services/redux/modules/import/types";
@@ -22,7 +23,8 @@ const statusToString: Record<ImporterStateStatus, string> = {
   failure: "Failed",
   progress: "In progress",
   success: "Success",
-  waiting: "Paused",
+  waiting: "Waiting for Spotify",
+  paused: "Paused",
 };
 
 export default function ImportHistory() {
@@ -53,7 +55,10 @@ export default function ImportHistory() {
                 {DateFormatter.toDateTime(new Date(st.createdAt))}
               </Text>
               <Text element="div" size="normal" greyed>
-                {st.type} · {statusToString[st.status]}
+                {st.type} ·{" "}
+                {st.status === "waiting" && st.budgetWait
+                  ? "Waiting for the daily request budget"
+                  : statusToString[st.status]}
               </Text>
             </>
           }
@@ -66,7 +71,7 @@ export default function ImportHistory() {
                 {st.status === "waiting" && (
                   <Text className={s.ratelimited} size="small">
                     {st.rateLimitedUntil
-                      ? `Spotify blocks requests until ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
+                      ? `${st.budgetWait ? "Budget frees up around" : "Spotify blocks requests until"} ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
                       : ""}
                     continues on its own
                   </Text>
@@ -74,12 +79,23 @@ export default function ImportHistory() {
               </Text>
               <ThreePoints
                 items={compact([
-                  st.status === "failure"
-                    ? { label: "Retry", onClick: () => onImport(st._id) }
-                    : undefined,
-                  st.status === "failure" || st.status === "waiting"
+                  st.status === "progress" || st.status === "waiting"
                     ? {
-                        label: st.status === "waiting" ? "Cancel" : "Clean up",
+                        label: "Pause",
+                        onClick: () => dispatch(pauseImport(st._id)),
+                      }
+                    : undefined,
+                  st.status === "failure" || st.status === "paused"
+                    ? {
+                        label: st.status === "paused" ? "Resume" : "Retry",
+                        onClick: () => onImport(st._id),
+                      }
+                    : undefined,
+                  st.status === "failure" ||
+                  st.status === "waiting" ||
+                  st.status === "paused"
+                    ? {
+                        label: st.status === "failure" ? "Clean up" : "Cancel",
                         onClick: () => cleanImport(st._id),
                         style: "destructive",
                       }

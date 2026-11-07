@@ -9,6 +9,7 @@ import { useInfiniteScroll } from "../../../services/hooks/scrolling";
 import { getPeriodName } from "../../../services/periodName";
 import { selectRawIntervalDetail } from "../../../services/redux/modules/user/selector";
 import ChartsHero from "../ChartsHero";
+import { heroMeasure, useTopSort } from "../measure";
 import Album from "./Album";
 import AlbumHeader from "./Album/AlbumHeader";
 
@@ -17,9 +18,12 @@ import s from "../index.module.css";
 export default function Albums() {
   const rawInterval = useSelector(selectRawIntervalDetail);
   const { interval } = rawInterval;
+  const [sort, setSort] = useTopSort();
   const { items, hasMore, onNext, dataLength } = useInfiniteScroll(
     interval,
-    api.getBestAlbums,
+    (start, end, nb, offset) => api.getBestAlbums(start, end, nb, offset, sort),
+    undefined,
+    sort,
   );
 
   const top = items[0];
@@ -37,8 +41,7 @@ export default function Albums() {
             meta: (
               <>
                 Your number one {getPeriodName(rawInterval)} · {top.artist.name}{" "}
-                · <span className="num">{top.count.toLocaleString()}</span>{" "}
-                plays
+                · {heroMeasure(sort, top.count, top.duration_ms)}
               </>
             ),
           }
@@ -52,7 +55,7 @@ export default function Albums() {
           hasChildren={items.length > 0}
           loader={<Loader />}>
           <GridWrapper>
-            <AlbumHeader />
+            <AlbumHeader sort={sort} setSort={setSort} />
             {items.map((item, rank) => (
               <Album
                 key={item.album.id}
@@ -69,8 +72,10 @@ export default function Albums() {
                 album={item.album}
                 count={item.count}
                 totalCount={item.total_count}
-                maxCount={top?.count ?? 0}
                 duration={item.duration_ms}
+                totalDuration={item.total_duration_ms}
+                max={(sort === "number" ? top?.count : top?.duration_ms) ?? 0}
+                sort={sort}
               />
             ))}
           </GridWrapper>

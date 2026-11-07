@@ -1,3 +1,4 @@
+import { dayIn, dayNumber } from "../../tools/date";
 import { genresOf } from "../../tools/genres";
 import { Timesplit } from "../../tools/types";
 import { ArtistModel, InfosModel } from "../Models";
@@ -17,8 +18,6 @@ import { getTracks } from "./track";
 // Only aggregation features of MongoDB 4.4 are used here, some instances
 // cannot run a newer MongoDB.
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
-
 export const dayString = (timezone: string) => ({
   $dateToString: { format: "%Y-%m-%d", date: "$played_at", timezone },
 });
@@ -33,9 +32,6 @@ const perDay = (timezone: string) => [
   },
   { $sort: { _id: 1 as const } },
 ];
-
-export const dayNumber = (day: string) =>
-  Date.parse(`${day}T00:00:00Z`) / DAY_MS;
 
 // days: sorted "YYYY-MM-DD" in the user's timezone. The current streak still
 // counts when its last day is yesterday, since today may not be over.
@@ -197,9 +193,7 @@ export const getOverview = async (user: User, start: Date, end: Date) => {
     undefined,
   );
   const now = new Date();
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(
-    end < now ? end : now,
-  );
+  const today = dayIn(timezone)(end < now ? end : now);
 
   return {
     plays: days.reduce((sum, day) => sum + day.plays, 0),

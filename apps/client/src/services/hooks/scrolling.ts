@@ -35,6 +35,8 @@ export function useInfiniteScroll<T>(
     offset: number,
   ) => Promise<{ data: T[] }>,
   filter?: (item: T) => boolean,
+  // Something else the list depends on: a change starts it again, like the interval
+  resetKey?: string,
 ) {
   const [items, setItems] = useState<T[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -112,7 +114,7 @@ export function useInfiniteScroll<T>(
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [interval]);
+  }, [interval, resetKey]);
 
   useEffect(() => {
     if (autoFillCycle === 0 && failedFetches === 0) return;

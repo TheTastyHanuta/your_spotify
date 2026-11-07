@@ -45,6 +45,11 @@
   text-align: right;
 }
 
+.budgetInput {
+  width: 9ch;
+  margin-right: 8px;
+}
+
 .loading {
   padding: 18px 28px;
 }
@@ -54,5 +59,96 @@
   .loading {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+/* Recent rate limits: rows that open on what Spotify answered */
+.limit + .limit {
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.limitHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.limitHead::-webkit-details-marker {
+  display: none;
+}
+
+.limitHead:hover .limitTitle {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.limitHead:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+
+.chevron {
+  color: var(--muted);
+  transition: transform 150ms ease-out;
+}
+
+.limit[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.limitBody {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 20px;
+  margin: 0;
+  padding: 2px 0 14px;
+  font-size: 13px;
+}
+
+.limitBody dt {
+  color: var(--muted);
+}
+
+.limitBody dd {
+  margin: 0;
+}
+
+.code,
+.answer {
+  font-family: var(--font-num);
+  font-size: 12px;
+}
+
+/* Text in the row, not a chip */
+.code {
+  padding: 0;
+  background: none;
+}
+
+.answer {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+/* Labels above their values on phones */
+@media screen and (max-width: 600px) {
+  .limitBody {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .limitBody dd + dt {
+    margin-top: 8px;
   }
 }

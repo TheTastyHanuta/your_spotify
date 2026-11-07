@@ -1,7 +1,7 @@
 import type { RequestOutcome } from "../apis/queueHttpClient";
+import { dayIn, dayNumber, dayOfNumber } from "../date";
 
-// What made a Spotify request. Pure module: node scripts/spotifyUsage.check.mjs
-// imports it without a build.
+// What made a Spotify request
 export const USAGE_SOURCES = [
   "polling",
   "import",
@@ -113,29 +113,19 @@ export function summarize(
 
   // Days in the user's time zone. shortcut: hours are UTC hours, so in a
   // zone with a half-hour offset a day takes half an hour of its neighbour.
-  const dayOf = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const dayOf = dayIn(timeZone);
   const perDay = new Map<string, { total: number; limited: number }>();
   for (const h of hours) {
-    const key = dayOf.format(h.hour);
+    const key = dayOf(h.hour);
     const o = h.outcomes ?? {};
     const day = perDay.get(key) ?? { total: 0, limited: 0 };
     day.total += total(o);
     day.limited += (o.retried429 ?? 0) + (o.ban ?? 0) + (o.quota ?? 0);
     perDay.set(key, day);
   }
-  const [y, m, d] = dayOf.format(now).split("-").map(Number) as [
-    number,
-    number,
-    number,
-  ];
   // Calendar arithmetic on the local date, independent of the zone
-  const dayBefore = (n: number) =>
-    new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+  const today = dayNumber(dayOf(now));
+  const dayBefore = (n: number) => dayOfNumber(today - n);
   const dayEntry = (n: number) => {
     const day = dayBefore(n);
     return { day, ...(perDay.get(day) ?? { total: 0, limited: 0 }) };
@@ -181,3 +171,92 @@ export function summarize(
 }
 
 export type UsageSummary = ReturnType<typeof summarize>;
+
+// Spotify allows an app a few thousand requests a day and bans it until its
+// daily reset once they are used up. Background jobs
+// stay under this many, polling and the pages are never held back.
+export const DEFAULT_DAILY_BUDGET = 4500;
+export const BACKGROUND_SOURCES: UsageSource[] = ["import", "isrc"];
+// A job that waited continues once this many requests are free again. An
+// import stores its songs about every 45 lookups and fetches them again after
+// a wait, so a few free requests would be spent without progress.
+export const BUDGET_RESUME_ROOM = 250;
+export const MIN_DAILY_BUDGET = 2 * BUDGET_RESUME_ROOM;
+
+// The requests of the hours starting in the last 24 hours and the current
+// one. Whenever Spotify's day resets, it counts no more than these. until is
+// when enough hours leave that window to free BUDGET_RESUME_ROOM requests.
+export function budgetUsage(hours: UsageHour[], now: Date, budget: number) {
+  const currentHour = Math.floor(now.getTime() / HOUR_MS) * HOUR_MS;
+  const counted = hours
+    .filter((h) => {
+      const t = h.hour.getTime();
+      return t >= currentHour - 24 * HOUR_MS && t <= currentHour;
+    })
+    .sort((a, b) => a.hour.getTime() - b.hour.getTime());
+  let used = 0;
+  let background = 0;
+  for (const h of counted) {
+    used += total(h.outcomes);
+    for (const source of BACKGROUND_SOURCES) {
+      background += h.sources?.[source] ?? 0;
+    }
+  }
+  let until: Date | null = null;
+  let left = used;
+  const target = Math.max(budget - BUDGET_RESUME_ROOM, 0);
+  for (const h of counted) {
+    if (left < budget && left <= target) {
+      break;
+    }
+    left -= total(h.outcomes);
+    // An hour is out of the window once the hour 25 hours after it starts
+    until = new Date(h.hour.getTime() + 25 * HOUR_MS);
+  }
+  return { budget, used, background, until };
+}
+
+// The endpoint of a request without IDs or query, e.g. /tracks/{id}. Requests
+// to other hosts than the Web API keep their host.
+export function endpointOf(url: string) {
+  const { host, pathname } = new URL(url);
+  const path = pathname
+    .replace(/^\/v1(?=\/)/, "")
+    .replace(/\/users\/[^/]+/, "/users/{id}")
+    .replace(/\/[0-9A-Za-z]{22}(?=\/|$)/g, "/{id}");
+  return host === "api.spotify.com" ? path : `${host}${path}`;
+}
+
+// What led up to a rate limit at `at`: the requests of the hours starting in
+// the 24 hours before and the current one by source, and those since the
+// previous ban ended (null without one). Hourly buckets, so both may include
+// up to an hour more; nothing is sent during a ban, so its last hour adds
+// little to the second.
+export function requestsBefore(
+  hours: UsageHour[],
+  at: Date,
+  previousBanEnd: Date | null,
+) {
+  const currentHour = Math.floor(at.getTime() / HOUR_MS) * HOUR_MS;
+  const from = previousBanEnd
+    ? Math.floor(previousBanEnd.getTime() / HOUR_MS) * HOUR_MS
+    : null;
+  const last24h: Partial<Record<UsageSource, number>> = {};
+  let sinceBan = from === null ? null : 0;
+  for (const h of hours) {
+    const t = h.hour.getTime();
+    if (t > currentHour) {
+      continue;
+    }
+    if (t >= currentHour - 24 * HOUR_MS) {
+      for (const [source, n] of Object.entries(h.sources ?? {})) {
+        last24h[source as UsageSource] =
+          (last24h[source as UsageSource] ?? 0) + (n ?? 0);
+      }
+    }
+    if (sinceBan !== null && from !== null && t >= from) {
+      sinceBan += total(h.outcomes);
+    }
+  }
+  return { requests24h: last24h, sinceBan };
+}

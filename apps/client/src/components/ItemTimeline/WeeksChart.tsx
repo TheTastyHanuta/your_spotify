@@ -135,14 +135,36 @@ export default function WeeksChart({
     y,
     span: spans.find((span) => x >= span.from && x <= span.to),
   }));
-  // The first week of each new year, the first week when there is none
-  const newYears = rows
-    .filter(
-      ({ x }) =>
-        x > 0 && weekStart(x).getFullYear() !== weekStart(x - 1).getFullYear(),
-    )
-    .map(({ x }) => x);
-  const years = newYears.length > 0 ? newYears : [0];
+  // Labels as fine as the weeks allow: each week for a short history, else
+  // the first week of each month (each quarter, or each year, for longer ones)
+  const step =
+    rows.length <= 12
+      ? 0
+      : rows.length <= 104
+        ? 1
+        : rows.length <= 312
+          ? 3
+          : 12;
+  const ticks = rows
+    .map(({ x }) => x)
+    .filter((x) => {
+      if (step === 0 || (x === 0 && step < 12)) {
+        return true;
+      }
+      const month = weekStart(x).getMonth();
+      return month !== weekStart(x - 1).getMonth() && month % step === 0;
+    });
+  // Month labels say their year: thinning out labels that would overlap
+  // could otherwise leave a stretch with no year shown
+  const tickLabel = (x: number) => {
+    const date = weekStart(x);
+    if (step === 0) {
+      return DateFormatter.toDayMonth(date);
+    }
+    return step === 12
+      ? DateFormatter.toYear(date)
+      : DateFormatter.toShortMonthYear(date);
+  };
   const sentence = hookSentence(song, of, note);
 
   // On phones the weeks scroll sideways: start at the newest
@@ -187,15 +209,18 @@ export default function WeeksChart({
                 margin={{
                   top: 24,
                   right: 24,
+                  // Room for the first label
+                  left: 16,
                   bottom: LANE + (twoRows ? LABEL_ROW : 0),
                 }}>
                 <XAxis
                   dataKey="x"
-                  ticks={years}
-                  interval={0}
-                  tickFormatter={(x: number) =>
-                    String(weekStart(x).getFullYear())
-                  }
+                  ticks={ticks}
+                  // Labels are set in the wider mono font after recharts
+                  // measures them
+                  interval="preserveStart"
+                  minTickGap={16}
+                  tickFormatter={tickLabel}
                 />
                 <YAxis width="auto" allowDecimals={false} />
                 <RTooltip

@@ -25,9 +25,32 @@ const num = (value: number) => (
   <span className="num">{value.toLocaleString()}</span>
 );
 
-// "Paused until …", "12 of 300 songs checked", …
-function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
+// "Waiting, Spotify is blocking …", "12 of 300 songs checked", …
+function lookupStatus({
+  job,
+  progress,
+  perDay,
+  importRunning,
+}: IsrcMergeState) {
   const total = progress.checked + progress.remaining;
+  // What the daily request budget lets through, so a wait for it is part of
+  // the estimate
+  // Counted from the end of a budget wait, the lookups send nothing before
+  const start = Math.max(
+    Date.now(),
+    job?.budgetWait && job.rateLimitedUntil
+      ? new Date(job.rateLimitedUntil).getTime()
+      : 0,
+  );
+  const estimate =
+    perDay > 0 ? (
+      <>
+        , about {num(perDay)} a day, done around{" "}
+        {DateFormatter.toDayMonthYear(
+          new Date(start + (progress.remaining / perDay) * 86_400_000),
+        )}
+      </>
+    ) : null;
   if (!job) {
     return "Not started";
   }
@@ -40,11 +63,31 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   if (progress.remaining === 0) {
     return <>All {num(total)} songs checked</>;
   }
+  if (job.stoppedReason === "paused") {
+    return (
+      <>
+        Paused, {num(progress.checked)} of {num(total)} songs checked
+      </>
+    );
+  }
+  if (
+    job.budgetWait &&
+    job.rateLimitedUntil &&
+    new Date(job.rateLimitedUntil) > new Date()
+  ) {
+    return (
+      <>
+        Waiting for the daily request budget, continues around{" "}
+        {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))}
+        {estimate}
+      </>
+    );
+  }
   if (job.rateLimitedUntil && new Date(job.rateLimitedUntil) > new Date()) {
     return (
       <>
-        Paused until {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))},
-        Spotify is blocking requests
+        Waiting, Spotify is blocking requests until{" "}
+        {DateFormatter.toDateTime(new Date(job.rateLimitedUntil))}
       </>
     );
   }
@@ -54,6 +97,7 @@ function lookupStatus({ job, progress, importRunning }: IsrcMergeState) {
   return (
     <>
       {num(progress.checked)} of {num(total)} songs checked
+      {estimate}
     </>
   );
 }
@@ -144,14 +188,17 @@ export default function MergeDuplicates() {
     return () => clearInterval(interval);
   }, [active, load]);
 
-  const start = async () => {
+  const control = async (pause: boolean) => {
     setSending(true);
     try {
-      await api.startIsrcMerge();
+      await (pause ? api.pauseIsrcMerge() : api.startIsrcMerge());
     } catch (e) {
       console.error(e);
       dispatch(
-        alertMessage({ level: "error", message: "Could not start the lookup" }),
+        alertMessage({
+          level: "error",
+          message: `Could not ${pause ? "pause" : "start"} the lookup`,
+        }),
       );
     }
     setSending(false);
@@ -189,6 +236,14 @@ export default function MergeDuplicates() {
 
   const { job, progress, plan } = state;
   const canStart = !job || Boolean(job.stoppedReason);
+  // Also while Spotify blocks requests, so the lookup does not go on after it
+  const canPause = Boolean(job && !job.stoppedReason && progress.remaining > 0);
+  let startLabel = "Start";
+  if (job?.stoppedReason === "paused") {
+    startLabel = "Resume";
+  } else if (job) {
+    startLabel = "Restart";
+  }
   const hasWork = plan.groups.length > 0 || plan.isrcsToStore > 0;
   const groups = showAll ? plan.groups : plan.groups.slice(0, SHOWN);
 
@@ -223,8 +278,13 @@ export default function MergeDuplicates() {
           <span className={s.status}>
             {lookupStatus(state)}
             {canStart && (
-              <Button onClick={() => void start()} disabled={sending}>
-                {job ? "Restart" : "Start"}
+              <Button onClick={() => void control(false)} disabled={sending}>
+                {startLabel}
+              </Button>
+            )}
+            {canPause && (
+              <Button onClick={() => void control(true)} disabled={sending}>
+                Pause
               </Button>
             )}
           </span>

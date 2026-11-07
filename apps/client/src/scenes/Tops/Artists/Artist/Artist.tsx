@@ -3,9 +3,8 @@ import IdealImage from "../../../../components/IdealImage";
 import InlineArtist from "../../../../components/InlineArtist";
 import Text from "../../../../components/Text";
 import { useMobile } from "../../../../services/hooks/hooks";
-import { msToDuration } from "../../../../services/stats";
 import { Artist as ArtistType } from "../../../../services/types";
-import ShareCount from "../../ShareCount";
+import { measureCells, TopSort } from "../../measure";
 import { useArtistGrid } from "./ArtistGrid";
 
 import s from "./index.module.css";
@@ -14,9 +13,11 @@ interface ArtistProps {
   artist: ArtistType;
   count: number;
   totalCount: number;
-  // The number one\'s count, for the share bar
-  maxCount: number;
   duration: number;
+  totalDuration: number;
+  // The number one's value in the sorted measure, for the share bar
+  max: number;
+  sort: TopSort;
   rank: number;
 }
 
@@ -25,7 +26,9 @@ export default function Artist({
   duration,
   count,
   totalCount,
-  maxCount,
+  max,
+  totalDuration,
+  sort,
   rank,
 }: ArtistProps) {
   const [isMobile, isTablet] = useMobile();
@@ -35,6 +38,14 @@ export default function Artist({
   const genres = (
     artist.genres.length ? artist.genres : (artist.mbGenres ?? [])
   ).join(", ");
+
+  const measures = measureCells(sort, isMobile, {
+    count,
+    duration,
+    totalCount,
+    totalDuration,
+    max,
+  });
 
   const columns: ColumnDescription[] = [
     {
@@ -74,18 +85,8 @@ export default function Artist({
         </Text>
       ),
     },
-    {
-      ...artistGrid.count,
-      node: <ShareCount count={count} total={totalCount} max={maxCount} />,
-    },
-    {
-      ...artistGrid.total,
-      node: !isMobile && (
-        <Text element="div" size="normal" className="num">
-          {msToDuration(duration)}
-        </Text>
-      ),
-    },
+    { ...artistGrid.count, node: measures.count },
+    { ...artistGrid.total, node: measures.total },
   ];
 
   return <GridRowWrapper className={s.row} columns={columns} />;

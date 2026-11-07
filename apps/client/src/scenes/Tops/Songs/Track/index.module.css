@@ -7,17 +7,6 @@
   margin-bottom: 0;
 }
 
-.count {
-  display: flex;
-  align-items: center;
-  justify-content: left;
-}
-
-.total {
-  display: flex;
-  align-items: center;
-}
-
 .names > :first-child {
   margin-bottom: 4px;
 }

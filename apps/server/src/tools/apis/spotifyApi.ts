@@ -3,16 +3,23 @@ import { AsyncLocalStorage } from "async_hooks";
 import { Types } from "mongoose";
 
 import { getUserFromField, storeInUser } from "../../database";
+import { getBudgetUsage } from "../../database/queries/spotifyUsage";
 import { SpotifyAlbum } from "../../database/schemas/album";
 import { SpotifyArtist } from "../../database/schemas/artist";
 import { SpotifyTrack } from "../../database/schemas/track";
 import { User } from "../../database/schemas/user";
 import { getWithDefault } from "../env";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
+import { stopIfPauseRequested } from "../importers/types";
 import { logger } from "../logger";
 import { chunk, wait } from "../misc";
 import { spotifyProvider } from "../oauth/Provider";
-import { HttpError } from "./queueHttpClient";
+import {
+  BACKGROUND_SOURCES,
+  HOUR_MS,
+  UsageSource,
+} from "../spotifyUsage/summary";
+import { HttpError, RateLimitedError, requestSource } from "./queueHttpClient";
 
 // A song of an album's tracklist (Spotify's simplified track)
 export interface SpotifyAlbumTrack {
@@ -64,6 +71,10 @@ export const nextSlowdownMs = (state: { slowdownMs?: number }) =>
     16 * getWithDefault("SPOTIFY_API_DELAY_MS", 2000),
   );
 
+// The daily request budget is used up. Jobs wait for it like for a ban, but
+// do not slow down: Spotify did not complain.
+export class BudgetExceededError extends RateLimitedError {}
+
 export class SpotifyAPI {
   constructor(private readonly userId: string) {}
 
@@ -89,6 +100,17 @@ export class SpotifyAPI {
     const slowdown = requestSlowdown.getStore();
     if (slowdown) {
       await wait(slowdown);
+    }
+    // Every request of an import comes here, also the album and artist
+    // lookups while storing its listens
+    stopIfPauseRequested();
+    if (BACKGROUND_SOURCES.includes(requestSource.getStore() as UsageSource)) {
+      const usage = await getBudgetUsage();
+      if (usage.used >= usage.budget) {
+        throw new BudgetExceededError(
+          usage.until ?? new Date(Date.now() + HOUR_MS),
+        );
+      }
     }
     const user = await getUserFromField(
       "_id",

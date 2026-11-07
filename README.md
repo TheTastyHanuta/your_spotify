@@ -25,8 +25,8 @@ It consists of a server that regularly asks Spotify what you played and stores i
 > - **Listened album context** - track and history views show which album version you actually played a song from
 > - **Remove wrong listens** - take a listen out of your statistics, for example a song Spotify recorded although you skipped it right away, with Undo and a list in the settings to restore it later
 > - **Genres from MusicBrainz** - Spotify no longer returns genres to new apps, so the server looks them up on [MusicBrainz](https://musicbrainz.org) in the background. Genres Spotify returned before are kept
-> - **Spotify rate limit handling** - a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports pause and continue on their own afterwards, logins tell you until when instead of hanging, every page shows the ban and your stats stay usable
-> - **Spotify API usage** - administrators see in **Settings → Spotify API** how many requests the server sent to Spotify per hour, day and week, what sent them and whether Spotify rate limited any of them
+> - **Spotify rate limit handling** - a daily request budget keeps imports and the duplicate song lookup from using up Spotify's daily limit, and a configurable pause between Spotify requests makes bans less likely. If Spotify does ban the app for a while, imports pause and continue on their own afterwards, logins tell you until when instead of hanging, every page shows the ban and your stats stay usable
+> - **Spotify API usage** - administrators see in **Settings → Spotify API** how many requests the server sent to Spotify per hour, day and week, what sent them and whether Spotify rate limited any of them, with a list of recent rate limits: when, what triggered them, how long Spotify blocked the app and how many requests came before
 > - **Better Spotify auth handling** - when Spotify revokes your access, the app asks you to log in again instead of silently stopping to record
 > - **More reliable imports** - imports no longer drop listens, resume from the right place after a failure and keep their uploaded files across updates, so a failed import can still be retried
 > - **Smaller, safer Docker images** - both containers run without root rights, the web app is served by Nginx with long-term browser caching and the server image ships Node.js without npm or build tools
@@ -224,9 +224,9 @@ It is best to import right after creating your account. YourSpotify detects dupl
 
 ### When Spotify blocks the import
 
-If Spotify rate limits the app for a long time, or keeps rate limiting it after a few retries, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. The pause leaves the polling of your recent listens time to catch up first. Imports send their requests a bit slower than the rest of the app (one every 1.5 × `SPOTIFY_API_DELAY_MS`, 3 seconds by default), and after every such block 1.5 times slower again, down to one request every 16 × `SPOTIFY_API_DELAY_MS` (32 seconds by default), so they are less likely to get the app blocked again. A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
+If Spotify rate limits the app for a long time, or keeps rate limiting it after a few retries, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. The pause leaves the polling of your recent listens time to catch up first. Imports send their requests a bit slower than the rest of the app (one every 1.5 × `SPOTIFY_API_DELAY_MS`, 3 seconds by default), and after every such block 1.5 times slower again, down to one request every 16 × `SPOTIFY_API_DELAY_MS` (32 seconds by default), so they are less likely to get the app blocked again. Imports also wait for the daily request budget (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)). A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
 
-To stop a paused import, choose **Cancel** in the menu next to it in **Import history**. This deletes its uploaded files.
+To hold an import back, choose **Pause** in the menu next to it in **Import history**, also while it waits for a block to end. A paused import stays paused, also after a block or a restart, until you choose **Resume**; it then continues from where it stopped. **Cancel** stops a paused or waiting import for good and deletes its uploaded files.
 
 ### When an import fails
 
@@ -294,7 +294,7 @@ The [linuxserver.io image](https://github.com/linuxserver/docker-your_spotify) r
 
 New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
 
-1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs or Spotify blocks requests, continues after restarts, and nothing changes in your stats meanwhile.
+1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs, Spotify blocks requests or the daily request budget is used up, shows when it should be done, continues after restarts, and nothing changes in your stats meanwhile. **Pause** stops it until you press **Resume**, also after a block or a restart.
 2. Check the preview: every song with several versions, the version that stays (the one with the most listens) and how many listens move. It fills up while the lookup runs.
 3. **Merge** applies the preview for every user on the server. Take a backup first: only a backup can undo it. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
 
@@ -381,6 +381,8 @@ The web app can't reach the server. Check that the `API_ENDPOINT` address is rea
 ### Spotify rate limited the app. What now?
 
 Spotify sometimes blocks an app for several hours, especially after large imports. Every page, logins and imports then show until when the block lasts and your existing stats stay usable as long as you are logged in. Imports and the duplicate song lookup pause and continue on their own a few minutes after the block ends, and they slow down after every block; only a login has to be retried. The block is remembered across restarts, so a restarted server does not ask Spotify again before it ends. If it happens often, check **Settings → Spotify API** for what sends the most requests and raise `SPOTIFY_API_DELAY_MS`; you can also set `DISABLE_POLLING` while you wait.
+
+Spotify also limits how many requests an app may send per day. Once they are used up, it blocks the app until its daily reset, which can be most of a day, and new listens are missed meanwhile. Spotify does not publish the limit. To stay under it, imports and the duplicate song lookup stop once the requests of the last 24 hours reach the **daily request budget** (4,500 by default), and continue on their own as older requests drop out of those 24 hours. Polling, logins and pages are never held back, but they count towards the budget. An admin can change it in **Settings → Spotify API** (at least 500). Raise it at your own risk, and lower it if the app still gets blocked. **Recent rate limits** on the same page shows, for every block, how many requests were sent in the 24 hours before and since the previous block ended, which tells you roughly where Spotify's limit lies.
 
 ### Songs don't seem to synchronize anymore
 

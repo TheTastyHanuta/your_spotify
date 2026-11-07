@@ -9,6 +9,8 @@ catalog:
   typescript: 6.0.3
   oxfmt: 0.74.0
   oxlint: 1.70.0
+  vitest: 5.0.5
+  '@vitest/coverage-v8': 5.0.5
 
 onlyBuiltDependencies:
   - core-js

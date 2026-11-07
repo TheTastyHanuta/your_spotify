@@ -325,11 +325,14 @@ export interface IsrcMergeTrack {
 export interface IsrcMergeState {
   job: {
     rateLimitedUntil?: string;
-    stoppedReason?: "reauth" | "user-missing";
+    budgetWait?: boolean;
+    stoppedReason?: "reauth" | "user-missing" | "paused";
     applying: boolean;
     lastApply?: { at: string; tracksMerged: number; listensRepointed: number };
   } | null;
   progress: { checked: number; found: number; none: number; remaining: number };
+  // Songs the daily request budget lets the lookups check in a day
+  perDay: number;
   plan: {
     groups: {
       isrc: string;
@@ -354,6 +357,26 @@ export type UsageSource =
 type UsageCell = { value: number; usual: number | null };
 type UsageBar = { total: number; limited: number };
 
+// A ban, a quota block, or nearby short 429s of one endpoint ("retried")
+export interface SpotifyLimitEvent {
+  _id: string;
+  at: string;
+  lastAt: string;
+  kind: "ban" | "quota" | "retried";
+  source: UsageSource;
+  endpoint: string;
+  count: number;
+  // 429s whose retries ran out, pausing their job
+  gaveUp: number;
+  until?: string;
+  retryAfter: string | null;
+  body: string;
+  // Whole hours: the 24 before and the current one
+  requests24h: Partial<Record<UsageSource, number>>;
+  // Since the previous ban ended, null without one
+  sinceBan: number | null;
+}
+
 export interface SpotifyUsageResponse {
   // The zone the days were grouped in
   timeZone: string;
@@ -372,6 +395,10 @@ export interface SpotifyUsageResponse {
   hourly: (UsageBar & { hour: number })[];
   daily: (UsageBar & { day: string })[];
   weekly: (UsageBar & { from: string; to: string })[];
+  // Requests of the last 24 hours (and the current hour) against the budget
+  budget: { budget: number; used: number; background: number };
+  // The latest first
+  limits: SpotifyLimitEvent[];
 }
 
 export type DiscoveriesResponse = {
@@ -456,6 +483,7 @@ export const api = {
   isrcMerge: () => get<IsrcMergeState>("/isrc-merge"),
   spotifyUsage: () => get<SpotifyUsageResponse>("/global/spotify-usage"),
   startIsrcMerge: () => post("/isrc-merge/start"),
+  pauseIsrcMerge: () => post("/isrc-merge/pause"),
   applyIsrcMerge: () => post("/isrc-merge/apply"),
   setGlobalPreferences: (preferences: Partial<GlobalPreferences>) =>
     post<GlobalPreferences>("/global/preferences", preferences),
@@ -626,7 +654,13 @@ export const api = {
       tracks: TrackWithFullArtistAlbum[];
       albums: AlbumWithFullArtist[];
     }>(`/search/${encodeURIComponent(str)}`),
-  getBestSongs: (start: Date, end: Date, nb: number, offset: number) =>
+  getBestSongs: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -638,8 +672,14 @@ export const api = {
         track: Track;
         track_artists: Artist[];
       }[]
-    >("/spotify/top/songs", { start, end, nb, offset }),
-  getBestArtists: (start: Date, end: Date, nb: number, offset: number) =>
+    >("/spotify/top/songs", { start, end, nb, offset, sort }),
+  getBestArtists: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -649,8 +689,14 @@ export const api = {
         artist: Artist;
         differents: number;
       }[]
-    >("/spotify/top/artists", { start, end, nb, offset }),
-  getBestAlbums: (start: Date, end: Date, nb: number, offset: number) =>
+    >("/spotify/top/artists", { start, end, nb, offset, sort }),
+  getBestAlbums: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -661,7 +707,7 @@ export const api = {
         album: Album;
         album_artists: Artist[];
       }[]
-    >("/spotify/top/albums", { start, end, nb, offset }),
+    >("/spotify/top/albums", { start, end, nb, offset, sort }),
   // The IDs of the top items in order, without the items themselves
   getRanks: (
     start: Date,
@@ -691,6 +737,7 @@ export const api = {
   retryImport: (existingStateId: string) =>
     post("/import/retry", { existingStateId }),
   cleanupImport: (id: string) => delet(`/import/clean/${id}`),
+  pauseImport: (id: string) => post(`/import/pause/${id}`),
   collaborativeBestSongs: (
     ids: string[],
     start: Date,

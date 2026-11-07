@@ -12,7 +12,7 @@ import TrackOptions from "../../../../components/TrackOptions";
 import { useMobile } from "../../../../services/hooks/hooks";
 import { msToDuration } from "../../../../services/stats";
 import { Artist, Album, Track as TrackType } from "../../../../services/types";
-import ShareCount from "../../ShareCount";
+import { measureCells, TopSort } from "../../measure";
 import { useTrackGrid } from "./TrackGrid";
 
 import s from "./index.module.css";
@@ -24,9 +24,11 @@ interface TrackProps {
   playable?: boolean;
   count: number;
   totalCount: number;
-  // The number one\'s count, for the share bar
-  maxCount: number;
   duration: number;
+  totalDuration: number;
+  // The number one's value in the sorted measure, for the share bar
+  max: number;
+  sort: TopSort;
   rank: number;
 }
 
@@ -42,9 +44,19 @@ export default function Track(props: TrackProps) {
     duration,
     count,
     totalCount,
-    maxCount,
+    max,
+    totalDuration,
+    sort,
     rank,
   } = props;
+
+  const measures = measureCells(sort, isMobile, {
+    count,
+    duration,
+    totalCount,
+    totalDuration,
+    max,
+  });
 
   const columns = [
     {
@@ -96,18 +108,8 @@ export default function Track(props: TrackProps) {
         </Text>
       ),
     },
-    {
-      ...trackGrid.count,
-      node: <ShareCount count={count} total={totalCount} max={maxCount} />,
-    },
-    {
-      ...trackGrid.total,
-      node: !isMobile && (
-        <Text element="div" size="normal" className="num">
-          {msToDuration(duration)}
-        </Text>
-      ),
-    },
+    { ...trackGrid.count, node: measures.count },
+    { ...trackGrid.total, node: measures.total },
     { ...trackGrid.options, node: !isMobile && <TrackOptions track={track} /> },
   ];
 

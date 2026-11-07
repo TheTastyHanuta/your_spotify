@@ -1,5 +1,4 @@
-// Pure part of ingesting played tracks, checked by
-// scripts/canonicalTracks.check.mjs
+// Pure part of ingesting played tracks
 import type { SpotifyTrack, Track } from "../database/schemas/track";
 
 interface TrackCanonicalizationResult {

@@ -91,6 +91,21 @@ export const startImportFullPrivacy = myAsyncThunk<
   }
 });
 
+export const pauseImport = myAsyncThunk<void, string>(
+  "@import/pause",
+  async (id, tapi) => {
+    try {
+      await api.pauseImport(id);
+    } catch (e) {
+      console.error(e);
+      tapi.dispatch(
+        alertMessage({ level: "error", message: "Could not pause the import" }),
+      );
+    }
+    tapi.dispatch(getImports(true)).catch(console.error);
+  },
+);
+
 export const cleanupImport = myAsyncThunk<void, string>(
   "@import/cleanup",
   async (id, tapi) => {

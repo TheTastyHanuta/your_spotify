@@ -1,5 +1,5 @@
-// Pure part of matching an album's tracklist to the stored songs, checked by
-// scripts/albumTracklist.check.mjs
+// Pure part of matching an album's tracklist to the stored songs, tested in
+// match.test.ts
 import type { AlbumTracklistEntry } from "../../database/schemas/albumTracklist";
 import type { Track } from "../../database/schemas/track";
 
