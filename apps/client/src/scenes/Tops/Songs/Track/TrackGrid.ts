@@ -11,7 +11,7 @@ export function useTrackGrid() {
     album: { unit: commonUnits.secondaryTitle, key: "album" },
     duration: { unit: commonUnits.duration, key: "duration" },
     count: { unit: commonUnits.percentage(isMobile), key: "count" },
-    total: { unit: commonUnits.percentage(isMobile), key: "total" },
+    total: { unit: commonUnits.time(isMobile), key: "total" },
     options: { unit: commonUnits.options, key: "options" },
   } as const;
 }

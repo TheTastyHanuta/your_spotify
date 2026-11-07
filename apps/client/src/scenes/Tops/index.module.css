@@ -44,6 +44,31 @@
   background: var(--tint);
 }
 
+/* Plays / Time headers. The grid's header rule makes every cell muted and
+   12px with !important, so the sorted one needs it too. */
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sort:hover,
+.sort:hover *,
+.sortActive,
+.sortActive * {
+  color: var(--text) !important;
+}
+
+.sortIcon {
+  flex: none;
+}
+
 @media screen and (max-width: 900px) {
   .tabs {
     padding: 0 16px;

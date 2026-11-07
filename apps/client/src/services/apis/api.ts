@@ -639,7 +639,13 @@ export const api = {
       tracks: TrackWithFullArtistAlbum[];
       albums: AlbumWithFullArtist[];
     }>(`/search/${encodeURIComponent(str)}`),
-  getBestSongs: (start: Date, end: Date, nb: number, offset: number) =>
+  getBestSongs: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -651,8 +657,14 @@ export const api = {
         track: Track;
         track_artists: Artist[];
       }[]
-    >("/spotify/top/songs", { start, end, nb, offset }),
-  getBestArtists: (start: Date, end: Date, nb: number, offset: number) =>
+    >("/spotify/top/songs", { start, end, nb, offset, sort }),
+  getBestArtists: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -662,8 +674,14 @@ export const api = {
         artist: Artist;
         differents: number;
       }[]
-    >("/spotify/top/artists", { start, end, nb, offset }),
-  getBestAlbums: (start: Date, end: Date, nb: number, offset: number) =>
+    >("/spotify/top/artists", { start, end, nb, offset, sort }),
+  getBestAlbums: (
+    start: Date,
+    end: Date,
+    nb: number,
+    offset: number,
+    sort?: User["settings"]["metricUsed"],
+  ) =>
     get<
       {
         count: number;
@@ -674,7 +692,7 @@ export const api = {
         album: Album;
         album_artists: Artist[];
       }[]
-    >("/spotify/top/albums", { start, end, nb, offset }),
+    >("/spotify/top/albums", { start, end, nb, offset, sort }),
   // The IDs of the top items in order, without the items themselves
   getRanks: (
     start: Date,
