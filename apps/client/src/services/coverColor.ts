@@ -1,6 +1,4 @@
 // Picks a cover's main colour and derives the page tint from it.
-// Checked by scripts/coverColor.check.mjs, so no imports and only
-// TypeScript that Node can strip.
 
 export type Rgb = [number, number, number];
 export type ColorMode = "dark" | "light";

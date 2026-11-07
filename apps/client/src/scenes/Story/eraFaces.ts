@@ -1,5 +1,4 @@
-// Where the faces of the artist eras go on the Your story strip. No imports,
-// so scripts/eraFaces.check.mjs can run it directly.
+// Where the faces of the artist eras go on the Your story strip.
 //
 // Each era has a face on one of two rows, above or below the line, as close
 // as it can to where the era starts. Eras go left to right to the row where
