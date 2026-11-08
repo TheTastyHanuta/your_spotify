@@ -592,11 +592,67 @@ export const getTimeline = async (
 type StepId = Record<string, number> | null;
 
 const NB_TOP_ARTISTS = 10;
-// Fewer artists over time, more would not tell apart in a stacked chart
-const NB_ARTISTS_OVER_TIME = 8;
+// As many as there are series colours, more would not tell apart in a
+// stacked chart
+const NB_ARTISTS_OVER_TIME = 10;
+// A step with fewer plays than this part of the average step can't make its
+// leader one of the artists over time: a first year with 79 plays would
+const MIN_LEADING_STEP = 0.05;
 
-// Plays of the period's top artists, and of its top few artists in each time
-// step. Each step's plays are given too, so the rest can be shown as others.
+// The artists of the chart over time: the most played half of them, then
+// the artists that led a time step, the biggest lead first, so every era of
+// a long period shows. Places left are filled with the next most played.
+export const pickArtistsOverTime = (
+  steps: { plays: number; artists: { id: string; plays: number }[] }[],
+  nb: number,
+) => {
+  // Listens without an artist only count in their step's plays
+  const known = steps.map((step) =>
+    step.artists.filter((artist) => Boolean(artist.id)),
+  );
+  const totals = new Map<string, number>();
+  for (const artists of known) {
+    for (const artist of artists) {
+      totals.set(artist.id, (totals.get(artist.id) ?? 0) + artist.plays);
+    }
+  }
+  const byPlays = [...totals.entries()]
+    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
+    .map(([id]) => id);
+
+  const average =
+    steps.reduce((sum, step) => sum + step.plays, 0) / (steps.length || 1);
+  const leads = new Map<string, number>();
+  for (const [index, step] of steps.entries()) {
+    if (step.plays < average * MIN_LEADING_STEP) {
+      continue;
+    }
+    const [leader] = [...known[index]!].sort(
+      (a, b) => b.plays - a.plays || a.id.localeCompare(b.id),
+    );
+    if (leader) {
+      const lead = leader.plays / step.plays;
+      leads.set(leader.id, Math.max(leads.get(leader.id) ?? 0, lead));
+    }
+  }
+  const leaders = [...leads.entries()]
+    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
+    .map(([id]) => id);
+
+  const picked = byPlays.slice(0, Math.ceil(nb / 2));
+  for (const id of [...leaders, ...byPlays]) {
+    if (picked.length >= nb) {
+      break;
+    }
+    if (!picked.includes(id)) {
+      picked.push(id);
+    }
+  }
+  return picked;
+};
+
+// Plays of the period's top artists, and of the chart's artists over time in
+// each time step. Each step's plays are given too, for their shares.
 export const getArtistShares = async (
   user: User,
   start: Date,
@@ -646,8 +702,9 @@ export const getArtistShares = async (
   const best = [...perArtist.entries()]
     .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
     .slice(0, NB_TOP_ARTISTS);
+  const overTimeIds = pickArtistsOverTime(steps, NB_ARTISTS_OVER_TIME);
   const artists = await ArtistModel.find({
-    id: { $in: best.map(([id]) => id) },
+    id: { $in: [...best.map(([id]) => id), ...overTimeIds] },
   })
     .select("id name images")
     .lean();
@@ -656,19 +713,19 @@ export const getArtistShares = async (
     const artist = byId.get(id);
     return artist ? [{ artist, plays }] : [];
   });
-  const overTime = new Set(
-    top.slice(0, NB_ARTISTS_OVER_TIME).map(({ artist }) => artist.id),
-  );
+  const overTime = overTimeIds.flatMap((id) => byId.get(id) ?? []);
+  const overTimeSet = new Set(overTime.map((artist) => artist.id));
 
   return {
     plays: steps.reduce((sum, step) => sum + step.plays, 0),
     top,
+    overTime,
     steps: steps.map((step) => ({
       _id: step._id,
       plays: step.plays,
       artists: Object.fromEntries(
         step.artists
-          .filter((artist) => overTime.has(artist.id))
+          .filter((artist) => overTimeSet.has(artist.id))
           .map((artist) => [artist.id, artist.plays]),
       ),
     })),

@@ -284,7 +284,9 @@ export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
   top: { artist: ShortArtist; plays: number }[];
-  // Plays of the top 8 artists in each time step, by artist id
+  // The chart's artists: the most played, then those that led a time step
+  overTime: ShortArtist[];
+  // Plays of the chart's artists in each time step, by artist id
   steps: {
     _id: DateId | null;
     plays: number;

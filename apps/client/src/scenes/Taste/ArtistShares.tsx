@@ -13,15 +13,22 @@ import ChartTooltip from "../../components/Tooltip";
 import { ArtistSharesResponse } from "../../services/apis/api";
 import {
   buildXYDataObjSpread,
+  DefaultGraphItem,
   formatXAxisDateTooltip,
+  getPrecisionFromDateId,
+  rollingShares,
   useFormatXAxis,
 } from "../../services/stats";
-import { DateId } from "../../services/types";
+import { DateId, Precision } from "../../services/types";
 
 import s from "./index.module.css";
 
-// As many as there are series colours
-const NB_ARTISTS = 8;
+const INFO =
+  "Your 5 most played artists of this period, plus artists that were your #1 at some point in it, so every era shows. That's why it can differ from your top artists. Each area is that artist's share of all your plays at the time.";
+
+// Daily shares are spiky with a few plays a day, they are shown over the
+// week around each day
+const DAYS_WINDOW = 7;
 
 // The shares are small, whole percents would mostly read 1% or 2%
 const share = (percent: number) => `${percent.toFixed(1)}%`;
@@ -32,40 +39,55 @@ interface ArtistSharesProps {
   end: Date;
 }
 
-// Share of each time step's plays of the period's top artists, the same
-// artist keeps its colour the whole time. The other artists are left out:
-// with varied listening they would fill nearly the whole chart.
+// Share of each time step's plays of the chart's artists (the period's most
+// played and those that led a step), the same artist keeps its colour the
+// whole time. The other artists are left out: with varied listening they
+// would fill nearly the whole chart.
 export default function ArtistShares({
   shares,
   start,
   end,
 }: ArtistSharesProps) {
   // Most played at the bottom
-  const series = shares.top
-    .slice(0, NB_ARTISTS)
-    .map(({ artist }, index) => ({
-      key: artist.id,
-      label: artist.name,
-      fill: `var(--series-${index + 1})`,
-    }));
+  const series = shares.overTime.map((artist, index) => ({
+    key: artist.id,
+    label: artist.name,
+    fill: `var(--series-${index + 1})`,
+  }));
 
-  // Steps without plays are left out, the areas join their neighbours
-  const data = buildXYDataObjSpread(
-    shares.steps.flatMap((step) => {
-      if (!step._id || step.plays === 0) {
+  const played = shares.steps.flatMap((step) =>
+    step._id && step.plays > 0
+      ? [{ _id: step._id as DateId, plays: step.plays, counts: step.artists }]
+      : [],
+  );
+  const span =
+    played[0] && getPrecisionFromDateId(played[0]._id) === Precision.day
+      ? DAYS_WINDOW
+      : 1;
+  // With a window, every day of the period: days without plays count in it
+  const filled = buildXYDataObjSpread(played, [], start, end, span === 1);
+  const rolled = rollingShares(
+    filled.map((step) => ({
+      plays: step.plays ?? 0,
+      counts: step.counts ?? {},
+    })),
+    span,
+  );
+  // Steps whose window has no plays are left out, the areas join their
+  // neighbours
+  const data = filled.flatMap<DefaultGraphItem & Record<string, any>>(
+    (step, index) => {
+      const stepShares = rolled[index];
+      if (!stepShares) {
         return [];
       }
       // 0 for an artist not played then, a missing value breaks the stack
       const row: Record<string, number> = {};
       for (const serie of series) {
-        row[serie.key] = ((step.artists[serie.key] ?? 0) / step.plays) * 100;
+        row[serie.key] = stepShares[serie.key] ?? 0;
       }
-      return [{ ...row, _id: step._id as DateId }];
-    }),
-    series.map((serie) => serie.key),
-    start,
-    end,
-    true,
+      return [{ ...row, x: step.x, dateWithPrecision: step.dateWithPrecision }];
+    },
   );
   const formatX = useFormatXAxis(data);
 
@@ -77,7 +99,7 @@ export default function ArtistShares({
     series.find((serie) => serie.key === key)?.label ?? key;
 
   return (
-    <Section title="Top artists over time">
+    <Section title="Top artists over time" info={INFO}>
       <div className={s.chart}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
@@ -104,6 +126,7 @@ export default function ArtistShares({
                           ),
                         )}{" "}
                         of the plays
+                        {span > 1 && ` in the ${span} days around it`}
                       </span>
                     </>
                   )}
@@ -143,7 +166,9 @@ export default function ArtistShares({
                 key={serie.key}
                 dataKey={serie.key}
                 name={serie.label}
-                type="linear"
+                // Unlike monotone, a B-spline keeps the stacked edges in
+                // order, so a band never dips under the one below it
+                type="basis"
                 stackId="artists"
                 fill={serie.fill}
                 fillOpacity={1}

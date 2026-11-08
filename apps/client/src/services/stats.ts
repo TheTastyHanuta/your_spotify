@@ -210,6 +210,30 @@ export const buildXYDataObjSpread = <D extends { _id: DateId }>(
   );
 };
 
+// Each row's shares of the plays in percent, by key, over the `window` rows
+// around it: summed plays over summed plays, so a day with few plays can't
+// spike. null where the window has no plays.
+export const rollingShares = (
+  rows: { plays: number; counts: Record<string, number> }[],
+  window: number,
+) => {
+  const half = Math.floor(window / 2);
+  return rows.map((_, index) => {
+    const around = rows.slice(Math.max(0, index - half), index + half + 1);
+    const plays = around.reduce((sum, row) => sum + row.plays, 0);
+    if (plays === 0) {
+      return null;
+    }
+    const shares: Record<string, number> = {};
+    for (const row of around) {
+      for (const [key, count] of Object.entries(row.counts)) {
+        shares[key] = (shares[key] ?? 0) + (count / plays) * 100;
+      }
+    }
+    return shares;
+  });
+};
+
 export const formatDateWithPrecisionToSimpleString = ({
   date,
   precision,

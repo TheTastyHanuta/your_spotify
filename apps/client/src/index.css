@@ -60,6 +60,9 @@ h6 {
   --series-6: #008300;
   --series-7: #9085e9;
   --series-8: #e66767;
+  /* Only the top artists over time chart goes past 8 */
+  --series-9: #21a3c4;
+  --series-10: #ad4fa8;
   --diverge-mid: #383835;
 }
 
@@ -83,6 +86,8 @@ h6 {
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
+  --series-9: #1a9fc2;
+  --series-10: #a0459c;
   --diverge-mid: #f0efec;
 }
 
