@@ -27,6 +27,7 @@ export function useAPI<Fn extends (...ags: any[]) => Promise<{ data: D }>, D>(
     user?.settings.metricUsed,
     user?.settings.nbElements,
     user?.settings.blacklistedArtists,
+    user?.settings.weekStartsOn,
   ]);
   const [value, setValue] = useState<
     UnboxPromise<ReturnType<Fn>>["data"] | null

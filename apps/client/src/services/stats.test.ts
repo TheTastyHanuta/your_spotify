@@ -1,12 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { getAppropriateTimesplitFromRange } from "./date";
-import {
-  getLastPeriod,
-  getPercentMore,
-  msToDuration,
-  rollingShares,
-} from "./stats";
+import { getLastPeriod, getPercentMore, msToDuration } from "./stats";
 import { Timesplit } from "./types";
 
 describe("getPercentMore", () => {
@@ -75,28 +70,4 @@ test("the chart unit follows the length of the range", () => {
     Timesplit.month,
     Timesplit.year,
   ]);
-});
-
-describe("rollingShares", () => {
-  const row = (plays: number, counts: Record<string, number> = {}) => ({
-    plays,
-    counts,
-  });
-
-  test("a window of 1 is each row's own shares, rows without plays are null", () => {
-    expect(rollingShares([row(4, { a: 1 }), row(0)], 1)).toStrictEqual([
-      { a: 25 },
-      null,
-    ]);
-  });
-
-  test("the window weighs rows by their plays and is cut at the ends", () => {
-    const rows = [row(2, { a: 2 }), row(0), row(8, { b: 2 }), row(10)];
-    expect(rollingShares(rows, 3)).toStrictEqual([
-      { a: 100 },
-      { a: 20, b: 20 },
-      { b: 2 * (100 / 18) },
-      { b: 2 * (100 / 18) },
-    ]);
-  });
 });

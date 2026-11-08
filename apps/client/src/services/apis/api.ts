@@ -284,13 +284,12 @@ export type ArtistSharesResponse = {
   plays: number;
   // The period's top 10 artists
   top: { artist: ShortArtist; plays: number }[];
-  // The chart's artists: the most played, then those that led a time step
-  overTime: ShortArtist[];
-  // Plays of the chart's artists in each time step, by artist id
+  // Each time step's top 5 artists, most played first. Weeks are named by
+  // their first day ({ year, month, day }), on the user's first day of the week
   steps: {
     _id: DateId | null;
     plays: number;
-    artists: Record<string, number>;
+    top: { artist: ShortArtist; plays: number }[];
   }[];
 };
 // Plays per release year in each time step, oldest year first

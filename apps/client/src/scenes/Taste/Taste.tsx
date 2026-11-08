@@ -24,10 +24,12 @@ import {
   DecadesPerYearResponse,
   TasteResponse,
 } from "../../services/apis/api";
+import { artistSharesTimesplit } from "../../services/artistShares";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import { medianYear, musicalAge } from "../../services/taste";
 import { percent, plural } from "../../services/tools";
+import { Timesplit } from "../../services/types";
 import ArtistShares from "./ArtistShares";
 import MusicalAgeOverTime from "./MusicalAgeOverTime";
 import {
@@ -69,11 +71,14 @@ export default function Taste() {
     NB_SHOWN + 1,
   );
   const decades = useAPI(api.getDecadesPerYear);
+  // The chart picks its own time step; the top artists and plays used above
+  // it don't depend on it, so they load without the chart too
+  const sharesSplit = artistSharesTimesplit(interval.start, interval.end);
   const shares = useAPI(
     api.getArtistShares,
     interval.start,
     interval.end,
-    interval.timesplit,
+    sharesSplit ?? Timesplit.day,
   );
 
   const empty = Boolean(taste && genres && genres.totalPlays === 0);
@@ -221,15 +226,12 @@ export default function Taste() {
         </Section>
       </div>
       <div className={s.sections}>
-        {shares ? (
-          <ArtistShares
-            shares={shares}
-            start={interval.start}
-            end={interval.end}
-          />
-        ) : (
-          <ChartSkeleton title="Top artists over time" />
-        )}
+        {sharesSplit &&
+          (shares ? (
+            <ArtistShares shares={shares} timesplit={sharesSplit} />
+          ) : (
+            <ChartSkeleton title="Top artists over time" />
+          ))}
         {taste ? (
           <ReleaseYears years={taste.years} median={median} />
         ) : (

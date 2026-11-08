@@ -1,6 +1,11 @@
 import { expect, test } from "vitest";
 
-import { computeStreaks, pickArtistsOverTime } from "./insights";
+import {
+  computeStreaks,
+  mergeDaysIntoWeeks,
+  topOfPeriod,
+  topOfSteps,
+} from "./insights";
 
 test("no listening days: no streak", () => {
   expect(computeStreaks([], "2024-05-10")).toStrictEqual({
@@ -44,52 +49,98 @@ test("the current streak still counts when its last day is yesterday, not before
 });
 
 const step = (artists: Record<string, number>) => ({
+  _id: null,
   plays: Object.values(artists).reduce((sum, plays) => sum + plays, 0),
   artists: Object.entries(artists).map(([id, plays]) => ({ id, plays })),
 });
 
-test("artists over time: the most played half, then each step's leader by its lead", () => {
+test("each step's top artists, most played first, without listens lacking an artist", () => {
   const steps = [
-    step({ early: 60, steady: 20, other: 20 }),
-    step({ steady: 30, middle: 25, other: 45 }),
-    step({ steady: 40, recent: 50, other: 10 }),
-  ];
-  // steady and other are the most played, then the leaders: early (60%)
-  // before recent (50%), other led a step too but is already in
-  expect(pickArtistsOverTime(steps, 4)).toStrictEqual([
-    "steady",
-    "other",
-    "early",
-    "recent",
+    step({ b: 5, a: 5, c: 9, d: 1 }),
+    {
+      ...step({ a: 2 }),
+      artists: [
+        { id: null, plays: 7 },
+        { id: "a", plays: 2 },
+      ],
+    },
+  ] as Parameters<typeof topOfSteps>[0];
+  expect(topOfSteps(steps, 3)).toStrictEqual([
+    [
+      { id: "c", plays: 9 },
+      { id: "a", plays: 5 },
+      { id: "b", plays: 5 },
+    ],
+    [{ id: "a", plays: 2 }],
   ]);
 });
 
-test("artists over time: a tiny step can't make its leader one of them", () => {
-  const steps = [
-    step({ tiny: 4 }),
-    step({ a: 50, b: 40, c: 30 }),
-    step({ a: 60, b: 45, c: 35 }),
-  ];
-  // tiny led 100% of its step, but 4 plays are under 5% of the average step
-  expect(pickArtistsOverTime(steps, 2)).toStrictEqual(["a", "b"]);
-});
-
-test("artists over time: listens without an artist are skipped", () => {
+test("the period's top artists add up the steps and skip listens without an artist, even on a tie", () => {
   const steps = [
     {
-      plays: 20,
+      ...step({ a: 5 }),
       artists: [
-        { id: "a", plays: 10 },
-        { id: null, plays: 10 },
+        { id: "a", plays: 5 },
+        { id: null, plays: 5 },
       ],
     },
-    step({ a: 10, b: 5 }),
-  ] as Parameters<typeof pickArtistsOverTime>[0];
-  expect(pickArtistsOverTime(steps, 2)).toStrictEqual(["a", "b"]);
+    step({ b: 3, a: 1 }),
+  ];
+  expect(topOfPeriod(steps, 10)).toStrictEqual([
+    { id: "a", plays: 6 },
+    { id: "b", plays: 3 },
+  ]);
 });
 
-test("artists over time: places left go to the next most played", () => {
-  const steps = [step({ a: 10, b: 5, c: 3, d: 1 }), step({ a: 8, c: 4 })];
-  expect(pickArtistsOverTime(steps, 3)).toStrictEqual(["a", "c", "b"]);
-  expect(pickArtistsOverTime([], 8)).toStrictEqual([]);
+const day = (month: number, date: number, artists: Record<string, number>) => ({
+  ...step(artists),
+  _id: { year: 2026, month, day: date },
+});
+
+test("days merge into weeks that start on the chosen day, named by their first day", () => {
+  // 2026-03-01 is a Sunday
+  const days = [
+    day(2, 28, { a: 1 }),
+    day(3, 1, { a: 2, b: 1 }),
+    day(3, 2, { b: 4 }),
+    day(3, 8, { c: 1 }),
+  ];
+  expect(mergeDaysIntoWeeks(days, 1)).toStrictEqual([
+    {
+      _id: { year: 2026, month: 2, day: 23 },
+      plays: 4,
+      artists: [
+        { id: "a", plays: 3 },
+        { id: "b", plays: 1 },
+      ],
+    },
+    {
+      _id: { year: 2026, month: 3, day: 2 },
+      plays: 5,
+      artists: [
+        { id: "b", plays: 4 },
+        { id: "c", plays: 1 },
+      ],
+    },
+  ]);
+  expect(mergeDaysIntoWeeks(days, 0).map((week) => week._id)).toStrictEqual([
+    { year: 2026, month: 2, day: 22 },
+    { year: 2026, month: 3, day: 1 },
+    { year: 2026, month: 3, day: 8 },
+  ]);
+});
+
+test("weeks run over the end of the year", () => {
+  // 2025-12-29 is a Monday
+  const days = [
+    { ...day(12, 31, { a: 1 }), _id: { year: 2025, month: 12, day: 31 } },
+    day(1, 2, { a: 1 }),
+  ];
+  expect(mergeDaysIntoWeeks(days, 1)).toStrictEqual([
+    {
+      _id: { year: 2025, month: 12, day: 29 },
+      plays: 2,
+      artists: [{ id: "a", plays: 2 }],
+    },
+  ]);
 });

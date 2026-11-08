@@ -592,89 +592,107 @@ export const getTimeline = async (
 type StepId = Record<string, number> | null;
 
 const NB_TOP_ARTISTS = 10;
-// As many as there are series colours, more would not tell apart in a
-// stacked chart
-const NB_ARTISTS_OVER_TIME = 10;
-// A step with fewer plays than this part of the average step can't make its
-// leader one of the artists over time: a first year with 79 plays would
-const MIN_LEADING_STEP = 0.05;
+// Artists shown in each time step of the chart over time
+const NB_TOP_PER_STEP = 5;
 
-// The artists of the chart over time: the most played half of them, then
-// the artists that led a time step, the biggest lead first, so every era of
-// a long period shows. Places left are filled with the next most played.
-export const pickArtistsOverTime = (
-  steps: { plays: number; artists: { id: string; plays: number }[] }[],
-  nb: number,
-) => {
-  // Listens without an artist only count in their step's plays
-  const known = steps.map((step) =>
-    step.artists.filter((artist) => Boolean(artist.id)),
-  );
-  const totals = new Map<string, number>();
-  for (const artists of known) {
-    for (const artist of artists) {
-      totals.set(artist.id, (totals.get(artist.id) ?? 0) + artist.plays);
-    }
-  }
-  const byPlays = [...totals.entries()]
-    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
-    .map(([id]) => id);
-
-  const average =
-    steps.reduce((sum, step) => sum + step.plays, 0) / (steps.length || 1);
-  const leads = new Map<string, number>();
-  for (const [index, step] of steps.entries()) {
-    if (step.plays < average * MIN_LEADING_STEP) {
-      continue;
-    }
-    const [leader] = [...known[index]!].sort(
-      (a, b) => b.plays - a.plays || a.id.localeCompare(b.id),
-    );
-    if (leader) {
-      const lead = leader.plays / step.plays;
-      leads.set(leader.id, Math.max(leads.get(leader.id) ?? 0, lead));
-    }
-  }
-  const leaders = [...leads.entries()]
-    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
-    .map(([id]) => id);
-
-  const picked = byPlays.slice(0, Math.ceil(nb / 2));
-  for (const id of [...leaders, ...byPlays]) {
-    if (picked.length >= nb) {
-      break;
-    }
-    if (!picked.includes(id)) {
-      picked.push(id);
-    }
-  }
-  return picked;
+type ArtistsStep = {
+  _id: StepId;
+  plays: number;
+  // id is null for listens without an artist
+  artists: { id: string | null; plays: number }[];
 };
 
-// Plays of the period's top artists, and of the chart's artists over time in
-// each time step. Each step's plays are given too, for their shares.
+const hasId = <A extends { id: string | null }>(
+  artist: A,
+): artist is A & { id: string } => Boolean(artist.id);
+
+const byPlaysThenId = (
+  a: { id: string; plays: number },
+  b: { id: string; plays: number },
+) => b.plays - a.plays || a.id.localeCompare(b.id);
+
+// Days ({ year, month, day }, in order) merged into weeks starting on
+// weekStartsOn (0 is Sunday), each named by its first day. The server's
+// $week would always start on Sunday.
+export const mergeDaysIntoWeeks = (
+  days: ArtistsStep[],
+  weekStartsOn: number,
+) => {
+  const weeks = new Map<number, ArtistsStep>();
+  for (const day of days) {
+    if (!day._id) {
+      continue;
+    }
+    const { year, month, day: date } = day._id as Record<string, number>;
+    // Calendar maths in UTC: the parts are already in the user's timezone
+    const time = Date.UTC(year!, month! - 1, date!);
+    const offset = (new Date(time).getUTCDay() - weekStartsOn + 7) % 7;
+    const first = new Date(time - offset * 86_400_000);
+    const key = first.getTime();
+    const week = weeks.get(key) ?? {
+      _id: {
+        year: first.getUTCFullYear(),
+        month: first.getUTCMonth() + 1,
+        day: first.getUTCDate(),
+      },
+      plays: 0,
+      artists: [],
+    };
+    week.plays += day.plays;
+    for (const artist of day.artists) {
+      const same = week.artists.find((other) => other.id === artist.id);
+      if (same) {
+        same.plays += artist.plays;
+      } else {
+        week.artists.push({ ...artist });
+      }
+    }
+    weeks.set(key, week);
+  }
+  return [...weeks.values()];
+};
+
+// The most played artists of each step, most played first; listens without
+// an artist only count in their step's plays
+export const topOfSteps = (steps: ArtistsStep[], nb: number) =>
+  steps.map((step) =>
+    step.artists.filter(hasId).sort(byPlaysThenId).slice(0, nb),
+  );
+
+// The most played artists of all the steps together, the same way
+export const topOfPeriod = (steps: ArtistsStep[], nb: number) => {
+  const perArtist = new Map<string, number>();
+  for (const artist of steps.flatMap((step) => step.artists.filter(hasId))) {
+    perArtist.set(artist.id, (perArtist.get(artist.id) ?? 0) + artist.plays);
+  }
+  return [...perArtist.entries()]
+    .map(([id, plays]) => ({ id, plays }))
+    .sort(byPlaysThenId)
+    .slice(0, nb);
+};
+
+// Plays of the period's top artists, and the top few artists of each time
+// step with their plays. Each step's plays are given too.
 export const getArtistShares = async (
   user: User,
   start: Date,
   end: Date,
   timeSplit: Timesplit,
 ) => {
-  const steps: {
-    _id: StepId;
-    plays: number;
-    artists: { id: string; plays: number }[];
-  }[] = await InfosModel.aggregate([
+  // Weeks are merged from days, to start on the user's first day of the week
+  const groupBy = timeSplit === Timesplit.week ? Timesplit.day : timeSplit;
+  const grouped: ArtistsStep[] = await InfosModel.aggregate([
     ...basicMatch(user._id, start, end),
     {
       $project: {
-        parts: getDateParts(user.settings.timezone, timeSplit),
+        parts: getDateParts(user.settings.timezone, groupBy),
         primaryArtistId: 1,
       },
     },
     {
       $group: {
         _id: {
-          ...getGroupingByTimeSplit(timeSplit, "parts"),
+          ...getGroupingByTimeSplit(groupBy, "parts"),
           artist: "$primaryArtistId",
         },
         plays: { $sum: 1 },
@@ -685,48 +703,44 @@ export const getArtistShares = async (
     // first, then their plays per step) if that ever gets close.
     {
       $group: {
-        _id: getGroupingByTimeSplit(timeSplit, "_id"),
+        _id: getGroupingByTimeSplit(groupBy, "_id"),
         plays: { $sum: "$plays" },
         artists: { $push: { id: "$_id.artist", plays: "$plays" } },
       },
     },
-    ...sortByTimeSplit(timeSplit, "_id"),
+    ...sortByTimeSplit(groupBy, "_id"),
   ]);
+  const steps =
+    timeSplit === Timesplit.week
+      ? mergeDaysIntoWeeks(grouped, user.settings.weekStartsOn ?? 1)
+      : grouped;
 
-  const perArtist = new Map<string, number>();
-  for (const step of steps) {
-    for (const artist of step.artists) {
-      perArtist.set(artist.id, (perArtist.get(artist.id) ?? 0) + artist.plays);
-    }
-  }
-  const best = [...perArtist.entries()]
-    .sort(([idA, a], [idB, b]) => b - a || idA.localeCompare(idB))
-    .slice(0, NB_TOP_ARTISTS);
-  const overTimeIds = pickArtistsOverTime(steps, NB_ARTISTS_OVER_TIME);
+  const best = topOfPeriod(steps, NB_TOP_ARTISTS);
+  const stepTops = topOfSteps(steps, NB_TOP_PER_STEP);
   const artists = await ArtistModel.find({
-    id: { $in: [...best.map(([id]) => id), ...overTimeIds] },
+    id: {
+      $in: [
+        ...best.map((artist) => artist.id),
+        ...stepTops.flatMap((tops) => tops.map((artist) => artist.id)),
+      ],
+    },
   })
     .select("id name images")
     .lean();
   const byId = new Map(artists.map((artist) => [artist.id, artist]));
-  const top = best.flatMap(([id, plays]) => {
+  const withArtist = (id: string, plays: number) => {
     const artist = byId.get(id);
     return artist ? [{ artist, plays }] : [];
-  });
-  const overTime = overTimeIds.flatMap((id) => byId.get(id) ?? []);
-  const overTimeSet = new Set(overTime.map((artist) => artist.id));
+  };
 
   return {
     plays: steps.reduce((sum, step) => sum + step.plays, 0),
-    top,
-    overTime,
-    steps: steps.map((step) => ({
+    top: best.flatMap((artist) => withArtist(artist.id, artist.plays)),
+    steps: steps.map((step, index) => ({
       _id: step._id,
       plays: step.plays,
-      artists: Object.fromEntries(
-        step.artists
-          .filter((artist) => overTimeSet.has(artist.id))
-          .map((artist) => [artist.id, artist.plays]),
+      top: stepTops[index]!.flatMap((artist) =>
+        withArtist(artist.id, artist.plays),
       ),
     })),
   };
