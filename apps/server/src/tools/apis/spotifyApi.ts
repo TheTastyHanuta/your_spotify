@@ -21,6 +21,21 @@ import {
 } from "../spotifyUsage/summary";
 import { HttpError, RateLimitedError, requestSource } from "./queueHttpClient";
 
+// A song of an album's tracklist (Spotify's simplified track)
+export interface SpotifyAlbumTrack {
+  id: string | null;
+  name: string;
+  disc_number: number;
+  track_number: number;
+  duration_ms: number;
+  artists: { id: string | null }[];
+}
+
+export interface SpotifyPage<T> {
+  items: T[];
+  next: string | null;
+}
+
 export interface SpotifyMe {
   id: string;
   display_name: string;
@@ -204,14 +219,15 @@ export class SpotifyAPI {
   // Only a missing or malformed id means the item does not exist. Anything
   // else (network errors, 5xx, 429s the client gave up on, token problems) is
   // thrown, so callers retry or fail visibly instead of dropping the listens
-  // as if the item had never existed.
-  private async getItem<T>(url: string) {
+  // as if the item had never existed. A caller that stores "missing" for good
+  // passes [404] only, so a 400 is thrown too.
+  private async getItem<T>(url: string, missing = [400, 404]) {
     const client = await this.checkToken();
     try {
       const res = await client.get(url);
       return res.data as T;
     } catch (e) {
-      if (e instanceof HttpError && (e.status === 400 || e.status === 404)) {
+      if (e instanceof HttpError && missing.includes(e.status)) {
         return undefined;
       }
       throw e;
@@ -233,6 +249,23 @@ export class SpotifyAPI {
 
   async getAlbum(id: string) {
     return this.getItem<SpotifyAlbum>(`/albums/${id}`);
+  }
+
+  // The album with the first page of its songs (up to 50); undefined only
+  // when Spotify doesn't have it (404)
+  async getAlbumWithTracks(id: string) {
+    return this.getItem<{ tracks: SpotifyPage<SpotifyAlbumTrack> }>(
+      `/albums/${id}`,
+      [404],
+    );
+  }
+
+  // One page of an album's songs, for albums with more than the 50 songs
+  // GET /albums/{id} includes
+  async getAlbumTracks(id: string, offset: number) {
+    return this.getItem<SpotifyPage<SpotifyAlbumTrack>>(
+      `/albums/${id}/tracks?limit=50&offset=${offset}`,
+    );
   }
 
   async getAlbums(spotifyIds: string[]) {

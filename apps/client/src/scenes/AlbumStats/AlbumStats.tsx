@@ -21,7 +21,7 @@ import {
 } from "../../services/stats";
 import { playRow } from "../ArtistStats/rows";
 import AlbumRank from "./AlbumRank";
-import { albumSongRow } from "./rows";
+import { ALBUM_SONGS_INFO, albumSongRow, albumSongs } from "./rows";
 
 // Same layout as the artist page
 import s from "../../styles/detail.module.css";
@@ -46,6 +46,9 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
     "album",
     albumId,
   );
+  // Ranked by all their plays, also from other releases (mostly singles);
+  // the album's own numbers only count plays from it
+  const songs = albumSongs(stats);
   const plays = stats.tracks.reduce((sum, { count }) => sum + count, 0);
   const first = stats.firstLast.first;
   const last = stats.firstLast.last;
@@ -86,7 +89,8 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
           {
             label: "Plays",
             value: plays.toLocaleString(),
-            note: `${stats.tracks.length.toLocaleString()} ${stats.tracks.length === 1 ? "song" : "songs"} heard`,
+            // The songs below also count their plays from other releases
+            note: "played from this album",
           },
           {
             label: "Time listened",
@@ -122,10 +126,9 @@ export default function AlbumStats({ stats }: AlbumStatsProps) {
       <div className={clsx("ruled-columns", s.columns)}>
         <Section
           title="Most played songs"
-          link={seeAll(stats.tracks, `/album/${albumId}/songs`)}>
-          {stats.tracks
-            .slice(0, NB_SHOWN)
-            .map(albumSongRow(stats.album.images))}
+          info={ALBUM_SONGS_INFO}
+          link={seeAll(songs, `/album/${albumId}/songs`)}>
+          {songs.slice(0, NB_SHOWN).map(albumSongRow(stats.album.images))}
         </Section>
         <div>
           <Section title={stats.artists.length === 1 ? "Artist" : "Artists"}>
