@@ -1,5 +1,12 @@
 import clsx from "clsx";
-import { CSSProperties, useMemo, useState } from "react";
+import {
+  CSSProperties,
+  MouseEvent,
+  PointerEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import {
   Area,
@@ -21,7 +28,7 @@ import { DateId, Timesplit } from "../../services/types";
 import s from "./index.module.css";
 
 const INFO =
-  "Each column is your 5 most played artists of that day, week, month or year, depending on the period. The graph above splits each column's plays among those 5, so it always reaches the top: it shows who was on top, not how much you listened. Up to 30 artists get a colour no other artist has: every column's #1 first, then the #2s, the #3s and so on. The rest are grey. Hover an artist to follow them.";
+  "Your 5 most played artists of each day, week, month or year. The graph shows how their plays split, not how much you listened. Hover an artist to follow them. On a phone, tap an artist to follow them and tap again to open their page.";
 
 // Artists without a colour, told apart by their tone
 const GREYS = [36, 50, 64].map(
@@ -42,6 +49,9 @@ export default function ArtistShares({ shares, timesplit }: ArtistSharesProps) {
   // The scrolling cuts off what passes its edge: on the right half the
   // tooltip goes left of the pointer
   const [tooltipLeft, setTooltipLeft] = useState(false);
+  // Whether the chip being touched was followed before the touch: a tap fires
+  // fake mouse and focus events that follow it before the click arrives
+  const followedAtTouch = useRef<boolean | undefined>(undefined);
 
   const steps = useMemo(
     () =>
@@ -122,6 +132,24 @@ export default function ArtistShares({ shares, timesplit }: ArtistSharesProps) {
     onMouseLeave: () => setHovered(undefined),
     onFocus: () => setHovered(id),
     onBlur: () => setHovered(undefined),
+    onPointerDown: (event: PointerEvent) => {
+      followedAtTouch.current =
+        event.pointerType === "touch" ? hovered === id : undefined;
+    },
+    // A touch that turns into a scroll never clicks
+    onPointerCancel: () => {
+      followedAtTouch.current = undefined;
+    },
+    // On touch screens the first tap follows the artist, the second opens it.
+    // The record is used once, so a later Enter key press still opens it.
+    onClick: (event: MouseEvent) => {
+      const followed = followedAtTouch.current;
+      followedAtTouch.current = undefined;
+      if (followed === false) {
+        event.preventDefault();
+        setHovered(id);
+      }
+    },
   });
 
   return (
