@@ -15,7 +15,7 @@ services:
     environment:
       # Loopback works on this machine or through an SSH tunnel. For an HTTPS
       # reverse-proxy setup, replace all endpoints as described in the README.
-      API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the Spotify dashboard
+      API_ENDPOINT: http://127.0.0.1:8080 # The Spotify redirect URI is this address followed by /oauth/spotify/callback
       CLIENT_ENDPOINT: http://127.0.0.1:3000
       SPOTIFY_PUBLIC: __your_spotify_client_id__
       SPOTIFY_SECRET: __your_spotify_secret__

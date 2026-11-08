@@ -87,6 +87,8 @@ On phones, the dashboard switches to a single column with navigation along the b
 
 ## Installation
 
+Already running the original YourSpotify? Follow [Switching from the original YourSpotify](#switching-from-the-original-yourspotify) instead; you keep your Spotify application and your listening history.
+
 ### 1. Choose how to access YourSpotify
 
 YourSpotify has two addresses: the web app (port `3000`) and the server, also called the API (port `8080`). Your browser needs to reach both. Decide first how you will open them, because the Spotify application needs the server address.
@@ -163,7 +165,7 @@ services:
     volumes:
       - imports:/tmp/imports
     environment:
-      API_ENDPOINT: http://127.0.0.1:8080 # This MUST be included as a valid URL in the Spotify dashboard (see above)
+      API_ENDPOINT: http://127.0.0.1:8080 # The Spotify redirect URI is this address followed by /oauth/spotify/callback (see above)
       CLIENT_ENDPOINT: http://127.0.0.1:3000
       SPOTIFY_PUBLIC: __your_spotify_client_id__
       SPOTIFY_SECRET: __your_spotify_secret__
@@ -224,7 +226,7 @@ It is best to import right after creating your account. YourSpotify detects dupl
 
 ### When Spotify blocks the import
 
-If Spotify rate limits the app for a long time, or keeps rate limiting it after a few retries, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. The pause leaves the polling of your recent listens time to catch up first. Imports send their requests a bit slower than the rest of the app (one every 1.5 × `SPOTIFY_API_DELAY_MS`, 3 seconds by default), and after every such block 1.5 times slower again, down to one request every 16 × `SPOTIFY_API_DELAY_MS` (32 seconds by default), so they are less likely to get the app blocked again. Imports also wait for the daily request budget (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)). A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
+If Spotify rate limits the app for a long time, or keeps rate limiting it after a few retries, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. Imports send their requests more slowly than the rest of the app (one every 3 seconds by default) and slow down further after every block, to at most one every 32 seconds, so they are less likely to get the app blocked again. Both times scale with `SPOTIFY_API_DELAY_MS`. Imports also wait for the daily request budget (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)). A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
 
 To hold an import back, choose **Pause** in the menu next to it in **Import history**, also while it waits for a block to end. A paused import stays paused, also after a block or a restart, until you choose **Resume**; it then continues from where it stopped. **Cancel** stops a paused or waiting import for good and deletes its uploaded files.
 
@@ -245,11 +247,11 @@ docker compose pull
 docker compose up -d
 ```
 
-Database changes are applied automatically when the server starts. Running and paused imports continue a few minutes after the server is back, and the duplicate song lookup continues where it stopped. Imports need the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose) for that; without it, upload their files again.
+Database changes are applied automatically when the server starts. Running imports continue a few minutes after the server is back (imports you paused stay paused), and the duplicate song lookup continues where it stopped. Imports need the `imports` volume from the [example compose file](#3-start-yourspotify-with-docker-compose) for that; without it, upload their files again.
 
 ## Switching from the original YourSpotify
 
-You keep your database, settings and Spotify application. Only the two app images change.
+You keep your database, settings and Spotify application. The two app images change and the compose file gets a few new lines.
 
 The commands below assume the service names from the example compose file (`server`, `web` and `mongo`) and the default database name `your_spotify`. If yours differ (check with `docker compose config --services` and the last part of `MONGO_ENDPOINT` is the database name), replace them in every command. If your database runs elsewhere or needs a password, make the backup with the tools you normally use for it.
 
@@ -259,56 +261,83 @@ Do this **before** switching. The new server changes the database as soon as it 
 
 ```bash
 docker compose stop server web
-docker compose exec mongo mongodump --archive=/tmp/your_spotify.archive --db your_spotify
-docker compose cp mongo:/tmp/your_spotify.archive ./your_spotify.archive
+docker compose exec mongo mongodump --archive=/tmp/before-switch.archive --db your_spotify
+docker compose cp mongo:/tmp/before-switch.archive ./before-switch.archive
+ls -lh before-switch.archive
 ```
 
-Check that `your_spotify.archive` exists and is not empty and keep it until you are happy with the switch.
+The last command shows the size of the backup. If a command failed or the file is empty, stop here and do not switch. Also save a copy of your compose file. Keep both until you are happy with the switch, and give later backups (for example before an update) a different file name, so this one is not overwritten.
 
-#### 2. Change the images
+#### 2. Change the compose file
 
-In your compose file, replace the two app images and leave everything else as it is. In particular, do not change the `mongo` image: MongoDB cannot open data files from a much older major version.
+Edit your existing compose file. First replace the two app images:
 
 | Service  | Original project               | This fork                                           |
 | -------- | ------------------------------ | --------------------------------------------------- |
 | `server` | `yooooomi/your_spotify_server` | `ghcr.io/thetastyhanuta/your_spotify_server:latest` |
 | `web`    | `yooooomi/your_spotify_client` | `ghcr.io/thetastyhanuta/your_spotify_client:latest` |
 
+Then add three things, marked with `# new` below. This is not a complete file: keep all your other lines (ports, environment, the `mongo` service and so on) as they are.
+
+```yml
+services:
+  server:
+    image: ghcr.io/thetastyhanuta/your_spotify_server:latest
+    init: true # new
+    volumes: # new
+      - imports:/tmp/imports # new
+
+  web:
+    image: ghcr.io/thetastyhanuta/your_spotify_client:latest
+    init: true # new
+
+volumes: # new, at the very left, not inside services
+  imports: # new
+```
+
+- The `imports` volume keeps uploaded history files, so a paused or failed import can continue after a restart or an update. Use a named volume as shown, not a folder on the host: the server does not run as root and could not write to a new host folder.
+- `init: true` lets the containers stop quickly.
+
+In particular, do not change the `mongo` image: MongoDB cannot open data files from a much older major version.
+
+Check the file and start the new version:
+
 ```bash
+docker compose config --quiet
 docker compose pull server web
 docker compose up -d
 ```
 
-Watch the server log with `docker compose logs -f server` until it prints `Migrations successfully ran`, then press Ctrl+C. Open the web app and check that your accounts and older listening history are still there and that a song you play now shows up on the **History** page after a few minutes.
+The first command prints nothing if the file is valid; otherwise it says what is wrong. Watch the server log with `docker compose logs -f server` until it prints `Migrations successfully ran`, then press Ctrl+C. Open the web app and check that your accounts and older listening history are still there and that a song you play now shows up on the **History** page after a few minutes.
+
+#### 3. Optional: merge duplicate tracks
+
+New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
+
+1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, so a large history takes a day or more. It waits on its own while an import runs, Spotify blocks requests or the daily request budget is used up, and continues after restarts. Your stats do not change meanwhile. **Pause** stops it until you press **Resume**.
+2. Check the preview: every song with several versions and the version that stays (the one with the most listens). It fills up while the lookup runs.
+3. **Merge** applies the preview for every user on the server. Only a backup can undo it, so make one first, under a new file name. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
+
+#### Going back
+
+To return to the original project, stop the app and restore your backup from step 1:
+
+```bash
+docker compose stop server web
+docker compose cp ./before-switch.archive mongo:/tmp/before-switch.archive
+docker compose exec mongo mongorestore --drop --archive=/tmp/before-switch.archive --nsInclude='your_spotify.*'
+```
+
+If `mongorestore` reports an error, do not continue: the original app would start on a half-restored database. Otherwise put back the copy of your old compose file and run `docker compose pull server web` and `docker compose up -d`. Listens recorded since the backup are lost, except the last roughly 50 plays that Spotify still returns.
 
 #### Coming from the linuxserver.io image
 
 The [linuxserver.io image](https://github.com/linuxserver/docker-your_spotify) runs the server and the web app in one container, with the API under `/api`. This fork has no such image, so the setup changes:
 
 1. Back up your database as in step 1, stopping the linuxserver.io container instead of `server web`.
-2. Replace the linuxserver.io container with the `server` and `web` services from the [example compose file](#3-start-yourspotify-with-docker-compose). Keep your existing Mongo container and its data. Do not add the example's `mongo` service and remove `depends_on` if your database is not a service in the same compose file.
+2. Replace the linuxserver.io container with the `server` and `web` services and the `volumes` block at the end of the [example compose file](#3-start-yourspotify-with-docker-compose). Keep your existing Mongo container and its data. Do not add the example's `mongo` service and remove `depends_on` if your database is not a service in the same compose file.
 3. Set `MONGO_ENDPOINT` on the server to your existing database. The server must be able to reach it, for example by being in the same compose file or Docker network.
 4. The API now has its own address (port `8080`). Choose an [access option](#1-choose-how-to-access-yourspotify), update your reverse proxy and change the redirect URI in the Spotify dashboard: it no longer contains `/api`.
-
-#### 3. Optional: merge duplicate tracks
-
-New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
-
-1. **Start** the lookup. The server asks Spotify for the ISRC of every older song in the background, one song every few seconds, so a large history takes a day or more. It pauses while an import runs, Spotify blocks requests or the daily request budget is used up, shows when it should be done, continues after restarts, and nothing changes in your stats meanwhile. **Pause** stops it until you press **Resume**, also after a block or a restart.
-2. Check the preview: every song with several versions, the version that stays (the one with the most listens) and how many listens move. It fills up while the lookup runs.
-3. **Merge** applies the preview for every user on the server. Take a backup first: only a backup can undo it. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
-
-#### Going back
-
-To return to the original project, stop the app and restore your backup:
-
-```bash
-docker compose stop server web
-docker compose cp ./your_spotify.archive mongo:/tmp/your_spotify.archive
-docker compose exec mongo mongorestore --drop --archive=/tmp/your_spotify.archive --nsInclude='your_spotify.*'
-```
-
-Then change the two images back to `yooooomi/your_spotify_server` and `yooooomi/your_spotify_client` and run `docker compose pull server web` and `docker compose up -d`. Listens recorded since the backup are lost, except the last roughly 50 plays that Spotify still returns.
 
 ## Using the dashboard
 
