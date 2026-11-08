@@ -22,6 +22,9 @@ import { getTimezone } from "./statsTools";
 // cannot run a newer MongoDB. The days are counted in the database, the
 // phases found in findPhases.
 
+// Weeks start on the user's first day of the week (0 is Sunday)
+const weekStartsOn = (user: User) => user.settings.weekStartsOn ?? 1;
+
 type Track = Awaited<ReturnType<typeof findTracks>>[number];
 type Artist = Awaited<ReturnType<typeof findArtists>>[number];
 // A hook or comeback of a song. knownDays and yearLater are the song's, they
@@ -102,7 +105,10 @@ const findHooks = async (user: User) => {
   const today = dayIn(timezone)(new Date());
   return songs
     .flatMap((song) =>
-      listed(song._id, findPhases(sortedDays(song.days), today)),
+      listed(
+        song._id,
+        findPhases(sortedDays(song.days), today, weekStartsOn(user)),
+      ),
     )
     .sort(strongestFirst);
 };
@@ -119,14 +125,22 @@ const findArtistDives = async (user: User) => {
   const listening = listeningOf(all, today);
   return artists
     .flatMap((artist) =>
-      listed(artist._id, findDives(sortedDays(artist.days), listening, today)),
+      listed(
+        artist._id,
+        findDives(
+          sortedDays(artist.days),
+          listening,
+          today,
+          weekStartsOn(user),
+        ),
+      ),
     )
     .sort(strongestFirst);
 };
 
 // The whole history takes ~0.5 s for 127k listens, so the result is kept per
-// user while the counted listens, the timezone and the day stay the same: a
-// new, removed, restored or blacklisted listen changes the count.
+// user while the counted listens, the timezone, the first day of the week and
+// the day stay the same: a new, removed, restored or blacklisted listen changes the count.
 // ponytail: an edit that adds and removes as many listens at once keeps the
 // old result until the next listen or day; compare the latest change if
 // that ever matters.
@@ -142,7 +156,7 @@ const cached = async (
     owner: user._id,
     blacklistedBy: { $exists: false },
   });
-  const version = `${listens}:${timezone}:${dayIn(timezone)(new Date())}`;
+  const version = `${listens}:${timezone}:${weekStartsOn(user)}:${dayIn(timezone)(new Date())}`;
   const key = `${kind}:${user._id.toString()}`;
   const hit = cache.get(key);
   if (hit?.version === version) {
@@ -277,7 +291,11 @@ export const getSongPhases = async (user: User, trackId: string) => {
     1,
   );
   return song
-    ? findPhases(sortedDays(song.days), dayIn(timezone)(new Date()))
+    ? findPhases(
+        sortedDays(song.days),
+        dayIn(timezone)(new Date()),
+        weekStartsOn(user),
+      )
     : null;
 };
 
@@ -317,6 +335,11 @@ export const getArtistPhases = async (user: User, artistId: string) => {
   const artist = artists.find((a) => a._id === artistId);
   const today = dayIn(timezone)(new Date());
   return artist
-    ? findDives(sortedDays(artist.days), listeningOf(all, today), today)
+    ? findDives(
+        sortedDays(artist.days),
+        listeningOf(all, today),
+        today,
+        weekStartsOn(user),
+      )
     : null;
 };

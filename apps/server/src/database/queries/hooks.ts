@@ -17,7 +17,8 @@ export interface Phase {
   kind: PhaseKind;
   // First day with plays
   start: string;
-  // From its first week to its last, Monday to Sunday
+  // From its first week to its last, weeks starting on the user's first day
+  // of the week
   weeks: number;
   plays: number;
   // Its last busy week is recent enough for it to go on
@@ -29,7 +30,7 @@ export interface Phase {
 }
 
 export interface ItemPhases {
-  // Monday of the week of the first listen
+  // First day of the week of the first listen
   firstWeek: string;
   // Plays per week from firstWeek to the week of today
   weeks: number[];
@@ -124,13 +125,19 @@ export const periodDays = (start: Date, end: Date, timezone: string) => {
   const day = dayIn(timezone);
   return [day(start), day(new Date(end.getTime() - 1))] as const;
 };
-// 1970-01-01 was a Thursday
-const mondayOf = (n: number) => n - ((n + 3) % 7);
+// The first day of day number n's week, weeks starting on weekStartsOn (0 is
+// Sunday). 1970-01-01 (day 0) was a Thursday.
+export const weekStartOf = (n: number, weekStartsOn: number) =>
+  n - ((((n + 4 - weekStartsOn) % 7) + 7) % 7);
 
 // days: sorted by day, with plays. today: the last day of the data; the
-// week of today counts with the plays it has.
-export const findPhases = (days: PlaysOnDay[], today: string) =>
-  phasesOf(days, today, SONG_RULES, null);
+// week of today counts with the plays it has. weekStartsOn: the user's first
+// day of the week (0 is Sunday).
+export const findPhases = (
+  days: PlaysOnDay[],
+  today: string,
+  weekStartsOn: number,
+) => phasesOf(days, today, weekStartsOn, SONG_RULES, null);
 
 // All the listener's plays per day, read once for all their artists
 export interface Listening {
@@ -158,11 +165,14 @@ export const findDives = (
   days: PlaysOnDay[],
   listening: Listening,
   today: string,
-) => phasesOf(days, today, artistRules(listening.weekly), listening);
+  weekStartsOn: number,
+) =>
+  phasesOf(days, today, weekStartsOn, artistRules(listening.weekly), listening);
 
 function phasesOf(
   days: PlaysOnDay[],
   today: string,
+  weekStartsOn: number,
   rules: Rules,
   listening: Listening | null,
 ): ItemPhases | null {
@@ -170,7 +180,7 @@ function phasesOf(
     return null;
   }
   const numbers = days.map((d) => dayNumber(d.day));
-  const first = mondayOf(numbers[0]!);
+  const first = weekStartOf(numbers[0]!, weekStartsOn);
   const last = dayNumber(today);
   const weekOf = (n: number) => Math.floor((n - first) / 7);
   const weeks: number[] = Array.from(
@@ -187,7 +197,7 @@ function phasesOf(
   }
   const at = (i: number) => weeks[i] ?? 0;
   const warm = listening
-    ? weekOf(mondayOf(listening.start) + 7 * rules.warmupWeeks)
+    ? weekOf(weekStartOf(listening.start, weekStartsOn) + 7 * rules.warmupWeeks)
     : 0;
   const busy = weeks.map((_, i) => i >= warm && rules.busy(weeks, totals, i));
 
@@ -212,7 +222,7 @@ function phasesOf(
     .filter((run) => run.plays >= rules.minPlays);
 
   const phases = kept.map((run, i): Phase => {
-    const monday = first + 7 * run.from;
+    const weekStart = first + 7 * run.from;
     const previous = kept[i - 1];
     const gap = previous ? run.from - previous.to - 1 : 0;
     return {
@@ -222,7 +232,7 @@ function phasesOf(
           ? "comeback"
           : "again",
       // Busy weeks have plays
-      start: days[numbers.findIndex((n) => n >= monday)]!.day,
+      start: days[numbers.findIndex((n) => n >= weekStart)]!.day,
       weeks: run.to - run.from + 1,
       plays: run.plays,
       ongoing: run.to >= weeks.length - 1 - rules.bridgeWeeks,

@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 
+import { dayNumber, dayOfNumber } from "../../tools/date";
 import {
   findDives,
   findPhases,
   listeningOf,
   periodDays,
   type PlaysOnDay,
+  weekStartOf,
 } from "./hooks";
 
 // Days as offsets from 2024-01-01
@@ -20,13 +22,13 @@ const weekly = (counts: number[]) =>
 const quiet = (n: number): number[] => Array(n).fill(0);
 
 const phases = (days: PlaysOnDay[], today: number) =>
-  findPhases(days, day(today))!.phases;
+  findPhases(days, day(today), 1)!.phases;
 const kinds = (days: PlaysOnDay[], today: number) =>
   phases(days, today).map((p) => p.kind);
 
 describe("songs", () => {
   test("no listens: nothing", () => {
-    expect(findPhases([], day(0))).toBe(null);
+    expect(findPhases([], day(0), 1)).toBe(null);
   });
 
   test("one play a week is never busy: no hook", () => {
@@ -98,17 +100,44 @@ describe("songs", () => {
     const late = findPhases(
       [on(100, 1), ...weekly([3, 3, 3, 3])],
       day(H + 400),
+      1,
     )!;
     expect(late.knownDays).toBe(H - 100);
     expect(late.firstWeek).toBe(day(98));
-    expect(findPhases(weekly([3, 3, 3, 3]), day(H + 400))!.knownDays).toBe(0);
+    expect(findPhases(weekly([3, 3, 3, 3]), day(H + 400), 1)!.knownDays).toBe(
+      0,
+    );
   });
 
-  test("weeks run Monday to Sunday: a Sunday and the Monday after are two weeks", () => {
-    const edge = findPhases([on(H + 6, 6), on(H + 7, 6)], day(H + 30))!;
-    expect(edge.firstWeek).toBe(day(H));
-    expect(edge.weeks).toStrictEqual([6, 6, 0, 0, 0]);
-    expect(edge.phases[0]!.weeks).toBe(2);
+  test("weeks start on the user's first day: a Sunday and the Monday after are two weeks from Monday, one from Sunday", () => {
+    const days = [on(H + 6, 6), on(H + 7, 6)];
+    const monday = findPhases(days, day(H + 30), 1)!;
+    expect(monday.firstWeek).toBe(day(H));
+    expect(monday.weeks).toStrictEqual([6, 6, 0, 0, 0]);
+    expect(monday.phases[0]!.weeks).toBe(2);
+    const sunday = findPhases(days, day(H + 30), 0)!;
+    expect(sunday.firstWeek).toBe(day(H + 6));
+    expect(sunday.weeks).toStrictEqual([12, 0, 0, 0]);
+    expect(sunday.phases[0]!.weeks).toBe(1);
+    expect(sunday.phases[0]!.start).toBe(day(H + 6));
+  });
+
+  test("the first day of a week, for every first day of the week", () => {
+    // 2024-01-03 was a Wednesday
+    const wednesday = dayNumber("2024-01-03");
+    expect(
+      [0, 1, 2, 3, 4, 5, 6].map((start) =>
+        dayOfNumber(weekStartOf(wednesday, start)),
+      ),
+    ).toStrictEqual([
+      "2023-12-31",
+      "2024-01-01",
+      "2024-01-02",
+      "2024-01-03",
+      "2023-12-28",
+      "2023-12-29",
+      "2023-12-30",
+    ]);
   });
 
   test("ongoing while the last busy week is at most 4 weeks ago", () => {
@@ -118,11 +147,11 @@ describe("songs", () => {
 
   test("played again a year after the hook; too early to say before 90 days passed", () => {
     const year = (extra: PlaysOnDay[], today: number) =>
-      findPhases([...weekly([3, 3, 3, 3]), ...extra], day(today))!.yearLater;
+      findPhases([...weekly([3, 3, 3, 3]), ...extra], day(today), 1)!.yearLater;
     expect(year([on(H + 400, 1)], H + 500)).toBe(true);
     expect(year([], H + 500)).toBe(false);
     expect(year([], H + 400)).toBe(null);
-    expect(findPhases(weekly([1]), day(H + 500))!.yearLater).toBe(null);
+    expect(findPhases(weekly([1]), day(H + 500), 1)!.yearLater).toBe(null);
   });
 });
 
@@ -161,6 +190,7 @@ describe("artists", () => {
       weekly(counts),
       listeningOf(all ?? listening(today), day(today)),
       day(today),
+      1,
     )!.phases;
 
   test("15 a week for 4 weeks is 15% of the listening: a deep dive of 60 plays", () => {

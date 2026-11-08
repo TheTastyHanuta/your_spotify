@@ -179,7 +179,7 @@ export type DiscoveryOverviewResponse = {
 // A stretch of heavy listening of a song, days as "YYYY-MM-DD" in the stats
 // timezone. The first is the hook, a later one after a long break a
 // comeback, other later ones "again". start: first day with plays; weeks:
-// Monday to Sunday weeks; ongoing: can still go on; breakDays: since the
+// weeks starting on the user's first day of the week; ongoing: can still go on; breakDays: since the
 // previous phase; shape: plays per week from 4 weeks before it
 export type Phase = {
   kind: "hook" | "comeback" | "again";
@@ -190,7 +190,8 @@ export type Phase = {
   breakDays: number;
   shape: number[];
 };
-// A song's or artist's plays per week from the Monday of its first listen to
+// A song's or artist's plays per week from the start of the week of its first
+// listen to
 // this week, and its phases (an artist's first one is a deep dive). knownDays: from the first listen to the hook; yearLater:
 // null until a year and 3 months have passed since the hook
 export type ItemPhases = {
