@@ -696,7 +696,7 @@ Get the plays of each time step, and the plays of songs heard for the first time
 
 ### Hooked Songs and Artist Deep Dives
 
-Hooks are found in phases: stretches of heavy listening of one song or artist. A song's week is busy when it has a play and the song got at least 6 plays in that week and the weeks right before and after it. Up to 4 quiet weeks between busy ones stay in the same phase, and a phase needs at least 12 plays. A song's first phase is its hook. A later phase that starts at least 12 weeks after the previous one is a comeback; other later phases are not listed. A hook "clicked late" when the song was first heard at least 60 days before. Days are in the stats timezone.
+Hooks are found in phases: stretches of heavy listening of one song or artist. A song's week is busy when it has a play and the song got at least 6 plays in that week and the weeks right before and after it. Up to 4 quiet weeks between busy ones stay in the same phase, and a phase needs at least 12 plays. A song's first phase is its hook. A later phase that starts at least 12 weeks after the previous one is a comeback; other later phases are not listed. A hook "clicked late" when the song was first heard at least 60 days before. Days are in the stats timezone, and weeks start on the user's first day of the week (`weekStartsOn`).
 
 Artists follow the same idea against all the listening: a busy week also needs at least 4% of all plays in those three weeks and twice the artist's usual plays (the weekly average of the 26 weeks before). The play floors grow with how much the listener listens (6% of an average week for a busy week, 16.5% for a phase), never below a song's. An artist's first phase is a deep dive; a comeback needs 26 quiet weeks, and nothing counts in the first 26 weeks of the listening history.
 
@@ -753,7 +753,7 @@ Get a song's plays per week and its phases, shown in the Weeks tab of the song p
 
 **Response:**
 
-- `200`: `{ song }`, `null` when the song was never played. `song` has `firstWeek` (Monday of the week of the first listen), `weeks` (plays per week from then to this week), `phases` (every phase, in time order, with `kind` `hook`, `comeback` or `again`; empty when the song never hooked the listener), `knownDays` and `yearLater`
+- `200`: `{ song }`, `null` when the song was never played. `song` has `firstWeek` (first day of the week of the first listen, on the user's first day of the week), `weeks` (plays per week from then to this week), `phases` (every phase, in time order, with `kind` `hook`, `comeback` or `again`; empty when the song never hooked the listener), `knownDays` and `yearLater`
 
 #### `GET /spotify/hooks/artists`
 

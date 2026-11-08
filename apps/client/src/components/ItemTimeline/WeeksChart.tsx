@@ -1,4 +1,4 @@
-import { addDays, differenceInCalendarDays, startOfWeek } from "date-fns";
+import { addDays, differenceInCalendarDays } from "date-fns";
 import {
   CSSProperties,
   useEffect,
@@ -126,8 +126,11 @@ export default function WeeksChart({
   const first = fromDay(song.firstWeek);
   const weekStart = (x: number) => addDays(first, 7 * x);
   const spans = song.phases.map((phase) => {
-    const monday = startOfWeek(fromDay(phase.start), { weekStartsOn: 1 });
-    const from = Math.round(differenceInCalendarDays(monday, first) / 7);
+    // Counted from firstWeek, which the server already put on the first day
+    // of the week of the user whose stats these are
+    const from = Math.floor(
+      differenceInCalendarDays(fromDay(phase.start), first) / 7,
+    );
     return { phase, from, to: from + phase.weeks - 1 };
   });
   const rows: Row[] = song.weeks.map((y, x) => ({

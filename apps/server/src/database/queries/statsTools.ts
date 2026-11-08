@@ -110,6 +110,9 @@ export const getTimezone = (userTimezone: string | undefined) =>
 // field). One $dateToParts converts the timezone once; separate $year, $month,
 // ... each convert again, which was most of the time over long periods. It has
 // no $week (Sunday weeks), so weeks keep $year and $week.
+// No chart asks for weeks here: they would ignore the user's first day of the
+// week (and the client's buildFromDateId ignores `week`). Group by day and
+// use mergeDaysIntoWeeks (insights.ts) instead, like the artist shares.
 export const getDateParts = (
   userTimezone: string | undefined,
   timeSplit: Timesplit,
