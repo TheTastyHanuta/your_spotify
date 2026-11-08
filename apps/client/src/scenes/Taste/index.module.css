@@ -128,28 +128,94 @@
   white-space: nowrap;
 }
 
-.seriesLegend {
+/* Top artists over time: a graph over one column of chips per time step,
+   scrolling sideways together once the columns don't fit */
+.sharesScroll {
+  overflow-x: auto;
+}
+
+.sharesTrack {
+  min-width: calc(var(--columns) * 124px);
+}
+
+.sharesGraph {
+  height: 140px;
+}
+
+.sharesColumns {
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+}
+
+.sharesColumn {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 16px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 6px 4px;
+  border-left: 1px solid var(--line);
+}
+
+.sharesColumn:first-child {
+  border-left: none;
+}
+
+.sharesLabel {
+  margin: 8px 0 2px;
+  overflow: hidden;
   color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.seriesLegendItem {
-  display: inline-flex;
+.chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.chipName {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  min-width: 0;
 }
 
-.swatch {
-  width: 10px;
-  height: 10px;
+.chipText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipPlays {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.chipBar {
+  height: 3px;
   border-radius: 2px;
 }
 
-.tooltipNote {
-  color: var(--muted);
+.dimmed {
+  opacity: 0.25;
+}
+
+.swatch {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
 
 .tooltipRow {

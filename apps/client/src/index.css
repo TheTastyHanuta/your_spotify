@@ -60,6 +60,31 @@ h6 {
   --series-6: #008300;
   --series-7: #9085e9;
   --series-8: #e66767;
+  /* Only the top artists over time chart goes past 8, up to 30: 11 to 30
+     were picked as far from the others as possible (services/artistShares.ts
+     keeps a copy to hand them out) */
+  --series-9: #21a3c4;
+  --series-10: #ad4fa8;
+  --series-11: #8de123;
+  --series-12: #ebaee5;
+  --series-13: #6b44de;
+  --series-14: #77caa2;
+  --series-15: #b8b40b;
+  --series-16: #f69b78;
+  --series-17: #fc68bc;
+  --series-18: #556418;
+  --series-19: #7daff9;
+  --series-20: #b91c72;
+  --series-21: #a45855;
+  --series-22: #774aa1;
+  --series-23: #e4c178;
+  --series-24: #09e9a1;
+  --series-25: #325cbd;
+  --series-26: #14d3f7;
+  --series-27: #6e6ebd;
+  --series-28: #dc1944;
+  --series-29: #5fbf61;
+  --series-30: #4a65f8;
   --diverge-mid: #383835;
 }
 
@@ -83,6 +108,28 @@ h6 {
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
+  --series-9: #1a9fc2;
+  --series-10: #a0459c;
+  --series-11: #703500;
+  --series-12: #7f0b56;
+  --series-13: #008474;
+  --series-14: #ab73fd;
+  --series-15: #94494d;
+  --series-16: #054b7a;
+  --series-17: #e843a6;
+  --series-18: #504fe5;
+  --series-19: #2e632f;
+  --series-20: #ac678b;
+  --series-21: #832bc3;
+  --series-22: #82218c;
+  --series-23: #805ef9;
+  --series-24: #775eba;
+  --series-25: #b95a20;
+  --series-26: #7480cf;
+  --series-27: #cf025e;
+  --series-28: #a11863;
+  --series-29: #139948;
+  --series-30: #7f4e83;
   --diverge-mid: #f0efec;
 }
 
