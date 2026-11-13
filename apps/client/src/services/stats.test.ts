@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import { getAppropriateTimesplitFromRange } from "./date";
-import { getLastPeriod, getPercentMore, msToDuration } from "./stats";
+import {
+  buildXYData,
+  getLastPeriod,
+  getPercentMore,
+  msToDuration,
+} from "./stats";
 import { Timesplit } from "./types";
 
 describe("getPercentMore", () => {
@@ -70,4 +75,47 @@ test("the chart unit follows the length of the range", () => {
     Timesplit.month,
     Timesplit.year,
   ]);
+});
+
+describe("buildXYData with another stats timezone", () => {
+  // The browser asks for Nov 10-13. The server groups by day in the stats
+  // timezone, so its days can start before or end after the browser's.
+  const start = new Date(2026, 10, 10);
+  const end = new Date(2026, 10, 13, 23, 59);
+  const days = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({
+      _id: { year: 2026, month: 11, day: from + i },
+      value: from + i,
+    }));
+  const shown = (built: ReturnType<typeof buildXYData>) =>
+    built.map((item) => [item.dateWithPrecision.date.getDate(), item.y]);
+
+  test("keeps a day after the period (stats timezone ahead)", () => {
+    expect(shown(buildXYData(days(10, 14), start, end))).toStrictEqual([
+      [10, 10],
+      [11, 11],
+      [12, 12],
+      [13, 13],
+      [14, 14],
+    ]);
+  });
+
+  test("keeps a day before the period (stats timezone behind)", () => {
+    expect(shown(buildXYData(days(9, 13), start, end, true))).toStrictEqual([
+      [9, 9],
+      [10, 10],
+      [11, 11],
+      [12, 12],
+      [13, 13],
+    ]);
+  });
+
+  test("still fills empty days up to the end of the period", () => {
+    expect(shown(buildXYData(days(10, 11), start, end))).toStrictEqual([
+      [10, 10],
+      [11, 11],
+      [12, 0],
+      [13, 0],
+    ]);
+  });
 });

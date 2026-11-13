@@ -119,19 +119,24 @@ const buildXYDataWithGetters = <Dict extends Record<string, any>>(
     return [];
   }
   const precision = getPrecisionFromDateId(data[0]!._id);
-  start = cleanDateFromPrecision(start, precision);
-  end = fresh(end, precision !== Precision.hour);
+  // The server only returns steps of the period, but in the stats timezone:
+  // when it differs from the browser's, the first or last step falls outside
+  // the browser's start and end, so the range grows to keep them
+  const first = buildFromDateId(data[0]!._id);
+  const last = buildFromDateId(data.at(-1)!._id);
+  start = cleanDateFromPrecision(
+    new Date(Math.min(start.getTime(), first.getTime())),
+    precision,
+  );
+  end = fresh(
+    new Date(Math.max(end.getTime(), last.getTime())),
+    precision !== Precision.hour,
+  );
   const built: (DefaultGraphItem & Dict)[] = [];
   let currentIndex = 0;
   for (let dataIndex = 0; dataIndex < data.length; dataIndex += 1) {
     const d = data[dataIndex]!;
     const thisDate = buildFromDateId(d._id);
-    if (thisDate.getTime() < start.getTime()) {
-      continue;
-    }
-    if (thisDate.getTime() > end.getTime()) {
-      return built;
-    }
     let currentDate = getDateFromIndex(currentIndex, start, precision);
     for (let i = 0; currentDate.getTime() !== thisDate.getTime(); i += 1) {
       if (currentDate.getTime() > thisDate.getTime()) {
