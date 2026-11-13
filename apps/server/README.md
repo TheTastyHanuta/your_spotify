@@ -434,14 +434,6 @@ Get the plays per album release year (each with its most played song), how old t
 
 - `200`: Object with `years`, `ageWhenPlayed`, `albumTypes`, `explicit` and `lengths` (under 2 min, 2–3, 3–4, 4–5, 5 min and more)
 
-#### `GET /spotify/taste/decades`
-
-Get the plays per release decade for each year of the whole history.
-
-**Response:**
-
-- `200`: Array of years with `decades` (decade and plays, oldest first)
-
 #### `GET /spotify/genres`
 
 Get the most played genres, using MusicBrainz genres first and Spotify's otherwise. An artist's plays count for each of its genres, so genres overlap.

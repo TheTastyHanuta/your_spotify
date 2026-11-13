@@ -40,7 +40,6 @@ import {
 } from "../database/queries/hooked";
 import {
   getCalendar,
-  getDecadesPerYear,
   getDiscoveries,
   getGenres,
   getArtistShares,
@@ -594,11 +593,6 @@ router.get("/taste", isLoggedOrGuest, async (req, res) => {
   const { user } = req as LoggedRequest;
   const { start, end } = validate(req.query, interval);
   res.status(200).send(await getTaste(user, start, end));
-});
-
-router.get("/taste/decades", isLoggedOrGuest, async (req, res) => {
-  const { user } = req as LoggedRequest;
-  res.status(200).send(await getDecadesPerYear(user));
 });
 
 router.get("/taste/artist_shares", isLoggedOrGuest, async (req, res) => {

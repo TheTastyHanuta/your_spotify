@@ -21,15 +21,21 @@ import Text from "../../components/Text";
 import ChartTooltip from "../../components/Tooltip";
 import {
   api,
-  DecadesPerYearResponse,
+  ReleaseYearsPerResponse,
   TasteResponse,
 } from "../../services/apis/api";
 import { artistSharesTimesplit } from "../../services/artistShares";
 import { useAPI } from "../../services/hooks/hooks";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
+import {
+  buildXYDataObjSpread,
+  DefaultGraphItem,
+  formatXAxisDateTooltip,
+  useFormatXAxis,
+} from "../../services/stats";
 import { medianYear, musicalAge } from "../../services/taste";
 import { percent, plural } from "../../services/tools";
-import { Timesplit } from "../../services/types";
+import { DateId, Timesplit } from "../../services/types";
 import ArtistShares from "./ArtistShares";
 import MusicalAgeOverTime from "./MusicalAgeOverTime";
 import {
@@ -70,7 +76,13 @@ export default function Taste() {
     interval.end,
     NB_SHOWN + 1,
   );
-  const decades = useAPI(api.getDecadesPerYear);
+  // Shared by the musical age and decades charts
+  const releaseYears = useAPI(
+    api.getReleaseYearsPer,
+    interval.start,
+    interval.end,
+    interval.timesplit,
+  );
   // The chart picks its own time step; the top artists and plays used above
   // it don't depend on it, so they load without the chart too
   const sharesSplit = artistSharesTimesplit(interval.start, interval.end);
@@ -238,15 +250,12 @@ export default function Taste() {
           <ChartSkeleton title="Release years" />
         )}
         <MusicalAgeOverTime
+          result={releaseYears}
           overall={
             median === undefined ? undefined : musicalAge(median, ageYear)
           }
         />
-        {decades ? (
-          decades.length > 0 && <DecadesPerYear years={decades} />
-        ) : (
-          <ChartSkeleton title="Release decades over the years" />
-        )}
+        <DecadesOverTime steps={releaseYears} />
       </div>
       <div className={clsx("ruled-columns", s.work)}>
         <Section title="Release types">
@@ -372,9 +381,15 @@ function ReleaseYears({
   );
 }
 
-function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
+const DECADES_TITLE = "Release decades over time";
+
+function DecadesOverTime({ steps }: { steps: ReleaseYearsPerResponse | null }) {
+  const { interval } = useSelector(selectRawIntervalDetail);
+  const decadeOf = (year: number) => Math.floor(year / 10) * 10;
   const allDecades = [
-    ...new Set(years.flatMap((y) => y.decades.map((d) => d.decade))),
+    ...new Set(
+      steps?.flatMap((step) => step.years.map((y) => decadeOf(y.year))),
+    ),
   ].sort((a, b) => a - b);
   const shown = allDecades.slice(-NB_DECADES);
   const hasEarlier = allDecades.length > shown.length;
@@ -388,25 +403,44 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
     fill: `color-mix(in oklab, var(--tint) ${100 - 20 * (all.length - 1 - index)}%, var(--bg))`,
   }));
 
-  const data = years.map(({ year, decades }) => {
-    const total = decades.reduce((sum, d) => sum + d.plays, 0) || 1;
-    const row: Record<string, number> = { x: year };
-    for (const { decade, plays } of decades) {
-      const key = shown.includes(decade) ? `${decade}` : "earlier";
-      row[key] = (row[key] ?? 0) + (plays / total) * 100;
-    }
-    return row;
-  });
+  // Steps without dated plays are left out, like in the musical age chart
+  const data = buildXYDataObjSpread(
+    steps?.flatMap(({ _id, years }) => {
+      if (!_id || years.length === 0) {
+        return [];
+      }
+      const total = years.reduce((sum, y) => sum + y.plays, 0);
+      const row: Record<string, number> = {};
+      for (const { year, plays } of years) {
+        const decade = decadeOf(year);
+        const key = shown.includes(decade) ? `${decade}` : "earlier";
+        row[key] = (row[key] ?? 0) + (plays / total) * 100;
+      }
+      return [{ ...row, _id: _id as DateId }];
+    }) ?? [],
+    series.map((serie) => serie.key),
+    interval.start,
+    interval.end,
+    true,
+  ) as (DefaultGraphItem & Record<string, number>)[];
+  const formatX = useFormatXAxis(data);
+
+  if (!steps) {
+    return <ChartSkeleton title={DECADES_TITLE} />;
+  }
+  if (data.length < 2) {
+    return null;
+  }
 
   const label = (key: string) =>
     series.find((serie) => serie.key === key)?.label ?? key;
 
   return (
-    <Section title="Release decades over the years">
+    <Section title={DECADES_TITLE}>
       <div className={s.chart}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
-            <XAxis dataKey="x" minTickGap={16} />
+            <XAxis dataKey="x" tickFormatter={formatX} minTickGap={16} />
             <YAxis
               width="auto"
               domain={[0, 100]}
@@ -418,7 +452,7 @@ function DecadesPerYear({ years }: { years: DecadesPerYearResponse }) {
               wrapperStyle={{ zIndex: 10 }}
               content={
                 <ChartTooltip<typeof data>
-                  title={({ x }) => `Played in ${x}`}
+                  title={formatXAxisDateTooltip}
                   value={(_, value, root) =>
                     `${label(String(root.dataKey))}: ${Math.round(value)}%`
                   }

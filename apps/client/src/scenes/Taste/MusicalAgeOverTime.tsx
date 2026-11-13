@@ -12,8 +12,7 @@ import {
 import Section, { ChartSkeleton } from "../../components/Section";
 import Text from "../../components/Text";
 import ChartTooltip from "../../components/Tooltip";
-import { api } from "../../services/apis/api";
-import { useAPI } from "../../services/hooks/hooks";
+import { ReleaseYearsPerResponse } from "../../services/apis/api";
 import { selectRawIntervalDetail } from "../../services/redux/modules/user/selector";
 import {
   buildXYDataObjSpread,
@@ -29,20 +28,16 @@ import s from "./index.module.css";
 const TITLE = "Musical age over time";
 
 interface MusicalAgeOverTimeProps {
+  result: ReleaseYearsPerResponse | null;
   // The musical age of the whole period
   overall: number | undefined;
 }
 
 export default function MusicalAgeOverTime({
+  result,
   overall,
 }: MusicalAgeOverTimeProps) {
   const { interval } = useSelector(selectRawIntervalDetail);
-  const result = useAPI(
-    api.getReleaseYearsPer,
-    interval.start,
-    interval.end,
-    interval.timesplit,
-  );
 
   // Steps without dated plays are left out
   const data = buildXYDataObjSpread(

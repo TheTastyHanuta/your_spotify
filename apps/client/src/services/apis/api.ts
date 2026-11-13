@@ -128,10 +128,6 @@ export type TasteResponse = {
   // Plays of songs < 2 min, 2-3, 3-4, 4-5, 5 min and more
   lengths: number[];
 };
-export type DecadesPerYearResponse = {
-  year: number;
-  decades: { decade: number; plays: number }[];
-}[];
 export type GenresResponse = {
   totalPlays: number;
   // Plays of artists with at least one genre
@@ -585,8 +581,6 @@ export const api = {
     get<
       BestOfPartOfDayResponse<T extends "artists" ? ShortArtist : ShortTrack>
     >("/spotify/top/part-of-day", { start, end, type, nb }),
-  getDecadesPerYear: () =>
-    get<DecadesPerYearResponse>("/spotify/taste/decades"),
   getGenres: (start: Date, end: Date, nb: number) =>
     get<GenresResponse>("/spotify/genres", { start, end, nb }),
   getDiscoveries: (start: Date, end: Date, nb: number) =>
