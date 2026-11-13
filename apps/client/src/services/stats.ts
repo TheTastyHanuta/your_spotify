@@ -27,39 +27,6 @@ export const buildFromDateId = (dateId: DateId) => {
   return date;
 };
 
-export const getDateFromIndex = (
-  index: number,
-  start: Date,
-  precision: Precision,
-) => {
-  const date = fresh(start, precision !== Precision.hour);
-  if (precision === Precision.year) {
-    date.setFullYear(date.getFullYear() + index);
-    return date;
-  }
-  if (precision === Precision.month) {
-    date.setMonth(date.getMonth() + index);
-    return date;
-  }
-  if (precision === Precision.week) {
-    date.setDate(date.getDate() + index * 7);
-    return date;
-  }
-  if (precision === Precision.day) {
-    date.setDate(date.getDate() + index);
-    return date;
-  }
-  if (precision === Precision.hour) {
-    date.setHours(date.getHours() + index);
-    return date;
-  }
-  console.warn("No precision on getDateFromIndex");
-  return date;
-  // const ratio = index / totalIndex;
-  // const date = new Date(start.getTime() + ratio * (end.getTime() - start.getTime()));
-  // return date;
-};
-
 export const getPrecisionFromDateId = (dateId: DateId) => {
   if ("hour" in dateId) {
     return Precision.hour;
@@ -83,28 +50,59 @@ export interface DefaultGraphItem {
   dateWithPrecision: DateWithPrecision;
 }
 
-const cleanDateFromPrecision = (date: Date, precision: Precision) => {
-  const d = fresh(date, true);
+// Steps are wall-clock times of the stats timezone. They are counted on a UTC
+// calendar, where no hour is skipped or repeated as in the browser's daylight
+// saving changes, and turned into browser dates only for the labels.
+const calendarOf = (date: Date) =>
+  Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+  );
+
+const calendarOfId = (id: DateId) =>
+  Date.UTC(id.year, (id.month ?? 1) - 1, id.day ?? 1, id.hour ?? 0);
+
+const startOfStep = (time: number, precision: Precision) => {
+  const d = new Date(time);
+  return Date.UTC(
+    d.getUTCFullYear(),
+    precision === Precision.year ? 0 : d.getUTCMonth(),
+    precision === Precision.year || precision === Precision.month
+      ? 1
+      : d.getUTCDate(),
+    precision === Precision.hour ? d.getUTCHours() : 0,
+  );
+};
+
+const addSteps = (time: number, steps: number, precision: Precision) => {
+  const d = new Date(time);
   if (precision === Precision.year) {
-    d.setMonth(0);
-    d.setDate(1);
-    return d;
+    d.setUTCFullYear(d.getUTCFullYear() + steps);
+  } else if (precision === Precision.month) {
+    d.setUTCMonth(d.getUTCMonth() + steps);
+  } else if (precision === Precision.week) {
+    d.setUTCDate(d.getUTCDate() + steps * 7);
+  } else if (precision === Precision.day) {
+    d.setUTCDate(d.getUTCDate() + steps);
+  } else {
+    d.setUTCHours(d.getUTCHours() + steps);
   }
-  if (precision === Precision.month) {
-    d.setDate(1);
-    return d;
-  }
-  if (precision === Precision.week) {
-    return d;
-  }
-  if (precision === Precision.day) {
-    return d;
-  }
-  if (precision === Precision.hour) {
-    return fresh(date, false);
-  }
-  console.warn("No precision on cleanDateFromPrecision");
-  return date;
+  return d.getTime();
+};
+
+// shortcut: an hour the browser skips (daylight saving) but the stats timezone
+// has gets the next hour's label, as a browser Date can't hold it; format from
+// the calendar parts if hourly charts across timezones ever need it exact.
+const browserDateOf = (time: number) => {
+  const d = new Date(time);
+  return new Date(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+    d.getUTCHours(),
+  );
 };
 
 const buildXYDataWithGetters = <Dict extends Record<string, any>>(
@@ -119,57 +117,33 @@ const buildXYDataWithGetters = <Dict extends Record<string, any>>(
     return [];
   }
   const precision = getPrecisionFromDateId(data[0]!._id);
-  start = cleanDateFromPrecision(start, precision);
-  end = fresh(end, precision !== Precision.hour);
+  const steps = data.map((d) => calendarOfId(d._id));
+  // The server only returns steps of the period, but in the stats timezone:
+  // when it differs from the browser's, the first or last step falls outside
+  // the browser's start and end, so the range grows to keep them
+  const first = startOfStep(Math.min(calendarOf(start), steps[0]!), precision);
+  const last = Math.max(startOfStep(calendarOf(end), precision), steps.at(-1)!);
   const built: (DefaultGraphItem & Dict)[] = [];
-  let currentIndex = 0;
-  for (let dataIndex = 0; dataIndex < data.length; dataIndex += 1) {
-    const d = data[dataIndex]!;
-    const thisDate = buildFromDateId(d._id);
-    if (thisDate.getTime() < start.getTime()) {
-      continue;
+  let dataIndex = 0;
+  for (let x = 0, step = first; step <= last; x += 1) {
+    // Sorted by step; one the walk already passed is left out
+    while (dataIndex < data.length && steps[dataIndex]! < step) {
+      dataIndex += 1;
     }
-    if (thisDate.getTime() > end.getTime()) {
-      return built;
+    const date = browserDateOf(step);
+    const dateWithPrecision = { date, precision };
+    if (steps[dataIndex] === step) {
+      built.push({ ...getData(dataIndex), x, dateWithPrecision });
+      dataIndex += 1;
+    } else if (
+      !doNotFillData &&
+      // An hour the browser skips gets no empty step, it would repeat a label
+      (precision !== Precision.hour ||
+        date.getHours() === new Date(step).getUTCHours())
+    ) {
+      built.push({ ...getDefaultData(), x, dateWithPrecision });
     }
-    let currentDate = getDateFromIndex(currentIndex, start, precision);
-    for (let i = 0; currentDate.getTime() !== thisDate.getTime(); i += 1) {
-      if (currentDate.getTime() > thisDate.getTime()) {
-        console.warn("Could not build missing data correctly");
-        return built;
-      }
-      if (!doNotFillData) {
-        built.push({
-          ...getDefaultData(),
-          x: currentIndex,
-          dateWithPrecision: { date: currentDate, precision },
-        });
-      }
-      currentIndex += 1;
-      currentDate = getDateFromIndex(currentIndex, start, precision);
-    }
-    built.push({
-      ...getData(dataIndex),
-      x: currentIndex,
-      dateWithPrecision: {
-        date: getDateFromIndex(currentIndex, start, precision),
-        precision,
-      },
-    });
-    currentIndex += 1;
-  }
-  if (!doNotFillData) {
-    let currentDate = getDateFromIndex(currentIndex, start, precision);
-
-    for (let i = 0; currentDate.getTime() <= end.getTime(); i += 1) {
-      built.push({
-        x: currentIndex + i,
-        dateWithPrecision: { date: currentDate, precision },
-        ...getDefaultData(),
-      });
-      currentIndex += 1;
-      currentDate = getDateFromIndex(currentIndex, start, precision);
-    }
+    step = addSteps(first, x + 1, precision);
   }
   return built;
 };

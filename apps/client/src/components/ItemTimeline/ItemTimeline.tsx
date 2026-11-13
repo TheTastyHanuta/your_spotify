@@ -240,13 +240,11 @@ export default function ItemTimeline({
     timeline.overall.months.map((m) => [monthKey(m._id), m]),
   );
   const firstMonth = buildFromDateId(timeline.months[0]!._id);
-  const lastMonth = buildFromDateId(timeline.months.at(-1)!._id);
-  // Up to now, so a stop shows. Never before the last month with listens,
-  // which can be ahead of the browser when the stats timezone is.
+  // Up to now, so a stop shows
   const months = buildXYData(
     timeline.months.map((m) => ({ _id: m._id, value: display(m) })),
     firstMonth,
-    new Date(Math.max(Date.now(), lastMonth.getTime())),
+    new Date(),
   );
   const dateOf = (x: number) =>
     months.find((month) => month.x === x)?.dateWithPrecision.date;

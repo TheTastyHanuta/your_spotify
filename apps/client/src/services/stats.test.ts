@@ -1,7 +1,12 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { getAppropriateTimesplitFromRange } from "./date";
-import { getLastPeriod, getPercentMore, msToDuration } from "./stats";
+import {
+  buildXYData,
+  getLastPeriod,
+  getPercentMore,
+  msToDuration,
+} from "./stats";
 import { Timesplit } from "./types";
 
 describe("getPercentMore", () => {
@@ -70,4 +75,97 @@ test("the chart unit follows the length of the range", () => {
     Timesplit.month,
     Timesplit.year,
   ]);
+});
+
+describe("buildXYData with another stats timezone", () => {
+  // The browser asks for Nov 10-13. The server groups by day in the stats
+  // timezone, so its days can start before or end after the browser's.
+  const start = new Date(2026, 10, 10);
+  const end = new Date(2026, 10, 13, 23, 59);
+  const days = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({
+      _id: { year: 2026, month: 11, day: from + i },
+      value: from + i,
+    }));
+  const shown = (built: ReturnType<typeof buildXYData>) =>
+    built.map((item) => [item.dateWithPrecision.date.getDate(), item.y]);
+
+  test("keeps a day after the period (stats timezone ahead)", () => {
+    expect(shown(buildXYData(days(10, 14), start, end))).toStrictEqual([
+      [10, 10],
+      [11, 11],
+      [12, 12],
+      [13, 13],
+      [14, 14],
+    ]);
+  });
+
+  test("keeps a day before the period (stats timezone behind)", () => {
+    expect(shown(buildXYData(days(9, 13), start, end, true))).toStrictEqual([
+      [9, 9],
+      [10, 10],
+      [11, 11],
+      [12, 12],
+      [13, 13],
+    ]);
+  });
+
+  test("still fills empty days up to the end of the period", () => {
+    const built = buildXYData(days(10, 11), start, end);
+    expect(shown(built)).toStrictEqual([
+      [10, 10],
+      [11, 11],
+      [12, 0],
+      [13, 0],
+    ]);
+    expect(built.map((item) => item.x)).toStrictEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("buildXYData over a daylight saving change of the browser", () => {
+  const browserTimezone = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = browserTimezone;
+  });
+  const hours = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({
+      _id: { year: 2026, month: 3, day: 8, hour: from + i },
+      value: from + i,
+    }));
+
+  test("keeps every hour of a stats timezone without the change", () => {
+    // New York skips 02:00 on March 8 2026, Phoenix (the stats one) does not
+    process.env.TZ = "America/New_York";
+    const built = buildXYData(
+      hours(2, 7),
+      new Date(2026, 2, 8, 5),
+      new Date(2026, 2, 8, 11),
+      true,
+    );
+    expect(built.map((item) => [item.x, item.y])).toStrictEqual([
+      [0, 2],
+      [1, 3],
+      [2, 4],
+      [3, 5],
+      [4, 6],
+      [5, 7],
+    ]);
+  });
+
+  test("adds no empty step for the hour the browser skips", () => {
+    process.env.TZ = "America/New_York";
+    const built = buildXYData(
+      [1, 3].flatMap((hour) => hours(hour, hour)),
+      new Date(2026, 2, 8, 0),
+      new Date(2026, 2, 8, 4),
+    );
+    expect(
+      built.map((item) => [item.dateWithPrecision.date.getHours(), item.y]),
+    ).toStrictEqual([
+      [0, 0],
+      [1, 1],
+      [3, 3],
+      [4, 0],
+    ]);
+  });
 });
