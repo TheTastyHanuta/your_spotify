@@ -376,61 +376,6 @@ export const getTaste = async (user: User, start: Date, end: Date) => {
   };
 };
 
-// Plays per release decade for each year of the user's whole history, to
-// show how their taste moved. Per album, as the release date is the album's.
-export const getDecadesPerYear = async (user: User) => {
-  const timezone = getTimezone(user.settings.timezone);
-  const perAlbum: {
-    _id: { year: number };
-    plays: number;
-    releaseDate?: string;
-  }[] = await InfosModel.aggregate([
-    { $match: { owner: user._id, blacklistedBy: { $exists: 0 } } },
-    {
-      $group: {
-        _id: {
-          year: { $year: { date: "$played_at", timezone } },
-          album: "$albumId",
-        },
-        plays: { $sum: 1 },
-      },
-    },
-    {
-      $lookup: {
-        from: "albums",
-        localField: "_id.album",
-        foreignField: "id",
-        as: "album",
-      },
-    },
-    {
-      $project: {
-        plays: 1,
-        releaseDate: { $arrayElemAt: ["$album.release_date", 0] },
-      },
-    },
-  ]);
-  const years = new Map<number, Map<number, number>>();
-  for (const row of perAlbum) {
-    const release = Number(row.releaseDate?.slice(0, 4));
-    if (!(release > 1900)) {
-      continue;
-    }
-    const decades = years.get(row._id.year) ?? new Map<number, number>();
-    const decade = Math.floor(release / 10) * 10;
-    decades.set(decade, (decades.get(decade) ?? 0) + row.plays);
-    years.set(row._id.year, decades);
-  }
-  return [...years.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([year, decades]) => ({
-      year,
-      decades: [...decades.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([decade, plays]) => ({ decade, plays })),
-    }));
-};
-
 // Plays per genre. An artist has up to 6 genres and counts for each, so the
 // genres overlap and their plays add up to more than coveredPlays.
 export const getGenres = async (
