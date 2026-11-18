@@ -431,7 +431,7 @@ Any user can set their own timezone in the settings, it will be used for any com
 
 ## Contributing
 
-If you found a bug in this fork or have an idea, feel free to open an [issue](https://github.com/TheTastyHanuta/your_spotify/issues/new/choose). If the problem also happens with the original project, please report it [there](https://github.com/Yooooomi/your_spotify/issues) as well.
+If you found a bug in this fork or have an idea, feel free to open an [issue](https://github.com/TheTastyHanuta/your_spotify/issues/new/choose). If the problem also happens with the original project, please report it [there](https://github.com/Yooooomi/your_spotify/issues) as well. To work on the code, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Supporting the original project
 
