@@ -36,7 +36,8 @@ export default function SiderSearch({
 }: SiderSearchProps) {
   const [search, setSearch] = useState("");
   const [results, loading] = useConditionalAPI(
-    search.length >= 3,
+    // Count code points like the server's zod check, so an emoji counts once
+    [...search].length >= 3,
     api.search,
     search,
   );
