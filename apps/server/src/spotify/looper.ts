@@ -1,4 +1,4 @@
-import { MongoServerSelectionError } from "mongodb";
+import { mongo } from "mongoose";
 
 import { getCloseTrackId, getUser, getUserCount } from "../database";
 import { Infos } from "../database/schemas/info";
@@ -174,7 +174,7 @@ export const dbLoop = async () => {
       }
     } catch (error) {
       logger.error(error);
-      if (error instanceof MongoServerSelectionError) {
+      if (error instanceof mongo.MongoServerSelectionError) {
         logger.error("Exiting because mongo is unreachable");
         process.exit(1);
       }
