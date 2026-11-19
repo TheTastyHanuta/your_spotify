@@ -73,7 +73,12 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     // One id at a time, so a retry does not fetch the whole batch again
     for (const id of spotifyIds) {
       tracks.push(
-        await retryPromise(() => this.spotifyApi.getTrack(id), 10, 30),
+        await retryPromise(
+          () => this.spotifyApi.getTrack(id),
+          10,
+          30,
+          "Import: Spotify track lookup",
+        ),
       );
     }
     return tracks;
@@ -88,6 +93,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         ),
       10,
       30,
+      "Import: preparing track metadata",
     );
     await storeTrackAlbumArtist({ tracks, albums, artists });
     const finalInfos: Omit<Infos, "owner">[] = [];
@@ -204,6 +210,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       () => getReusableStoredTracks(ids),
       10,
       30,
+      "Import: stored track lookup",
     );
     const toSearch = ids.filter((id) => !stored.has(id));
     const searchedItems = await this.search(toSearch);

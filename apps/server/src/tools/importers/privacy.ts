@@ -66,6 +66,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
       () => this.spotifyApi.search(track, artist),
       10,
       30,
+      "Import: Spotify track search",
     );
     return res;
   };
@@ -79,6 +80,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         ),
       10,
       30,
+      "Import: preparing track metadata",
     );
     await storeTrackAlbumArtist({ tracks, albums, artists });
     const finalInfos: Omit<Infos, "owner">[] = [];

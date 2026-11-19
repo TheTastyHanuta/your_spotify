@@ -7,10 +7,36 @@ import { logger } from "./logger";
 import {
   beforeParenthesis,
   chunk,
+  errorReason,
   minOfArray,
   removeDiacritics,
   retryPromise,
 } from "./misc";
+
+describe("errorReason", () => {
+  test("names the HTTP status, the network error code or the message", () => {
+    expect(
+      errorReason(
+        new HttpError({
+          status: 502,
+          statusText: "Bad Gateway",
+          body: "<html>",
+        }),
+      ),
+    ).toBe("HTTP 502 Bad Gateway");
+    expect(
+      errorReason(new HttpError({ status: 503, statusText: "", body: "" })),
+    ).toBe("HTTP 503");
+    expect(
+      errorReason(
+        new TypeError("fetch failed", { cause: { code: "ECONNRESET" } }),
+      ),
+    ).toBe("fetch failed (ECONNRESET)");
+    expect(
+      errorReason(new Error("The operation was aborted due to timeout")),
+    ).toBe("The operation was aborted due to timeout");
+  });
+});
 
 describe("retryPromise", () => {
   // Every failure is logged

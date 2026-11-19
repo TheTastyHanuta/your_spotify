@@ -276,10 +276,25 @@ export function beforeParenthesis(str: string) {
   return str;
 }
 
+// Short reason for a failed call, for logs. Network errors from fetch keep the
+// useful part (ECONNRESET, ENOTFOUND...) in their cause.
+export const errorReason = (e: unknown) => {
+  if (e instanceof HttpError) {
+    return `HTTP ${e.status}${e.statusText ? ` ${e.statusText}` : ""}`;
+  }
+  if (e instanceof Error) {
+    const code = (e.cause as { code?: unknown } | undefined)?.code;
+    return typeof code === "string" ? `${e.message} (${code})` : e.message;
+  }
+  return String(e);
+};
+
 export const retryPromise = async <T>(
   fn: () => Promise<T>,
   max: number,
   timeSeconds: number,
+  // What is being tried, so the log says which call failed
+  label = "Call",
 ): Promise<T> => {
   if (max <= 0) {
     throw new Error("Cannot retry 0 times");
@@ -304,8 +319,8 @@ export const retryPromise = async <T>(
       }
       lastError = e;
       logger.error(
-        `Retrying crashed promise, ${i + 1}/${max}${
-          isLastTry ? "" : `, retrying in ${timeSeconds} seconds...`
+        `${label} failed (${errorReason(e)}), try ${i + 1}/${max}${
+          isLastTry ? ", giving up" : `, retrying in ${timeSeconds} seconds...`
         }`,
       );
     }
