@@ -8,13 +8,18 @@ import {
   selectLoaded,
   selectUser,
 } from "../../services/redux/modules/user/selector";
+import FullscreenCentered from "../FullscreenCentered";
+import Text from "../Text";
 
 interface PrivateRouteProps {
   children: ReactNode;
+  // For pages whose requests need a login, which a share-link guest lacks
+  noGuests?: boolean;
 }
 
 export default function PrivateRoute({
   children,
+  noGuests,
 }: PrivateRouteProps): ReactNode {
   const user = useSelector(selectUser);
   const accounts = useSelector(selectAccounts);
@@ -32,6 +37,15 @@ export default function PrivateRoute({
   }
   if (!user || !accounts || accounts.length === 0) {
     return <div />;
+  }
+  if (noGuests && user.isGuest) {
+    return (
+      <FullscreenCentered>
+        <Text element="h3" size="big">
+          This page is not available when viewing as a guest
+        </Text>
+      </FullscreenCentered>
+    );
   }
   return children;
 }

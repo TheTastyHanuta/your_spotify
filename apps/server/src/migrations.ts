@@ -44,6 +44,7 @@ import { up as create_private_data } from "./migrations/1708973485300-create_pri
 import { up as add_metadata_to_infos } from "./migrations/1708973485301-add_metadata_to_infos";
 import { up as add_language_to_user } from "./migrations/1708973485302-add_language_to_user";
 import { up as remove_user_tracks } from "./migrations/1788998400000-remove_user_tracks";
+import { up as rebuild_artist_blacklist } from "./migrations/1795097848766-rebuild_artist_blacklist";
 
 function noop() {}
 
@@ -81,6 +82,10 @@ export function runMigrations() {
         },
         "1788998400000-remove_user_tracks.js": {
           up: remove_user_tracks,
+          down: noop,
+        },
+        "1795097848766-rebuild_artist_blacklist.js": {
+          up: rebuild_artist_blacklist,
           down: noop,
         },
       },

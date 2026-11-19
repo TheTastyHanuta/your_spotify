@@ -78,13 +78,13 @@ export const checkBlacklistConsistency = () =>
     { $unset: { blacklistedBy: 1 } },
   );
 
+// By the listen's own primary artist, like the poller and importers mark them:
+// after an ISRC merge the listen's track can list another artist first
 export const unblacklistByArtist = async (userId: string, artistId: string) => {
-  const tracks = await TrackModel.find({ "artists.0": artistId });
-  const trackIds = tracks.map((t) => t.id);
   await InfosModel.updateMany(
     {
       owner: userId,
-      id: { $in: trackIds },
+      primaryArtistId: artistId,
       blacklistedBy: { $elemMatch: { $eq: "artist" } },
     },
     { $pull: { blacklistedBy: "artist" } },
@@ -95,14 +95,11 @@ export const unblacklistByArtist = async (userId: string, artistId: string) => {
   );
 };
 
-export const blacklistByArtist = async (userId: string, artistId: string) => {
-  const tracks = await TrackModel.find({ "artists.0": artistId });
-  const trackIds = tracks.map((t) => t.id);
-  return InfosModel.updateMany(
-    { owner: userId, id: { $in: trackIds } },
+export const blacklistByArtist = (userId: string, artistId: string) =>
+  InfosModel.updateMany(
+    { owner: userId, primaryArtistId: artistId },
     { $addToSet: { blacklistedBy: "artist" } },
   );
-};
 
 // The tracks the stored ones are merged into, following chains (a primary
 // merged again later) to their end, so a version reaches the current primary

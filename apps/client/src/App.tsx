@@ -247,7 +247,7 @@ function App() {
                 <Route
                   path="/collaborative/affinity"
                   element={
-                    <PrivateRoute>
+                    <PrivateRoute noGuests>
                       <Affinity />
                     </PrivateRoute>
                   }
@@ -255,7 +255,7 @@ function App() {
                 <Route
                   path="/collaborative/top/songs/:mode"
                   element={
-                    <PrivateRoute>
+                    <PrivateRoute noGuests>
                       <CollaborativeSongs />
                     </PrivateRoute>
                   }
@@ -263,7 +263,7 @@ function App() {
                 <Route
                   path="/collaborative/top/albums/:mode"
                   element={
-                    <PrivateRoute>
+                    <PrivateRoute noGuests>
                       <CollaborativeAlbums />
                     </PrivateRoute>
                   }
@@ -271,7 +271,7 @@ function App() {
                 <Route
                   path="/collaborative/top/artists/:mode"
                   element={
-                    <PrivateRoute>
+                    <PrivateRoute noGuests>
                       <CollaborativeArtists />
                     </PrivateRoute>
                   }

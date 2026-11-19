@@ -1,10 +1,12 @@
 import { readFile, unlink } from "fs/promises";
 
+import { Types } from "mongoose";
 import { z } from "zod";
 
 import {
   addTrackIdsToUser,
   getCloseTrackId,
+  getUserFromField,
   storeFirstListenedAtIfLess,
 } from "../../database";
 import { setImporterStateCurrent } from "../../database/queries/importer";
@@ -16,6 +18,7 @@ import {
   storeTrackAlbumArtist,
 } from "../../spotify/dbTools";
 import { SpotifyAPI } from "../apis/spotifyApi";
+import { artistBlacklistMark } from "../blacklist";
 import { logger } from "../logger";
 import {
   beforeParenthesis,
@@ -84,6 +87,14 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
       "Import: preparing track metadata",
     );
     await storeTrackAlbumArtist({ tracks, albums, artists });
+    // Read for every batch: an import can run for days, and the poller marks
+    // listens of blacklisted artists the same way
+    const user = await getUserFromField(
+      "_id",
+      new Types.ObjectId(userId),
+      false,
+    );
+    const blacklistedArtists = user?.settings.blacklistedArtists ?? [];
     const finalInfos: Omit<Infos, "owner">[] = [];
     for (let i = 0; i < items.length; i += 1) {
       const item = items[i]!;
@@ -118,6 +129,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         albumId: item.track.album.id,
         artistIds: item.track.artists.map((e) => e.id),
         durationMs: item.track.duration_ms,
+        ...artistBlacklistMark(blacklistedArtists, primaryArtist.id),
       });
     }
     // Recorded before the listens: once those are stored, a retry skips them

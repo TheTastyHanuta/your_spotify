@@ -10,6 +10,7 @@ import {
   requestSource,
 } from "../tools/apis/queueHttpClient";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
+import { artistBlacklistMark } from "../tools/blacklist";
 import { SpotifyReauthRequiredError } from "../tools/errors/Spotify";
 import { logger } from "../tools/logger";
 import { retryPromise, wait } from "../tools/misc";
@@ -72,9 +73,6 @@ const loop = async (user: User) => {
       30,
     );
     if (duplicate.length === 0) {
-      const isBlacklisted = user.settings.blacklistedArtists.find(
-        (a) => a === item.track.artists[0]?.id,
-      );
       const [primaryArtist] = item.track.artists;
       if (!primaryArtist) {
         continue;
@@ -86,7 +84,10 @@ const loop = async (user: User) => {
         primaryArtistId: primaryArtist.id,
         artistIds: item.track.artists.map((e) => e.id),
         id: track.id,
-        ...(isBlacklisted ? { blacklistedBy: ["artist" as const] } : {}),
+        ...artistBlacklistMark(
+          user.settings.blacklistedArtists,
+          primaryArtist.id,
+        ),
       });
     }
   }

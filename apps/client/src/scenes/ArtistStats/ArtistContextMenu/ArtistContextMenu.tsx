@@ -1,7 +1,7 @@
 import BlacklistArtistDialog from "../../../components/BlacklistArtistDialog";
 import ThreePoints from "../../../components/ThreePoints";
 import { ThreePointItem } from "../../../components/ThreePoints/ThreePoints";
-import { useBooleanState } from "../../../services/hooks/hooks";
+import { useBooleanState, useIsGuest } from "../../../services/hooks/hooks";
 import { compact, conditionalEntry } from "../../../services/tools";
 
 interface ArtistContextMenuProps {
@@ -16,6 +16,7 @@ export default function ArtistContextMenu({
   blacklisted,
 }: ArtistContextMenuProps) {
   const [open, setOpen, setClosed] = useBooleanState();
+  const isGuest = useIsGuest();
 
   const items: Array<ThreePointItem> = compact([
     conditionalEntry(
@@ -27,6 +28,11 @@ export default function ArtistContextMenu({
       blacklisted,
     ),
   ]);
+
+  // Share-link guests cannot change the shared account
+  if (isGuest) {
+    return null;
+  }
 
   return (
     <>
