@@ -17,6 +17,19 @@ import { getTracksAlbumsArtists, storeIterationOfLoop } from "./dbTools";
 
 const RETRY = 10;
 
+const LATE_MS = 30 * 60 * 1000;
+// Old plays among the new ones mean Spotify added them to the history late,
+// or the poller had not run for a while (downtime, a new user's first poll).
+export const latePlaysNote = (playedAt: Date[], now: number) => {
+  const late = playedAt
+    .map((date) => date.getTime())
+    .filter((time) => now - time > LATE_MS);
+  if (late.length === 0) {
+    return "";
+  }
+  return `; ${late.length} played over ${LATE_MS / 60_000} minutes ago, the oldest at ${new Date(Math.min(...late)).toISOString()}`;
+};
+
 // Returns when the newest listen Spotify gave back was played, 0 if none
 const loop = async (user: User) => {
   logger.debug(`[${user.username}]: refreshing...`);
@@ -38,6 +51,7 @@ const loop = async (user: User) => {
       () => spotifyApi.raw(nextUrl),
       RETRY,
       30,
+      `[${user.username}]: fetching recent plays`,
     );
     const { data } = response;
     items.push(...data.items);
@@ -97,7 +111,10 @@ const loop = async (user: User) => {
   );
   // Spotify's answer overlaps the last poll, so most polls add nothing
   (infos.length > 0 ? logger.info : logger.debug)(
-    `[${user.username}]: ${infos.length} new plays (${items.length} fetched); new in catalogue: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists`,
+    `[${user.username}]: ${infos.length} new plays (${items.length} fetched); new in catalogue: ${tracks.length} tracks, ${albums.length} albums, ${artists.length} artists${latePlaysNote(
+      infos.map((info) => info.played_at),
+      Date.now(),
+    )}`,
   );
   return Math.max(...items.map((item) => new Date(item.played_at).getTime()));
 };
