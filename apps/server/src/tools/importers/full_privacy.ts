@@ -24,6 +24,7 @@ import { logger } from "../logger";
 import { minOfArray, retryPromise } from "../misc";
 import { Unpack } from "../types";
 import { getFromCacheString, setToCacheString } from "./cache";
+import { IMPORT_DUPLICATE_SECONDS, isCloseListen } from "./duplicates";
 import {
   FullPrivacyImporterState,
   HistoryImporter,
@@ -108,12 +109,12 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         this.userId.toString(),
         [track.id, item.track.id],
         date,
-        60,
+        IMPORT_DUPLICATE_SECONDS,
       );
-      const currentImportDuplicate = finalInfos.find(
-        (e) => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
-      );
-      if (duplicate.length > 0 || currentImportDuplicate) {
+      if (
+        duplicate.length > 0 ||
+        isCloseListen(finalInfos, track.id, date, IMPORT_DUPLICATE_SECONDS)
+      ) {
         logger.debug(
           `${item.track.name} - ${item.track.artists[0]?.name} was duplicate`,
         );

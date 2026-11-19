@@ -25,6 +25,7 @@ import {
 } from "../misc";
 import { Unpack } from "../types";
 import { getFromCache, setToCache, SpotifyTrackCacheItem } from "./cache";
+import { IMPORT_DUPLICATE_SECONDS, isCloseListen } from "./duplicates";
 import {
   HistoryImporter,
   PrivacyImporterState,
@@ -95,12 +96,12 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
         this.userId.toString(),
         [track.id, item.track.id],
         date,
-        60,
+        IMPORT_DUPLICATE_SECONDS,
       );
-      const currentImportDuplicate = finalInfos.find(
-        (e) => Math.abs(e.played_at.getTime() - date.getTime()) <= 60 * 1000,
-      );
-      if (duplicate.length > 0 || currentImportDuplicate) {
+      if (
+        duplicate.length > 0 ||
+        isCloseListen(finalInfos, track.id, date, IMPORT_DUPLICATE_SECONDS)
+      ) {
         logger.debug(
           `${item.track.name} - ${item.track.artists[0]?.name} was duplicate`,
         );
