@@ -12,7 +12,6 @@ export interface User {
   refreshToken: string | null;
   spotifyAuthDate?: Date;
   spotifyReauthRequired?: boolean;
-  lastTimestamp: number;
   settings: {
     historyLine: boolean;
     preferredStatsPeriod: string;
@@ -40,7 +39,6 @@ export const UserSchema = new Schema<User>(
     refreshToken: { type: String, default: null },
     spotifyAuthDate: { type: Date },
     spotifyReauthRequired: { type: Boolean },
-    lastTimestamp: { type: Number, default: 0 },
     settings: {
       historyLine: { type: Boolean, default: true },
       preferredStatsPeriod: { type: String, default: "day" },

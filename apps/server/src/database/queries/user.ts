@@ -1,6 +1,5 @@
 import { Types } from "mongoose";
 
-import { DAY_MS } from "../../tools/date";
 import { chainEnds, unusedTracksToDelete } from "../../tools/orphanTracks";
 import {
   AlbumModel,
@@ -37,8 +36,6 @@ export const createUser = (
     accessToken: "",
     refreshToken: "",
     expiresIn: 0,
-    // Set last timestamp to yesterday so that we already have a pull of tracks
-    lastTimestamp: Date.now() - DAY_MS,
     settings: {
       historyLine: false,
       preferredStatsPeriod: "month",
@@ -129,7 +126,7 @@ export const addTrackIdsToUser = async (
 
 export const getCloseTrackId = async (
   userId: string,
-  trackId: string,
+  trackIds: string[],
   date: Date,
   secondsPlusMinus: number,
 ) => {
@@ -139,7 +136,7 @@ export const getCloseTrackId = async (
   endDate.setSeconds(endDate.getSeconds() + secondsPlusMinus);
   return InfosModel.find({
     owner: userId,
-    id: trackId,
+    id: { $in: trackIds },
     played_at: { $gt: startDate, $lt: endDate },
   });
 };
