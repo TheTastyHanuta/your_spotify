@@ -1,6 +1,10 @@
 import { cloneElement, ReactElement } from "react";
 
-import { useBooleanState, useLongPress } from "../../services/hooks/hooks";
+import {
+  useBooleanState,
+  useIsGuest,
+  useLongPress,
+} from "../../services/hooks/hooks";
 import { Track } from "../../services/types";
 import Dialog from "../Dialog";
 import TrackOptionsContent from "../TrackOptionsContent";
@@ -18,6 +22,12 @@ export default function LongClickableTrack({
 }: LongClickableTrackProps) {
   const [isOpen, open, close] = useBooleanState();
   const divProps = useLongPress(open);
+  const isGuest = useIsGuest();
+
+  // Every option needs a login, like the menu next to the track
+  if (isGuest) {
+    return children;
+  }
 
   return (
     <>

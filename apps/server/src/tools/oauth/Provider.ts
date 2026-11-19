@@ -3,6 +3,20 @@ import { QueuedHttpClient } from "../apis/queueHttpClient";
 import { generateRandomString } from "../crypto";
 import { credentials } from "./credentials";
 
+interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+}
+
+// A refresh can answer with a new refresh token, the old one then stops
+// working; without one the stored token stays
+export const tokensFrom = (data: TokenResponse, now = Date.now()) => ({
+  accessToken: data.access_token,
+  ...(data.refresh_token ? { refreshToken: data.refresh_token } : {}),
+  expiresIn: now + data.expires_in * 1000,
+});
+
 export interface Provider {
   getRedirect(): Promise<{ url: string; state: string }>;
   exchangeCode(
@@ -11,7 +25,7 @@ export interface Provider {
   ): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }>;
   refresh(
     refreshToken: string,
-  ): Promise<{ accessToken: string; expiresIn: number }>;
+  ): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }>;
   getHttpClient(accessToken: string): QueuedHttpClient;
 }
 
@@ -39,7 +53,7 @@ export class Spotify implements Provider {
   }
 
   async exchangeCode(code: string, state: string) {
-    const { data } = await this.client.post(
+    const { data } = await this.client.post<TokenResponse>(
       "https://accounts.spotify.com/api/token",
       {
         params: {
@@ -54,15 +68,11 @@ export class Spotify implements Provider {
       },
     );
 
-    return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: Date.now() + data.expires_in * 1000,
-    };
+    return tokensFrom(data);
   }
 
   async refresh(refresh: string) {
-    const { data } = await this.client.post(
+    const { data } = await this.client.post<TokenResponse>(
       "https://accounts.spotify.com/api/token",
       {
         params: { grant_type: "refresh_token", refresh_token: refresh },
@@ -75,10 +85,7 @@ export class Spotify implements Provider {
       },
     );
 
-    return {
-      accessToken: data.access_token as string,
-      expiresIn: Date.now() + data.expires_in * 1000,
-    };
+    return tokensFrom(data);
   }
 
   getHttpClient(accessToken: string) {

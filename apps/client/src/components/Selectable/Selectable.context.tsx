@@ -3,6 +3,7 @@ import { createContext, MouseEvent, ReactNode, useContext } from "react";
 
 import { Pointer } from "../../services/pointer";
 import { uniq } from "../../services/tools";
+import { selectRange } from "./selectRange";
 
 import s from "./index.module.css";
 
@@ -53,21 +54,7 @@ export const SelectableContextProvider = ({
   };
 
   const handleSelectTo = (index: number) => {
-    const lastSelected = selected.at(-1);
-    if (lastSelected === undefined) {
-      setSelected([index]);
-      return;
-    }
-    const order = Math.sign(index - lastSelected);
-    const addedIndexes: number[] = [];
-    for (
-      let i = lastSelected;
-      order < 0 ? i >= index : i <= index;
-      i += order
-    ) {
-      addedIndexes.push(i);
-    }
-    setSelected(uniq([...selected, ...addedIndexes]));
+    setSelected(selectRange(selected, index));
   };
 
   return (

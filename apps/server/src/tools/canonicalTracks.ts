@@ -17,7 +17,10 @@ export function primaryIdOf(
   storedById: Map<string, Pick<Track, "mergedInto">>,
 ) {
   const seen = new Set([track.id]);
-  let id = track.mergedInto ?? track.id;
+  let id =
+    track.mergedInto && storedById.has(track.mergedInto)
+      ? track.mergedInto
+      : track.id;
   while (!seen.has(id)) {
     seen.add(id);
     const next = storedById.get(id)?.mergedInto;

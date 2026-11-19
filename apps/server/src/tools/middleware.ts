@@ -285,7 +285,7 @@ export const measureRequestDuration = (
 };
 
 class AffinityNotAllowedError extends YourSpotifyError {
-  type = "UNAUTHORIZED" as const;
+  type = "FORBIDDEN" as const;
   code = "AFFINITY_NOT_ALLOWED";
 
   constructor() {

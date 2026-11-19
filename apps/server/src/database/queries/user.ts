@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 
+import { primaryIdOf } from "../../tools/canonicalTracks";
 import { chainEnds, unusedTracksToDelete } from "../../tools/orphanTracks";
 import {
   AlbumModel,
@@ -9,6 +10,7 @@ import {
   UserModel,
 } from "../Models";
 import { Infos, notRemoved } from "../schemas/info";
+import { Track } from "../schemas/track";
 import { User } from "../schemas/user";
 
 export const getUserFromField = async <F extends keyof User>(
@@ -97,28 +99,29 @@ export const addTrackIdsToUser = async (
   infos: Omit<Infos, "owner">[],
 ) => {
   // A track merged after the caller resolved it would keep these listens
-  // apart, so they go to the track it was merged into
-  const mergedInto = new Map<string, string>();
+  // apart, so they go to the track it was merged into.
+  // A merge target can itself be merged later, a few steps cover the chain.
+  // Targets are loaded too, as a chain only continues to a stored track: six
+  // loads follow five merges.
+  const storedById = new Map<string, Pick<Track, "id" | "mergedInto">>();
   let ids = [...new Set(infos.map((info) => info.id))];
-  // A merge target can itself be merged later, a few steps cover the chain
-  for (let step = 0; step < 5 && ids.length > 0; step += 1) {
-    const merged = await TrackModel.find(
-      { id: { $in: ids }, mergedInto: { $exists: true, $ne: null } },
+  for (let step = 0; step < 6 && ids.length > 0; step += 1) {
+    const tracks = await TrackModel.find(
+      { id: { $in: ids } },
       { id: 1, mergedInto: 1 },
     ).lean();
-    for (const track of merged) {
-      mergedInto.set(track.id, track.mergedInto!);
-      for (const [from, to] of mergedInto) {
-        if (to === track.id) {
-          mergedInto.set(from, track.mergedInto!);
-        }
-      }
+    for (const track of tracks) {
+      storedById.set(track.id, track);
     }
-    ids = merged.map((track) => track.mergedInto!);
+    ids = tracks.flatMap((track) =>
+      track.mergedInto && !storedById.has(track.mergedInto)
+        ? [track.mergedInto]
+        : [],
+    );
   }
   const realInfos = infos.map((info) => ({
     ...info,
-    id: mergedInto.get(info.id) ?? info.id,
+    id: primaryIdOf(storedById.get(info.id) ?? { id: info.id }, storedById),
     owner: new Types.ObjectId(id),
   }));
   return InfosModel.create(realInfos);

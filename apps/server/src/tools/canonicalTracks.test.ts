@@ -120,6 +120,14 @@ test("a chain whose end is not stored stops at the last stored track", () => {
   ).toStrictEqual({ canonical: { v: "p" }, missing: [], versions: {} });
 });
 
+test("a track merged into one that is not stored stays itself", () => {
+  expect(run([played("v")], [{ id: "v", mergedInto: "gone" }])).toStrictEqual({
+    canonical: { v: "v" },
+    missing: [],
+    versions: {},
+  });
+});
+
 test("a loop of merged tracks ends instead of running forever", () => {
   expect(
     run(
