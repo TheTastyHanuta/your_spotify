@@ -37,28 +37,17 @@ const loop = async (user: User) => {
   // No early return on a missing access token: checkToken either refreshes it
   // or flags the account as needing a reconnection. Returning here left those
   // accounts silently untracked, even when a refresh could still have worked.
-  // Spotify keeps only the last 50 listens, so one full page holds them all
-  const url = `/me/player/recently-played?limit=50&after=${
-    user.lastTimestamp - 1000 * 60 * 60 * 2
-  }`;
+  // Spotify keeps only the last 50 listens, so one full page holds them all.
+  // No `after` cutoff: Spotify sometimes adds listens hours late with their
+  // original times, and duplicates of stored listens are skipped below.
   const spotifyApi = new SpotifyAPI(user._id.toString());
-
-  const items: RecentlyPlayedTrack[] = [];
-  let nextUrl = url;
-
-  do {
-    const response = await retryPromise(
-      () => spotifyApi.raw(nextUrl),
-      RETRY,
-      30,
-      `[${user.username}]: fetching recent plays`,
-    );
-    const { data } = response;
-    items.push(...data.items);
-    nextUrl = data.next;
-  } while (nextUrl);
-
-  const lastTimestamp = Date.now();
+  const { data } = await retryPromise(
+    () => spotifyApi.raw("/me/player/recently-played?limit=50"),
+    RETRY,
+    30,
+    `[${user.username}]: fetching recent plays`,
+  );
+  const items: RecentlyPlayedTrack[] = data.items;
 
   if (items.length === 0) {
     logger.debug(`[${user.username}]: no new music`);
@@ -78,7 +67,7 @@ const loop = async (user: User) => {
     const date = new Date(item.played_at);
     const duplicate = await getCloseTrackId(
       user._id.toString(),
-      track.id,
+      [track.id, item.track.id],
       date,
       30,
     );
@@ -103,7 +92,6 @@ const loop = async (user: User) => {
   }
   await storeIterationOfLoop(
     user._id.toString(),
-    lastTimestamp,
     tracks,
     albums,
     artists,

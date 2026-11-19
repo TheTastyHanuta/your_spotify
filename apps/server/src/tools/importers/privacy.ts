@@ -93,7 +93,7 @@ export class PrivacyImporter implements HistoryImporter<"privacy"> {
       const date = new Date(`${item.played_at}Z`);
       const duplicate = await getCloseTrackId(
         this.userId.toString(),
-        track.id,
+        [track.id, item.track.id],
         date,
         60,
       );

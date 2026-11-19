@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
 
-import {
-  addTrackIdsToUser,
-  storeInUser,
-  storeFirstListenedAtIfLess,
-} from "../database";
+import { addTrackIdsToUser, storeFirstListenedAtIfLess } from "../database";
 import { TrackModel, AlbumModel, ArtistModel } from "../database/Models";
 import { findMergedIntoTracks } from "../database/queries/track";
 import { Album, SpotifyAlbum } from "../database/schemas/album";
@@ -393,7 +389,6 @@ export async function storeTrackAlbumArtist({
 
 export async function storeIterationOfLoop(
   userId: string,
-  iterationTimestamp: number,
   tracks: Track[],
   albums: Album[],
   artists: Artist[],
@@ -405,10 +400,6 @@ export async function storeIterationOfLoop(
     await storeTrackAlbumArtist({ tracks, albums, artists });
 
     await addTrackIdsToUser(userId, infos);
-
-    await storeInUser("_id", new mongoose.Types.ObjectId(userId), {
-      lastTimestamp: iterationTimestamp,
-    });
 
     const min = minOfArray(infos, (item) => item.played_at.getTime());
 
