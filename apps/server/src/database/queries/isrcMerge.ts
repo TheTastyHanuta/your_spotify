@@ -252,6 +252,18 @@ const getSecondaryIdsByPrimaryId = async () => {
     group.push(track.id);
     secondaryIdsByPrimaryId.set(track.mergedInto!, group);
   }
+  // Listens of a track merged into one that is not stored stay where they
+  // are, as ingestion keeps them: moved there, they would join no track
+  const stored = new Set(
+    await TrackModel.distinct("id", {
+      id: { $in: [...secondaryIdsByPrimaryId.keys()] },
+    }),
+  );
+  for (const primaryId of secondaryIdsByPrimaryId.keys()) {
+    if (!stored.has(primaryId)) {
+      secondaryIdsByPrimaryId.delete(primaryId);
+    }
+  }
   return secondaryIdsByPrimaryId;
 };
 
