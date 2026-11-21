@@ -6,6 +6,7 @@ import {
 } from "../../spotify/dbTools";
 import { requestSource } from "../apis/queueHttpClient";
 import { SpotifyAlbumTrack, SpotifyAPI } from "../apis/spotifyApi";
+import { isrcOf } from "../isrc";
 import { logger } from "../logger";
 import { wait } from "../misc";
 import { isrcCandidates } from "./match";
@@ -83,7 +84,7 @@ async function lookUpIsrcs(
     // A 400 or 404 is "no such song" for good, as in the ISRC merge; anything
     // else throws and a later view asks again
     const track = await api.getTrack(entry.id);
-    const isrc = track?.external_ids?.isrc ?? null;
+    const isrc = isrcOf(track) ?? null;
     // Saved first: the album page matches by it even if storing the version
     // below fails, and Spotify is not asked again
     await AlbumTracklistModel.updateOne(

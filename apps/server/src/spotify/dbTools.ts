@@ -9,6 +9,7 @@ import { Infos } from "../database/schemas/info";
 import { SpotifyTrack, Track } from "../database/schemas/track";
 import { SpotifyAPI } from "../tools/apis/spotifyApi";
 import { canonicalizeSpotifyTracks } from "../tools/canonicalTracks";
+import { isrcOf } from "../tools/isrc";
 import { longWriteDbLock } from "../tools/lock";
 import { logger } from "../tools/logger";
 import { Metrics } from "../tools/metrics";
@@ -26,14 +27,12 @@ const spotifyTrackToStoredTrack = (track: SpotifyTrack): Track => ({
   ...track,
   album: track.album.id,
   artists: track.artists.map((e) => e.id),
-  isrc: track.external_ids?.isrc,
+  isrc: isrcOf(track),
 });
 
 const getSpotifyTrackIsrcs = (spotifyTracks: SpotifyTrack[]) => [
   ...new Set(
-    spotifyTracks
-      .map((track) => track.external_ids?.isrc)
-      .filter((isrc): isrc is string => Boolean(isrc)),
+    spotifyTracks.map(isrcOf).filter((isrc): isrc is string => Boolean(isrc)),
   ),
 ];
 
@@ -54,7 +53,7 @@ async function updateExistingTrackIsrcs(
 ) {
   const storedById = new Map(storedTracks.map((track) => [track.id, track]));
   const updates = spotifyTracks.flatMap((track) => {
-    const isrc = track.external_ids?.isrc;
+    const isrc = isrcOf(track);
     const storedTrack = storedById.get(track.id);
     if (
       !isrc ||

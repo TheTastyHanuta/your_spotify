@@ -1,5 +1,6 @@
 // Pure part of ingesting played tracks
 import type { SpotifyTrack, Track } from "../database/schemas/track";
+import { isrcOf } from "./isrc";
 
 interface TrackCanonicalizationResult {
   canonicalIdBySpotifyId: Map<string, string>;
@@ -61,7 +62,7 @@ export function canonicalizeSpotifyTracks(
     if (!spotifyTrack.id) {
       continue;
     }
-    const isrc = spotifyTrack.external_ids?.isrc;
+    const isrc = isrcOf(spotifyTrack);
     const storedByMatchingIsrc = isrc ? storedByIsrc.get(isrc) : undefined;
     if (storedByMatchingIsrc) {
       canonicalIdBySpotifyId.set(spotifyTrack.id, storedByMatchingIsrc.id);

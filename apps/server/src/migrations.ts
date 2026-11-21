@@ -45,6 +45,7 @@ import { up as add_metadata_to_infos } from "./migrations/1708973485301-add_meta
 import { up as add_language_to_user } from "./migrations/1708973485302-add_language_to_user";
 import { up as remove_user_tracks } from "./migrations/1788998400000-remove_user_tracks";
 import { up as rebuild_artist_blacklist } from "./migrations/1795097848766-rebuild_artist_blacklist";
+import { up as normalize_isrcs } from "./migrations/1795287113610-normalize_isrcs";
 
 function noop() {}
 
@@ -88,6 +89,7 @@ export function runMigrations() {
           up: rebuild_artist_blacklist,
           down: noop,
         },
+        "1795287113610-normalize_isrcs.js": { up: normalize_isrcs, down: noop },
       },
       stateStore: new MongoDbStore(),
     },
