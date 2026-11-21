@@ -53,7 +53,6 @@ It consists of a server that regularly asks Spotify what you played and stores i
   - [Building the images yourself](#building-the-images-yourself)
   - [Installing locally (not recommended)](#installing-locally-not-recommended)
 - [FAQ](#faq)
-- [External guides](#external-guides)
 - [Contributing](#contributing)
 - [Supporting the original project](#supporting-the-original-project)
 - [License](#license)
@@ -122,26 +121,30 @@ Set up Nginx, Caddy, Traefik or another proxy with two HTTPS addresses: one forw
 ```yml
 server:
   environment:
-    API_ENDPOINT: https://api.yourspotify.example.com
-    CLIENT_ENDPOINT: https://yourspotify.example.com
+    API_ENDPOINT: https://api.stats.example.com
+    CLIENT_ENDPOINT: https://stats.example.com
 
 web:
   environment:
-    API_ENDPOINT: https://api.yourspotify.example.com
+    API_ENDPOINT: https://api.stats.example.com
 ```
 
-Spotify redirect URI: `https://api.yourspotify.example.com/oauth/spotify/callback`, which is your `API_ENDPOINT` followed by `/oauth/spotify/callback`.
+Spotify redirect URI: `https://api.stats.example.com/oauth/spotify/callback`, which is your `API_ENDPOINT` followed by `/oauth/spotify/callback`. Write both addresses without a trailing slash.
 
 For Nginx, [docs/nginx-example.conf](docs/nginx-example.conf) is a complete example with both addresses, including notes for Cloudflare Tunnel.
 
 Things to keep in mind for the proxy:
 
-- Both addresses must be under the same domain, as in the example. The login cookie is not sent between unrelated domains, so you would be logged out on every request.
+- Both addresses must be under the same domain, as in the example. The login cookie is not sent between unrelated domains, so you would be logged out on every request. With a shared dynamic DNS service like DuckDNS, use `name.duckdns.org` and `api.name.duckdns.org`; two separate names there count as unrelated domains.
+- Don't put `spotify` in the domain name: Google may then mark the whole domain as deceptive.
+- The example compose file makes the ports reachable from this machine only (`127.0.0.1:`). That is enough for a proxy installed directly on this machine.
+  - A proxy running in Docker can't reach these ports. Put it in the same Docker network as YourSpotify and forward to `web:3000` and `server:8080`; the `ports` lines are then not needed.
+  - If the proxy runs on another machine, remove `127.0.0.1:` from both `ports` lines. Docker opens published ports past firewalls like ufw, so the ports can then be reached from your whole network.
 - A history import uploads up to 50 files of 20 MB each in one request. Some proxies limit uploads by default (Nginx to 1 MB, raise it with `client_max_body_size`, for example to `1024m`).
 
 ### 2. Create the Spotify application
 
-1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and click **Create app**.
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and click **Create app**.
 2. Fill out the application information.
 3. Enter the redirect URI from the access option you chose above.
 4. Check **Web API** and **I understand and agree**, then create the application.
@@ -159,7 +162,7 @@ services:
     init: true
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - mongo
     volumes:
@@ -181,7 +184,7 @@ services:
     init: true
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       API_ENDPOINT: http://127.0.0.1:8080
 
@@ -205,28 +208,29 @@ Check that all three containers are running with `docker compose ps`. If one kee
 
 1. Open the web app (`http://127.0.0.1:3000`, or your frontend address with option C) and log in with Spotify.
 2. **The first account that logs in becomes the administrator.**
-3. Play a song on Spotify. The server checks for new listens every few minutes, so it shows up on the **History** page shortly after.
+3. Play a song on Spotify for at least 30 seconds. It shows up on the **History** page within 10 minutes: the server checks for new listens every 2 minutes while you listen, and every 10 minutes when you haven't for a while.
 4. YourSpotify records your listening from now on, plus roughly the day before you logged in. To get your older history, [import it](#importing-past-history).
-5. If you are the only user, turn off new registrations in **Settings → Admin → Allow registrations**.
+5. Set your timezone in **Settings → Statistics → Timezone**. Until then, stats use the server's `TIMEZONE` (`Europe/Paris` if it isn't set).
+6. If you are the only user, turn off new registrations in **Settings → Admin → Allow registrations**.
 
 If the login fails with `INVALID_CLIENT: Invalid redirect URI`, the redirect URI in the Spotify dashboard does not exactly match your `API_ENDPOINT` followed by `/oauth/spotify/callback`.
 
 ## Importing past history
 
-Spotify only lets apps see your most recent plays, so everything before your registration has to be imported from a Spotify data export. Request the export on Spotify's [privacy page](https://www.spotify.com/us/account/privacy/), then open **Settings → Account → Import data** in YourSpotify.
+Spotify only lets apps see your most recent plays, so everything before your registration has to be imported from a Spotify data export. Request the export on Spotify's [privacy page](https://www.spotify.com/account/privacy/), then open **Settings → Account → Import data** in YourSpotify.
 
 | Method                                       | What you get                                      | Spotify takes up to | Files to upload                            |
 | :------------------------------------------- | :------------------------------------------------ | :------------------ | :----------------------------------------- |
 | **Extended streaming history** (recommended) | Your whole history since you created your account | 30 days             | `Streaming_History_Audio_YYYY-YYYY_X.json` |
-| **Account data**                             | The last year only                                | 5 days              | `StreamingHistoryX.json`                   |
+| **Account data**                             | The last year only                                | 5 days              | `StreamingHistory_music_X.json`            |
 
-Choose the method matching your export, upload the files (up to 50 files, 20 MB each) and start the import. A large history can take several hours, because the server waits between Spotify requests to avoid being rate limited. You can keep using the dashboard meanwhile; the page header shows the progress.
+Choose the method matching your export, upload the files (up to 50 files, 20 MB each; not the podcast or video files of the same export) and start the import. A large history can take several hours, because the server waits between Spotify requests to avoid being rate limited. You can keep using the dashboard meanwhile; the page header shows the progress.
 
 It is best to import right after creating your account. YourSpotify recognises listens it already recorded, but a few may still be inserted twice, more often with the **Account data** method.
 
 ### When Spotify blocks the import
 
-If Spotify rate limits the app for a long time, or keeps rate limiting it after a few retries, the import pauses instead of failing. The page header and the import history in **Settings** show until when Spotify blocks requests. A few minutes after that, the import continues on its own from where it stopped. Imports send their requests more slowly than the rest of the app (one every 3 seconds by default) and slow down further after every block, to at most one every 32 seconds, so they are less likely to get the app blocked again. Both times scale with `SPOTIFY_API_DELAY_MS`. Imports also wait for the daily request budget (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)). A large import can therefore take days; you only have to start it once. An import that was running when the server stopped continues a few minutes after the server starts again.
+If Spotify blocks requests during an import, the import pauses instead of failing. The page header and the import history in **Settings** show until when. A few minutes after the block ends, the import continues on its own from where it stopped, and from then on it sends its requests more slowly. Imports also wait for the daily request budget (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)). A large import can therefore take days, but you only have to start it once; it also continues after the server restarts.
 
 To hold an import back, choose **Pause** in the menu next to it in **Import history**, also while it waits for a block to end. A paused import stays paused, also after a block or a restart, until you choose **Resume**; it then continues from where it stopped. **Cancel** stops a paused or waiting import for good and deletes its uploaded files.
 
@@ -255,7 +259,7 @@ You keep your database, settings and Spotify application. The two app images cha
 
 The commands below assume the service names from the example compose file (`server`, `web` and `mongo`) and the default database name `your_spotify`. If yours differ (check with `docker compose config --services` and the last part of `MONGO_ENDPOINT` is the database name), replace them in every command. If your database runs elsewhere or needs a password, make the backup with the tools you normally use for it.
 
-#### 1. Back up your database
+### 1. Back up your database
 
 Do this **before** switching. The new server changes the database as soon as it starts, so a later backup is no longer your original database. Stop the app first, so nothing is written during the backup:
 
@@ -268,7 +272,7 @@ ls -lh before-switch.archive
 
 The last command shows the size of the backup. If a command failed or the file is empty, stop here and do not switch. Also save a copy of your compose file. Keep both until you are happy with the switch, and give later backups (for example before an update) a different file name, so this one is not overwritten.
 
-#### 2. Change the compose file
+### 2. Change the compose file
 
 Edit your existing compose file. First replace the two app images:
 
@@ -310,7 +314,7 @@ docker compose up -d
 
 The first command prints nothing if the file is valid; otherwise it says what is wrong. Watch the server log with `docker compose logs -f server` until it prints `Migrations successfully ran`, then press Ctrl+C. Open the web app and check that your accounts and older listening history are still there and that a song you play now shows up on the **History** page after a few minutes.
 
-#### 3. Optional: merge duplicate tracks
+### 3. Optional: merge duplicate tracks
 
 New listens are matched by ISRC automatically, but your existing history still contains duplicate songs (for example a single and the album version). An admin can merge them in **Settings → Admin → Merge duplicate songs**:
 
@@ -318,7 +322,7 @@ New listens are matched by ISRC automatically, but your existing history still c
 2. Check the preview: every song with several versions and the version that stays (the one with the most listens). It fills up while the lookup runs.
 3. **Merge** applies the preview for every user on the server. Only a backup can undo it, so make one first, under a new file name. Album stats keep the album each listen was played from. You can merge again later for songs found after that.
 
-#### Going back
+### Going back
 
 To return to the original project, stop the app and restore your backup from step 1:
 
@@ -330,14 +334,14 @@ docker compose exec mongo mongorestore --drop --archive=/tmp/before-switch.archi
 
 If `mongorestore` reports an error, do not continue: the original app would start on a half-restored database. Otherwise put back the copy of your old compose file and run `docker compose pull server web` and `docker compose up -d`. Listens recorded since the backup are lost, except the last roughly 50 plays that Spotify still returns.
 
-#### Coming from the linuxserver.io image
+### Coming from the linuxserver.io image
 
 The [linuxserver.io image](https://github.com/linuxserver/docker-your_spotify) runs the server and the web app in one container, with the API under `/api`. This fork has no such image, so the setup changes:
 
 1. Back up your database as in step 1, stopping the linuxserver.io container instead of `server web`.
 2. Replace the linuxserver.io container with the `server` and `web` services and the `volumes` block at the end of the [example compose file](#3-start-yourspotify-with-docker-compose). Keep your existing Mongo container and its data. Do not add the example's `mongo` service and remove `depends_on` if your database is not a service in the same compose file.
 3. Set `MONGO_ENDPOINT` on the server to your existing database. The server must be able to reach it, for example by being in the same compose file or Docker network.
-4. The API now has its own address (port `8080`). Choose an [access option](#1-choose-how-to-access-yourspotify), update your reverse proxy and change the redirect URI in the Spotify dashboard: it no longer contains `/api`.
+4. The API now has its own address (port `8080`), so the image's `APP_URL` becomes `CLIENT_ENDPOINT` (the web app) and `API_ENDPOINT` (the API). Choose an [access option](#1-choose-how-to-access-yourspotify), update your reverse proxy and change the redirect URI in the Spotify dashboard: it no longer contains `/api`.
 
 ## Using the dashboard
 
@@ -362,7 +366,7 @@ All variables are set on the **server**, except `FRAME_ANCESTORS`, which belongs
 | MONGO_ENDPOINT        | mongodb://mongo:27017/your_spotify | The address of the Mongo database, where **mongo** is the name of your service in the compose file                                                                                                                    |
 | PROMETHEUS_USERNAME   | _not defined_                      | Prometheus basic auth username (see [here](apps/server/README.md#prometheus))                                                                                                                                         |
 | PROMETHEUS_PASSWORD   | _not defined_                      | Prometheus basic auth password                                                                                                                                                                                        |
-| LOG_LEVEL             | info                               | The log level, debug is useful if you encounter any bugs                                                                                                                                                              |
+| LOG_LEVEL             | info                               | `debug`, `info`, `warn` or `error`; debug is useful if you encounter any bugs                                                                                                                                         |
 | CORS                  | _not defined_                      | List of comma-separated origins allowed (not required; defaults to CLIENT_ENDPOINT)                                                                                                                                   |
 | COOKIE_VALIDITY_MS    | 30d                                | How long a login stays valid, following [this pattern](https://github.com/vercel/ms). It is renewed while you keep using the app, so it only runs out when a device is not used for that long                         |
 | MAX_IMPORT_CACHE_SIZE | 100000                             | The maximum number of cached items per user during an import. A larger cache reduces Spotify requests and can make imports faster                                                                                     |
@@ -401,9 +405,9 @@ You can follow the instructions [here](LOCAL_INSTALL.md). Note that you still ne
 
 ### The login fails with "INVALID_CLIENT: Invalid redirect URI"
 
-The redirect URI in the Spotify dashboard must be exactly your `API_ENDPOINT` followed by `/oauth/spotify/callback`, including `http`/`https` and the port. Also see [Choose how to access YourSpotify](#1-choose-how-to-access-yourspotify): a plain local IP address over `http://` is not accepted by Spotify.
+The redirect URI in the Spotify dashboard must be exactly your `API_ENDPOINT` followed by `/oauth/spotify/callback`, including `http`/`https` and the port. `API_ENDPOINT` must not end with a slash. Also see [Choose how to access YourSpotify](#1-choose-how-to-access-yourspotify): a plain local IP address over `http://` is not accepted by Spotify.
 
-### The web application is telling me it cannot retrieve global preferences
+### The web application can't communicate with the server
 
 The web app can't reach the server. Check that the `API_ENDPOINT` address is reachable from the device you are browsing from.
 
@@ -415,7 +419,7 @@ Spotify also limits how many requests an app may send per day, without saying ho
 
 ### Songs don't seem to synchronize anymore
 
-This can happen if you revoked access on your Spotify account. The page header usually asks you to log in again. Otherwise, go to **Settings → Account → Miscellaneous** and click **Relog** next to **Relog to Spotify**.
+Spotify ends the app's access about six months after you last logged in with Spotify, or earlier if you revoked it in your Spotify account. The app offers to log in again from a month after a login, and asks you to once the access has ended. New listens are also not fetched while Spotify blocks the app (see [Spotify rate limited the app](#spotify-rate-limited-the-app-what-now)) or when `DISABLE_POLLING` is set. To log in again yourself, go to **Settings → Account → Miscellaneous** and click **Relog** next to **Relog to Spotify**.
 
 ### Some songs are missing or show up at the wrong time
 
@@ -429,11 +433,7 @@ From an admin account, go to **Settings → Admin → Allow registrations** and 
 
 ### A user is not in the same timezone as the server, how can they use their own timezone?
 
-Any user can set their own timezone in the settings, it will be used for any computed statistics. The timezone of the device will be used for everything else, such as song history.
-
-## External guides
-
-- [BreadNet](https://breadnet.co.uk/your-spotify-2022) installation tutorial (written for the original project)
+Any user can set their own timezone in **Settings → Statistics → Timezone**, it will be used for any computed statistics. The timezone of the device will be used for everything else, such as song history.
 
 ## Contributing
 

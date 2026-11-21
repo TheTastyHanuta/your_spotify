@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for coding agents (and humans) working in this repository. The workflow for branches, commits and pull requests is in [CONTRIBUTING.md](CONTRIBUTING.md).
+Guidance for coding agents (and humans) working in this repository. The workflow for branches, commits and pull requests is in [CONTRIBUTING.md](CONTRIBUTING.md). Branch names start with `feature/`, `fix/`, `refactor/` or `docs/`. Pull request descriptions use the headings of `.github/pull_request_template.md`; `gh pr create --body` or `--body-file` replaces the template, so write them out.
 
 YourSpotify is a self-hosted Spotify stats dashboard: an Express server polls each user's recently played tracks into MongoDB, and a React client shows the stats. This is a fork of Yooooomi/your_spotify (default branch `master`).
 
@@ -57,4 +57,4 @@ Instance config is env variables, listed in the README's "Environment variables"
 
 ## Docs
 
-The README and other docs describe how things work now. Notes about a change between versions ("X was removed", "after updating, do Y") go in the release notes, not the docs; when a change needs them, write the draft in the pull request or your reply. The README's "This fork adds" list and the guides for switching from the original project stay, because they remain true.
+The README and other docs describe how things work now. Notes about a change between versions ("X was removed", "after updating, do Y") go in the release notes, not the docs; what people running the app must do or will notice goes under the pull request's "For people running the app" heading, and the release notes are written from it at release time. The README's "This fork adds" list and the guides for switching from the original project stay, because they remain true.
