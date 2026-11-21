@@ -169,6 +169,12 @@ const cached = async (
   return hooks;
 };
 
+// For changes the listen count doesn't show, such as moved listens
+export const forgetHooks = (userId: string) => {
+  cache.delete(`songs:${userId}`);
+  cache.delete(`artists:${userId}`);
+};
+
 const allHooks = (user: User) => cached(user, "songs", findHooks);
 const allDives = (user: User) => cached(user, "artists", findArtistDives);
 

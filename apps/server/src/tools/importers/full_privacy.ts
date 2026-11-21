@@ -9,7 +9,13 @@ import {
   getUserFromField,
   storeFirstListenedAtIfLess,
 } from "../../database";
+import { InfosModel, TrackModel } from "../../database/Models";
+import { forgetHooks } from "../../database/queries/hooked";
 import { setImporterStateCurrent } from "../../database/queries/importer";
+import {
+  getIsrcLookups,
+  storeIsrcLookup,
+} from "../../database/queries/isrcMerge";
 import { Infos } from "../../database/schemas/info";
 import {
   RecentlyPlayedTrack,
@@ -27,7 +33,17 @@ import { logger } from "../logger";
 import { minOfArray, retryPromise } from "../misc";
 import { Unpack } from "../types";
 import { getFromCacheString, setToCacheString } from "./cache";
-import { IMPORT_DUPLICATE_SECONDS, isCloseListen } from "./duplicates";
+import { isCloseListen } from "./duplicates";
+import {
+  DUPLICATE_MS,
+  ExportPlay,
+  LATE_MS,
+  MIN_PLAY_MS,
+  offlineStoppedAt,
+  planImport,
+  playsNearListens,
+  StoredTrack,
+} from "./matching";
 import {
   FullPrivacyImporterState,
   HistoryImporter,
@@ -41,6 +57,9 @@ const fullPrivacyFileSchema = z.array(
     spotify_track_uri: z.string().nullable(),
     master_metadata_track_name: z.string().nullable(),
     master_metadata_album_artist_name: z.string().nullable(),
+    reason_end: z.string().nullish(),
+    offline: z.boolean().nullish(),
+    offline_timestamp: z.number().nullish(),
   }),
 );
 
@@ -61,6 +80,9 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
   // yet so a retried import has to start from there.
   private oldestPendingItem: number | null;
 
+  // Indexes of the plays no stored listen stands for, the only ones imported
+  private toImport: Set<number>;
+
   constructor(user: User) {
     this.id = "";
     this.userId = user._id.toString();
@@ -68,9 +90,26 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     this.currentItem = 0;
     this.spotifyApi = new SpotifyAPI(this.userId);
     this.oldestPendingItem = null;
+    this.toImport = new Set();
   }
 
   static idFromSpotifyURI = (uri: string) => uri.split(":")[2];
+
+  // When the play stopped, see offlineStoppedAt. Only offline rows: those
+  // are the ones the export gives the sync time for.
+  static stoppedAt = (content: FullPrivacyItem) =>
+    content.offline
+      ? offlineStoppedAt(
+          Date.parse(content.ts),
+          content.offline_timestamp,
+          content.ms_played,
+        )
+      : undefined;
+
+  static playedAt = (content: FullPrivacyItem) => {
+    const stopped = FullPrivacyImporter.stoppedAt(content);
+    return stopped === undefined ? content.ts : new Date(stopped).toISOString();
+  };
 
   search = async (spotifyIds: string[]) => {
     const tracks: (SpotifyTrack | undefined)[] = [];
@@ -116,15 +155,18 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         continue;
       }
       const date = new Date(item.played_at);
+      // A play can end next to a listen of the same track: one the plan
+      // didn't move, or a track id it didn't know that turns out to be the
+      // same track. The startup cleanup would delete one of the two anyway.
       const duplicate = await getCloseTrackId(
         this.userId.toString(),
         [track.id, item.track.id],
         date,
-        IMPORT_DUPLICATE_SECONDS,
+        DUPLICATE_MS / 1000,
       );
       if (
         duplicate.length > 0 ||
-        isCloseListen(finalInfos, track.id, date, IMPORT_DUPLICATE_SECONDS)
+        isCloseListen(finalInfos, track.id, date, DUPLICATE_MS / 1000)
       ) {
         logger.debug(
           `${item.track.name} - ${item.track.artists[0]?.name} was duplicate`,
@@ -154,8 +196,8 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         await storeFirstListenedAtIfLess(this.userId, minInfo.played_at);
       }
     }
-    // Save the progress only once the listens are stored. Listens a retry
-    // stores a second time are skipped by the duplicate check above.
+    // Save the progress only once the listens are stored. A retry pairs the
+    // listens stored before with their plays and doesn't import them again.
     await addTrackIdsToUser(this.userId.toString(), finalInfos);
     await setImporterStateCurrent(
       this.id,
@@ -260,6 +302,206 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     return idsToSearch;
   };
 
+  // Pairs the export's plays with the stored listens, moves listens Spotify
+  // stamped late to the export's time and keeps the plays to import. Runs at
+  // every start: listens an earlier run stored pair with their own plays.
+  // Asks Spotify first for the tracks the database doesn't know, so they pair
+  // by ISRC; the answers are cached for the import.
+  plan = async (elements: FullPrivacyItem[]) => {
+    const plays: ExportPlay[] = [];
+    elements.forEach((content, index) => {
+      const trackId =
+        content.spotify_track_uri &&
+        FullPrivacyImporter.idFromSpotifyURI(content.spotify_track_uri);
+      const time = Date.parse(content.ts);
+      if (!trackId || Number.isNaN(time)) {
+        return;
+      }
+      plays.push({
+        index,
+        time,
+        trackId,
+        msPlayed: content.ms_played,
+        reasonEnd: content.reason_end,
+        stoppedAt: FullPrivacyImporter.stoppedAt(content),
+      });
+    });
+    if (plays.length === 0) {
+      this.toImport = new Set();
+      return;
+    }
+    let first = Number.POSITIVE_INFINITY;
+    let last = Number.NEGATIVE_INFINITY;
+    for (const play of plays) {
+      first = Math.min(first, play.stoppedAt ?? play.time);
+      last = Math.max(last, play.time);
+    }
+    const owner = new Types.ObjectId(this.userId);
+    // Removed listens count as stored, so they are not imported again
+    const listens = (
+      await InfosModel.find(
+        {
+          owner,
+          played_at: {
+            // Spotify stamps some plays up to LATE_MS early or late
+            $gte: new Date(first - LATE_MS),
+            $lte: new Date(last + LATE_MS),
+          },
+        },
+        { id: 1, played_at: 1 },
+      ).lean()
+    ).map((listen) => ({
+      _id: listen._id.toString(),
+      time: listen.played_at.getTime(),
+      trackId: listen.id,
+    }));
+    const tracks = await this.storedTracks([
+      ...new Set([
+        ...listens.map((listen) => listen.trackId),
+        ...plays.map((play) => play.trackId),
+      ]),
+    ]);
+    // The ISRC merge stores the ISRCs it looked up only when it is applied
+    const withoutIsrc = [...tracks]
+      .filter(([, track]) => !track.isrc && !track.mergedInto)
+      .map(([id]) => id);
+    for (const [id, isrc] of await getIsrcLookups(withoutIsrc)) {
+      if (isrc) {
+        tracks.get(id)!.isrc = isrc;
+      }
+    }
+    await this.addUnknownTracks(playsNearListens(plays, listens), tracks);
+    const { matched, moves, toImport, unmatched } = planImport(
+      plays,
+      listens,
+      tracks,
+      await this.newestPolled(plays),
+    );
+    if (moves.length > 0) {
+      // First: a retry finds the moves done and would not record it
+      await storeFirstListenedAtIfLess(
+        this.userId,
+        new Date(moves.reduce((min, move) => Math.min(min, move.to), Infinity)),
+      );
+      await InfosModel.bulkWrite(
+        moves.map((move) => ({
+          updateOne: {
+            filter: { _id: new Types.ObjectId(move._id), owner },
+            update: { $set: { played_at: new Date(move.to) } },
+          },
+        })),
+      );
+      forgetHooks(this.userId);
+    }
+    logger.info(
+      `Import: ${matched} plays already stored, ${moves.length} of them moved to the export's time; ${toImport.size} plays to import; ${unmatched.length} stored listens from the export's time span are not in it`,
+    );
+    this.toImport = toImport;
+  };
+
+  // Spotify's recently played list, which the poller reads 50 at a time, still
+  // holds the newest listens; moved, the poller would store them again. Plays
+  // an earlier run imported from this export (at its exact times) are not in
+  // that list, so they don't count.
+  newestPolled = async (plays: ExportPlay[]) => {
+    const exportTimes = new Set(
+      plays.flatMap((play) => [play.time, play.stoppedAt ?? play.time]),
+    );
+    const ids = new Set<string>();
+    const cursor = InfosModel.find(
+      { owner: new Types.ObjectId(this.userId) },
+      { played_at: 1 },
+    )
+      .sort({ played_at: -1 })
+      .lean()
+      .cursor();
+    try {
+      // Mongoose's cursor doesn't close itself when the loop returns early
+      for await (const listen of cursor) {
+        if (!exportTimes.has(listen.played_at.getTime())) {
+          ids.add(listen._id.toString());
+          if (ids.size === 50) {
+            break;
+          }
+        }
+      }
+    } finally {
+      await cursor.close();
+    }
+    return ids;
+  };
+
+  // ISRC and merge target of the given tracks and of the tracks they were
+  // merged into
+  storedTracks = async (ids: string[]) => {
+    const tracks = new Map<string, StoredTrack>();
+    let toFetch = ids;
+    while (toFetch.length > 0) {
+      const found = await TrackModel.find(
+        { id: { $in: toFetch } },
+        { id: 1, isrc: 1, mergedInto: 1 },
+      ).lean();
+      for (const track of found) {
+        tracks.set(track.id, {
+          isrc: track.isrc ?? undefined,
+          mergedInto: track.mergedInto ?? undefined,
+        });
+      }
+      toFetch = [
+        ...new Set(
+          found.flatMap((track) =>
+            track.mergedInto && !tracks.has(track.mergedInto)
+              ? [track.mergedInto]
+              : [],
+          ),
+        ),
+      ];
+    }
+    return tracks;
+  };
+
+  // Adds the ISRC Spotify gives for the plays' tracks not stored yet. Only
+  // plays of 30 s or more: shorter ones are never imported, and skipped songs
+  // would cost most of the requests. The import looks up the others when it
+  // stores their plays. Answers are stored with the ISRC merge's
+  // lookups, so a paused or retried import doesn't ask again.
+  addUnknownTracks = async (
+    plays: ExportPlay[],
+    tracks: Map<string, StoredTrack>,
+  ) => {
+    const ids = [
+      ...new Set(
+        plays
+          .filter((play) => play.msPlayed >= MIN_PLAY_MS)
+          .map((play) => play.trackId)
+          .filter((id) => !tracks.has(id)),
+      ),
+    ];
+    const isrcs = await getIsrcLookups(ids);
+    const toSearch = ids.filter((id) => !isrcs.has(id));
+    if (toSearch.length > 0) {
+      logger.info(
+        `Import: looking up ${toSearch.length} tracks that aren't stored yet`,
+      );
+    }
+    for (const id of toSearch) {
+      stopIfPauseRequested();
+      const [track] = await this.search([id]);
+      // Kept for the import of the track's plays
+      setToCacheString(
+        this.userId.toString(),
+        id,
+        track ? { exists: true, track } : { exists: false },
+      );
+      const isrc = track?.external_ids?.isrc || null;
+      await storeIsrcLookup(id, isrc);
+      isrcs.set(id, isrc);
+    }
+    for (const [id, isrc] of isrcs) {
+      tracks.set(id, { isrc: isrc ?? undefined });
+    }
+  };
+
   run = async (id: string) => {
     this.id = id;
     let items: RecentlyPlayedTrack[] = [];
@@ -268,6 +510,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     if (!this.elements) {
       return false;
     }
+    await this.plan(this.elements);
     for (let i = this.currentItem; i < this.elements.length; i += 1) {
       stopIfPauseRequested();
       this.currentItem = i;
@@ -275,22 +518,8 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         logger.info(`Importing... (${i}/${this.elements.length})`);
       }
       const content = this.elements[i]!;
-      if (
-        !content.spotify_track_uri ||
-        !content.master_metadata_track_name ||
-        !content.master_metadata_album_artist_name
-      ) {
-        continue;
-      }
-      if (content.ms_played < 30 * 1000) {
-        // If track was played for less than 30 seconds
-        logger.debug(
-          `Track ${content.master_metadata_track_name} - ${
-            content.master_metadata_album_artist_name
-          } was passed, only listened for ${Math.floor(
-            content.ms_played / 1000,
-          )} seconds`,
-        );
+      // Already stored, shorter than 30 s or without a track
+      if (!this.toImport.has(i) || !content.spotify_track_uri) {
         continue;
       }
       const spotifyId = FullPrivacyImporter.idFromSpotifyURI(
@@ -305,12 +534,15 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       const item = getFromCacheString(this.userId.toString(), spotifyId);
       if (!item) {
         const arrayOfPlayedAt = idsToSearch[spotifyId] ?? [];
-        arrayOfPlayedAt.push(content.ts);
+        arrayOfPlayedAt.push(FullPrivacyImporter.playedAt(content));
         idsToSearch[spotifyId] = arrayOfPlayedAt;
         this.oldestPendingItem ??= i;
         idsToSearch = await this.checkIdsToSearch(idsToSearch, items);
       } else if (item.exists) {
-        items.push({ track: item.track, played_at: content.ts });
+        items.push({
+          track: item.track,
+          played_at: FullPrivacyImporter.playedAt(content),
+        });
       }
       if (items.length >= 20) {
         await this.storeItems(this.userId, items);
