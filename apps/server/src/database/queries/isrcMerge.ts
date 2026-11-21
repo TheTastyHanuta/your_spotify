@@ -52,6 +52,15 @@ export const storeIsrcLookup = async (trackId: string, isrc: string | null) => {
   );
 };
 
+// Spotify's earlier answers for these track ids, null for no ISRC
+export const getIsrcLookups = async (trackIds: string[]) => {
+  const lookups = await IsrcLookupModel.find(
+    { trackId: { $in: trackIds } },
+    { trackId: 1, isrc: 1 },
+  ).lean();
+  return new Map(lookups.map((lookup) => [lookup.trackId, lookup.isrc]));
+};
+
 export const getLookupProgress = async () => {
   const [remaining] = await TrackModel.aggregate<{ count: number }>([
     ...toLookUpPipeline(),

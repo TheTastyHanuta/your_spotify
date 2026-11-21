@@ -222,7 +222,7 @@ Spotify only lets apps see your most recent plays, so everything before your reg
 
 Choose the method matching your export, upload the files (up to 50 files, 20 MB each) and start the import. A large history can take several hours, because the server waits between Spotify requests to avoid being rate limited. You can keep using the dashboard meanwhile; the page header shows the progress.
 
-It is best to import right after creating your account. YourSpotify detects duplicate listens, but a few may still be inserted twice.
+It is best to import right after creating your account. YourSpotify recognises listens it already recorded, but a few may still be inserted twice, more often with the **Account data** method.
 
 ### When Spotify blocks the import
 
@@ -416,6 +416,12 @@ Spotify also limits how many requests an app may send per day. Once they are use
 ### Songs don't seem to synchronize anymore
 
 This can happen if you revoked access on your Spotify account. The page header usually asks you to log in again. Otherwise, go to **Settings → Account → Miscellaneous** and click **Relog** next to **Relog to Spotify**.
+
+### Some songs are missing or show up at the wrong time
+
+Spotify only shows apps your recently played songs, and not all of them: songs you skipped or stopped partway and songs from a private session are often left out. Spotify also sometimes reports a song minutes or hours before or after you played it, mostly one that was still playing when the app was closed or another device took over.
+
+To fix this, request your **Extended streaming history** and import it (see [Importing past history](#importing-past-history)). The import matches the export's plays with the listens YourSpotify already recorded, by recording (ISRC) and time, and adds the plays of at least 30 seconds it finds no listen for. Matched listens more than a minute off move to the time in the export, except the 50 most recent ones YourSpotify recorded itself. For some songs played offline, mostly before 2023, the export gives the time your phone went back online; the import uses when you played them instead, which can be days earlier. Where the export and Spotify's record differ too much, a few plays may still end up twice or keep a wrong time, and a play ending within 30 seconds of a listen of the same song is skipped. Spotify reports some plays up to two days late, and one that arrives while the import runs can be stored twice, so wait two days after the export arrives before importing it.
 
 ### How can I block new registrations?
 
