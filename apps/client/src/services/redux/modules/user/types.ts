@@ -35,6 +35,8 @@ export interface User {
 export interface ReduxPresetIntervalDetail {
   type: "preset";
   index: number;
+  // First day of a past period, "yyyy-MM-dd"
+  start?: string;
 }
 
 export interface ReduxCustomIntervalDetail {

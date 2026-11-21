@@ -10,8 +10,9 @@ const NAMES: Record<string, string> = {
 };
 
 // "Your top artist this month", "… of all time", "… from 3 Mar to 9 Mar"
-export function getPeriodName({ name, interval }: RawIntervalDetail) {
+export function getPeriodName({ name, interval, offset }: RawIntervalDetail) {
   return (
-    NAMES[name] ?? `from ${intervalToDisplay(interval.start, interval.end)}`
+    (offset ? undefined : NAMES[name]) ??
+    `from ${intervalToDisplay(interval.start, interval.end)}`
   );
 }

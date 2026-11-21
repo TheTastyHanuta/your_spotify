@@ -51,6 +51,22 @@ describe("getLastPeriod", () => {
     expect(getLastPeriod(start, end, "day").label).toBe("this time yesterday");
   });
 
+  test("a finished period compares with the whole one before", () => {
+    // Not with 1–28 January
+    expect(
+      getLastPeriod(
+        new Date(2026, 1, 1),
+        new Date(2026, 1, 28, 23, 59, 59, 999),
+        "month",
+        true,
+      ),
+    ).toStrictEqual({
+      start: new Date(2026, 0, 1),
+      end: new Date(2026, 0, 31, 23, 59, 59, 999),
+      label: "the month before",
+    });
+  });
+
   test("any other range compares with the range of the same length just before", () => {
     expect(
       getLastPeriod(new Date(2026, 3, 10), new Date(2026, 3, 20), "custom"),

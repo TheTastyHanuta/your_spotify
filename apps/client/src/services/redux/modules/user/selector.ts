@@ -21,8 +21,9 @@ export const selectUser = createSelector(
   selectUserState,
   (state) => state.user,
 );
-export const selectIntervalDetail = createSelector(selectUserState, (state) =>
-  fromReduxIntervalDetail(state.intervalDetail),
+export const selectIntervalDetail = createSelector(
+  [selectUserState, selectPresetDates],
+  (state) => fromReduxIntervalDetail(state.intervalDetail),
 );
 
 export const selectRawIntervalDetail = createSelector(

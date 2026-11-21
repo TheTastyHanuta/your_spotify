@@ -17,8 +17,12 @@
 
 .calendarRoot {
   margin: unset !important;
-  margin-top: -16px !important;
   margin-left: -16px !important;
+}
+
+.period {
+  width: 100%;
+  max-width: 320px;
 }
 
 @media screen and (max-width: 560px) {
@@ -35,7 +39,8 @@
   }
 }
 
-.outside {
+.day.outside,
+.day:disabled {
   color: var(--muted);
 }
 

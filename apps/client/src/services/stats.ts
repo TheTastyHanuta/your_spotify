@@ -275,10 +275,23 @@ const SHIFT_BY_UNIT: Record<string, (date: Date) => Date> = {
 };
 
 // The period to compare with. "This year" so far compares with the same days
-// of the previous year, like the recap. Other ranges compare with the range
-// of the same length just before.
-export const getLastPeriod = (start: Date, end: Date, unit: string) => {
+// of the previous year, like the recap, and a finished year with the whole
+// year before. Other ranges compare with the range of the same length just
+// before.
+export const getLastPeriod = (
+  start: Date,
+  end: Date,
+  unit: string,
+  finished = false,
+) => {
   const shift = SHIFT_BY_UNIT[unit];
+  if (shift && finished) {
+    return {
+      start: shift(start),
+      end: new Date(start.getTime() - 1),
+      label: `the ${unit} before`,
+    };
+  }
   if (shift) {
     return {
       start: shift(start),

@@ -8,16 +8,10 @@ import clsx from "clsx";
 import {
   startOfDay,
   startOfWeek,
-  startOfMonth,
-  startOfYear,
   subDays,
-  subWeeks,
   subMonths,
   subYears,
-  endOfDay,
   endOfWeek,
-  endOfMonth,
-  endOfYear,
   subHours,
 } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -35,6 +29,7 @@ interface DayProps {
   onHover: (date: Date | undefined) => void;
   onClick: (date: Date) => void;
   outsideCurrentMonth: boolean;
+  disabled: boolean;
 }
 
 export type Range = [Date | undefined, Date | undefined];
@@ -46,6 +41,7 @@ function Day({
   hovering,
   onHover,
   outsideCurrentMonth,
+  disabled,
 }: DayProps) {
   const [start, end] = value;
 
@@ -77,6 +73,7 @@ function Day({
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={() => onClick(date)}
       onMouseEnter={() => onHover(date)}
       className={clsx("no-button", s.day, {
@@ -115,11 +112,13 @@ function DayWrapper({
   setHover,
   hover,
   outsideCurrentMonth,
+  disabled,
 }: PickerDayProps & DayWrapperAdditionalProps) {
   return (
     <Day
       key={day.getTime()}
       outsideCurrentMonth={outsideCurrentMonth ?? false}
+      disabled={disabled ?? false}
       onClick={internSetValue}
       value={rangeValue}
       onHover={setHover}
@@ -133,35 +132,6 @@ const presets: Array<{
   label: string;
   create: () => [start: Date, end: Date];
 }> = [
-  {
-    label: "Previous day",
-    create: () => {
-      const startOfLastDay = startOfDay(subDays(new Date(), 1));
-      return [startOfLastDay, endOfDay(startOfLastDay)];
-    },
-  },
-  {
-    label: "Previous week",
-    create: () => {
-      const options = { weekStartsOn: WeekStart.get() };
-      const startOfLastWeek = startOfWeek(subWeeks(new Date(), 1), options);
-      return [startOfLastWeek, endOfWeek(startOfLastWeek, options)];
-    },
-  },
-  {
-    label: "Previous month",
-    create: () => {
-      const startOfLastMonth = startOfMonth(subMonths(new Date(), 1));
-      return [startOfLastMonth, endOfMonth(startOfLastMonth)];
-    },
-  },
-  {
-    label: "Previous year",
-    create: () => {
-      const startOfLastYear = startOfYear(subYears(new Date(), 1));
-      return [startOfLastYear, endOfYear(startOfLastYear)];
-    },
-  },
   {
     label: "Last 24 hours",
     create: () => [subHours(new Date(), 24), new Date()],
@@ -188,6 +158,77 @@ interface RangePickerProps {
   onChange: (newRange: Range) => void;
 }
 
+function useWeekStartLocale() {
+  // A new object on every render would rebuild the date adapter each time
+  const weekStartsOn = WeekStart.get();
+  return useMemo(
+    () => ({ ...enUS, options: { ...enUS.options, weekStartsOn } }),
+    [weekStartsOn],
+  );
+}
+
+const VIEWS = {
+  day: ["year", "day"],
+  week: ["year", "day"],
+  month: ["year", "month"],
+  year: ["year"],
+} as const;
+
+interface PeriodCalendarProps {
+  unit: keyof typeof VIEWS;
+  value: Date;
+  minDate: Date | undefined;
+  onPick: (date: Date) => void;
+}
+
+const CALENDAR_SX = {
+  width: "100%",
+  "& .MuiPickersCalendarHeader-root": { pl: 2, pr: 0 },
+  "& .MuiMonthCalendar-root, & .MuiYearCalendar-root": { width: "100%" },
+  "& .MuiYearCalendar-root": { maxHeight: "none", columnGap: "12px" },
+  "& .MuiMonthCalendar-button, & .MuiYearCalendar-button": {
+    borderRadius: "var(--radius)",
+  },
+};
+
+// For weeks, any day picks its week
+export function PeriodCalendar({
+  unit,
+  value,
+  minDate,
+  onPick,
+}: PeriodCalendarProps) {
+  const [hover, setHover] = useState<Date | undefined>();
+  const views = VIEWS[unit];
+  const options = { weekStartsOn: WeekStart.get() };
+  const week = hover ?? value;
+  const rangeValue: Range =
+    unit === "week"
+      ? [startOfWeek(week, options), startOfDay(endOfWeek(week, options))]
+      : [value, value];
+  return (
+    <LocalizationProvider
+      dateAdapter={AdapterDateFns}
+      adapterLocale={useWeekStartLocale()}>
+      <div className={s.period} onMouseLeave={() => setHover(undefined)}>
+        <DateCalendar
+          sx={CALENDAR_SX}
+          views={views}
+          openTo={views[views.length - 1]}
+          value={value}
+          minDate={minDate}
+          maxDate={new Date()}
+          onChange={(date, state) => date && state === "finish" && onPick(date)}
+          slots={{ day: DayWrapper as any }}
+          slotProps={{
+            day: { hover, internSetValue: onPick, setHover, rangeValue } as any,
+          }}
+        />
+      </div>
+    </LocalizationProvider>
+  );
+}
+
 export default function RangePicker({ value, onChange }: RangePickerProps) {
   const [hover, setHover] = useState<Date | undefined>();
 
@@ -205,12 +246,7 @@ export default function RangePicker({ value, onChange }: RangePickerProps) {
     return onChange([date, first]);
   };
 
-  // A new object on every hover would rebuild the date adapter each time
-  const weekStartsOn = WeekStart.get();
-  const locale = useMemo(
-    () => ({ ...enUS, options: { ...enUS.options, weekStartsOn } }),
-    [weekStartsOn],
-  );
+  const locale = useWeekStartLocale();
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locale}>
