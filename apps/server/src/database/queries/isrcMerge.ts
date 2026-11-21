@@ -104,12 +104,27 @@ export const pauseIsrcMergeJob = () =>
 export const updateIsrcMergeJob = (update: UpdateQuery<IsrcMergeJob>) =>
   IsrcMergeJobModel.updateOne(JOB, update);
 
-// Only one apply runs at a time, a second request finds the flag set
-export const claimIsrcMergeApply = () =>
-  IsrcMergeJobModel.findOneAndUpdate(
-    { ...JOB, applying: { $ne: true } },
-    { $set: { applying: true } },
-  );
+// Only one apply runs at a time, a second request finds the flag set. A
+// missing job is created as not started: a migration can find duplicates
+// before any admin started the lookups.
+export const claimIsrcMergeApply = async (userId: Types.ObjectId) => {
+  try {
+    return await IsrcMergeJobModel.findOneAndUpdate(
+      { ...JOB, applying: { $ne: true } },
+      {
+        $set: { applying: true },
+        $setOnInsert: { startedBy: userId, stoppedReason: "not-started" },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
+  } catch (error) {
+    // The upsert meets the existing job while another apply runs
+    if ((error as { code?: number }).code === 11000) {
+      return null;
+    }
+    throw error;
+  }
+};
 
 const getPlayCounts = async (trackIds: string[]) => {
   const playsById = new Map<string, number>();
