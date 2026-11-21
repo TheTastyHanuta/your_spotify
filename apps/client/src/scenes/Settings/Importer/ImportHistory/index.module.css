@@ -24,7 +24,8 @@
   margin-right: 8px;
 }
 
-.ratelimited {
+/* A muted line under the count */
+.note {
   display: block;
   color: var(--muted);
 }

@@ -25,6 +25,8 @@ export interface BaseImporterState {
   rateLimitedUntil?: string;
   // rateLimitedUntil is the end of a wait for the daily request budget
   budgetWait?: boolean;
+  // While the import looks up songs on Spotify before storing plays
+  lookups?: { done: number; total: number };
 }
 
 export interface PrivacyImporterState extends BaseImporterState {
