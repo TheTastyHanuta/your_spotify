@@ -57,4 +57,4 @@ Instance config is env variables, listed in the README's "Environment variables"
 
 ## Docs
 
-The README and other docs describe how things work now. Notes about a change between versions ("X was removed", "after updating, do Y") go in the release notes, not the docs; when a change needs them, write the draft under the pull request's "For people running the app" heading or in your reply. The README's "This fork adds" list and the guides for switching from the original project stay, because they remain true.
+The README and other docs describe how things work now. Notes about a change between versions ("X was removed", "after updating, do Y") go in the release notes, not the docs; what people running the app must do or will notice goes under the pull request's "For people running the app" heading, and the release notes are written from it at release time. The README's "This fork adds" list and the guides for switching from the original project stay, because they remain true.
