@@ -16,6 +16,7 @@ import {
 } from "../apis/spotifyApi";
 import { SpotifyReauthRequiredError } from "../errors/Spotify";
 import { isAnyImportRunning } from "../importers/importer";
+import { isrcOf } from "../isrc";
 import { logger } from "../logger";
 import { wait } from "../misc";
 
@@ -62,7 +63,7 @@ async function lookUpBatch() {
           }
           // Spotify answers 404 for tracks it does not have anymore
           const track = await spotifyApi.getTrack(id);
-          await storeIsrcLookup(id, track?.external_ids?.isrc ?? null);
+          await storeIsrcLookup(id, isrcOf(track) ?? null);
           // The first answer ends a wait, so the panel stops showing it
           if (done === 0 && job.rateLimitedUntil) {
             await updateIsrcMergeJob({

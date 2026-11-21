@@ -32,6 +32,7 @@ import {
 } from "../../spotify/dbTools";
 import { SpotifyAPI } from "../apis/spotifyApi";
 import { artistBlacklistMark } from "../blacklist";
+import { isrcOf } from "../isrc";
 import { logger } from "../logger";
 import { minOfArray, retryPromise } from "../misc";
 import { Unpack } from "../types";
@@ -560,7 +561,7 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         id,
         track ? { exists: true, track } : { exists: false },
       );
-      const isrc = track?.external_ids?.isrc || null;
+      const isrc = isrcOf(track) ?? null;
       await storeIsrcLookup(id, isrc);
       isrcs.set(id, isrc);
     }
