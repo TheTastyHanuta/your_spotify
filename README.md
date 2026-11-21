@@ -137,7 +137,9 @@ Things to keep in mind for the proxy:
 
 - Both addresses must be under the same domain, as in the example. The login cookie is not sent between unrelated domains, so you would be logged out on every request. With a shared dynamic DNS service like DuckDNS, use `name.duckdns.org` and `api.name.duckdns.org`; two separate names there count as unrelated domains.
 - Don't put `spotify` in the domain name: Google may then mark the whole domain as deceptive.
-- The example compose file makes the ports reachable from this machine only (`127.0.0.1:`), which is enough when the proxy runs here too. If it runs on another machine, remove `127.0.0.1:` from both `ports` lines; Docker opens published ports past firewalls like ufw, so the ports can then be reached from your whole network.
+- The example compose file makes the ports reachable from this machine only (`127.0.0.1:`). That is enough for a proxy installed directly on this machine.
+  - A proxy running in Docker can't reach these ports. Put it in the same Docker network as YourSpotify and forward to `web:3000` and `server:8080`; the `ports` lines are then not needed.
+  - If the proxy runs on another machine, remove `127.0.0.1:` from both `ports` lines. Docker opens published ports past firewalls like ufw, so the ports can then be reached from your whole network.
 - A history import uploads up to 50 files of 20 MB each in one request. Some proxies limit uploads by default (Nginx to 1 MB, raise it with `client_max_body_size`, for example to `1024m`).
 
 ### 2. Create the Spotify application

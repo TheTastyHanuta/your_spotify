@@ -4,8 +4,8 @@ services:
     init: true
     restart: always
     ports:
-      # Reachable from this machine only; remove 127.0.0.1: if your reverse
-      # proxy runs on another machine
+      # Reachable from this machine only. For a reverse proxy in Docker or on
+      # another machine, see the README's reverse-proxy notes
       - "127.0.0.1:8080:8080"
     depends_on:
       - mongo
