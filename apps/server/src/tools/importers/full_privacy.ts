@@ -9,9 +9,12 @@ import {
   getUserFromField,
   storeFirstListenedAtIfLess,
 } from "../../database";
-import { InfosModel, TrackModel } from "../../database/Models";
+import { ArtistModel, InfosModel, TrackModel } from "../../database/Models";
 import { forgetHooks } from "../../database/queries/hooked";
-import { setImporterStateCurrent } from "../../database/queries/importer";
+import {
+  setImporterStateCurrent,
+  setImporterStateLookups,
+} from "../../database/queries/importer";
 import {
   getIsrcLookups,
   storeIsrcLookup,
@@ -42,6 +45,7 @@ import {
   offlineStoppedAt,
   planImport,
   playsNearListens,
+  StoredListen,
   StoredTrack,
 } from "./matching";
 import {
@@ -64,6 +68,29 @@ const fullPrivacyFileSchema = z.array(
 );
 
 export type FullPrivacyItem = Unpack<z.infer<typeof fullPrivacyFileSchema>>;
+
+// How many of the listens the export doesn't have the log lists
+const MAX_LISTED = 100;
+
+// The oldest of the stored listens the export doesn't have, for the log
+export const listedUnmatched = (unmatched: StoredListen[]) =>
+  unmatched.toSorted((a, b) => a.time - b.time).slice(0, MAX_LISTED);
+
+// The log lines for stored listens the export doesn't have. Not removed: some
+// are real plays Spotify left out of the export.
+export const unmatchedText = (
+  shown: StoredListen[],
+  total: number,
+  names: Map<string, string>,
+) =>
+  [
+    "Import: stored listens the export doesn't have (times in UTC). Not all of them are wrong: Spotify leaves some plays out of the export, and listens from the time of files you didn't import are listed too. Remove wrong ones from your history.",
+    ...shown.map(
+      (listen) =>
+        `  ${new Date(listen.time).toISOString().slice(0, 19).replace("T", " ")}  ${names.get(listen.trackId) ?? listen.trackId}`,
+    ),
+    ...(total > shown.length ? [`  … and ${total - shown.length} more.`] : []),
+  ].join("\n");
 
 export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
   private id: string;
@@ -396,6 +423,17 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
     logger.info(
       `Import: ${matched} plays already stored, ${moves.length} of them moved to the export's time; ${toImport.size} plays to import; ${unmatched.length} stored listens from the export's time span are not in it`,
     );
+    if (unmatched.length > 0) {
+      const shown = listedUnmatched(unmatched);
+      // Only for the log, so a failed lookup must not fail the import
+      const names = await this.songNames(
+        shown.map((listen) => listen.trackId),
+      ).catch((e) => {
+        logger.warn("Import: could not read the song names for the log", e);
+        return new Map<string, string>();
+      });
+      logger.info(unmatchedText(shown, unmatched.length, names));
+    }
     this.toImport = toImport;
   };
 
@@ -429,6 +467,28 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       await cursor.close();
     }
     return ids;
+  };
+
+  // "Title – first artist" of the given tracks
+  songNames = async (ids: string[]) => {
+    const tracks = await TrackModel.find(
+      { id: { $in: ids } },
+      { id: 1, name: 1, artists: 1 },
+    ).lean();
+    const artists = new Map(
+      (
+        await ArtistModel.find(
+          { id: { $in: tracks.flatMap((track) => track.artists.slice(0, 1)) } },
+          { id: 1, name: 1 },
+        ).lean()
+      ).map((artist) => [artist.id, artist.name]),
+    );
+    return new Map(
+      tracks.map((track) => {
+        const artist = artists.get(track.artists[0] ?? "");
+        return [track.id, artist ? `${track.name} – ${artist}` : track.name];
+      }),
+    );
   };
 
   // ISRC and merge target of the given tracks and of the tracks they were
@@ -484,8 +544,15 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         `Import: looking up ${toSearch.length} tracks that aren't stored yet`,
       );
     }
-    for (const id of toSearch) {
+    for (const [index, id] of toSearch.entries()) {
       stopIfPauseRequested();
+      await setImporterStateLookups(this.id, {
+        done: index,
+        total: toSearch.length,
+      });
+      if (index > 0 && index % 25 === 0) {
+        logger.info(`Import: looked up ${index} of ${toSearch.length} tracks`);
+      }
       const [track] = await this.search([id]);
       // Kept for the import of the track's plays
       setToCacheString(
@@ -496,6 +563,9 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
       const isrc = track?.external_ids?.isrc || null;
       await storeIsrcLookup(id, isrc);
       isrcs.set(id, isrc);
+    }
+    if (toSearch.length > 0) {
+      await setImporterStateLookups(this.id);
     }
     for (const [id, isrc] of isrcs) {
       tracks.set(id, { isrc: isrc ?? undefined });

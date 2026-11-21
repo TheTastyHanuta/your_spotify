@@ -15,14 +15,14 @@ export const createImporterState = (
     "_id" | "user"
   >);
 
-// Any status change clears the ban end of an earlier pause
+// Any status change clears the ban end of an earlier pause and the lookups' progress
 export const setImporterStateStatus = (
   id: string,
   status: ImporterStateStatus,
 ) =>
   ImporterStateModel.findByIdAndUpdate(id, {
     $set: { status },
-    $unset: { rateLimitedUntil: 1 },
+    $unset: { rateLimitedUntil: 1, lookups: 1 },
   });
 
 // Changes the status only if it still is one of from, and returns the import
@@ -35,7 +35,7 @@ export const claimImporterState = (
 ) =>
   ImporterStateModel.findOneAndUpdate(
     { _id: id, status: { $in: from } },
-    { $set: { status }, $unset: { rateLimitedUntil: 1 } },
+    { $set: { status }, $unset: { rateLimitedUntil: 1, lookups: 1 } },
   );
 
 // Only a running import starts waiting, returns null for one paused meanwhile
@@ -65,6 +65,19 @@ export const setImporterStateMetadata = <T extends ImporterState["metadata"]>(
 
 export const setImporterStateCurrent = (id: string, current: number) =>
   ImporterStateModel.findByIdAndUpdate(id, { current });
+
+// Progress of the Spotify lookups before the plays are stored, none to remove
+// it. Only on a running import: a pause meanwhile has already removed it.
+export const setImporterStateLookups = (
+  id: string,
+  lookups?: { done: number; total: number },
+) =>
+  lookups
+    ? ImporterStateModel.findOneAndUpdate(
+        { _id: id, status: "progress" },
+        { $set: { lookups } },
+      )
+    : ImporterStateModel.findByIdAndUpdate(id, { $unset: { lookups: 1 } });
 
 export const getUserImporterState = async (userId: string) =>
   ImporterStateModel.find({ user: userId }).sort({ createdAt: -1 });

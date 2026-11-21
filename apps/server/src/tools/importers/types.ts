@@ -52,6 +52,8 @@ export interface BaseImporterState {
   budgetWait?: boolean;
   // Extra wait before each Spotify request, raised after every ban
   slowdownMs?: number;
+  // While the import looks up songs on Spotify before storing plays
+  lookups?: { done: number; total: number };
 }
 export interface PrivacyImporterState extends BaseImporterState {
   type: "privacy";

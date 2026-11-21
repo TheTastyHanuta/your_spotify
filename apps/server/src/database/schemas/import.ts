@@ -24,6 +24,7 @@ export const ImporterStateSchema = new Schema<ImporterState>(
     rateLimitedUntil: { type: Date },
     slowdownMs: { type: Number },
     budgetWait: { type: Boolean },
+    lookups: { done: Number, total: Number },
   },
   { timestamps: true },
 );

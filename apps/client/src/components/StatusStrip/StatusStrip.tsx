@@ -79,13 +79,20 @@ export default function StatusStrip() {
         )}
       </>
     ),
-    running && (
-      <>
-        Importing your Spotify history:{" "}
-        <span className="num">{running.current}</span> of{" "}
-        <span className="num">{running.total}</span>
-      </>
-    ),
+    running &&
+      (running.lookups ? (
+        <>
+          Importing your Spotify history: looking up songs on Spotify,{" "}
+          <span className="num">{running.lookups.done}</span> of{" "}
+          <span className="num">{running.lookups.total}</span>
+        </>
+      ) : (
+        <>
+          Importing your Spotify history:{" "}
+          <span className="num">{running.current}</span> of{" "}
+          <span className="num">{running.total}</span>
+        </>
+      )),
     paused && (
       <>
         Import paused at <span className="num">{paused.current}</span> of{" "}

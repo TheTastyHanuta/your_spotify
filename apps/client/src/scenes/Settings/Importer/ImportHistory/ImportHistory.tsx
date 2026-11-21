@@ -68,8 +68,17 @@ export default function ImportHistory() {
                 <span className={clsx("num", s.count)}>
                   {st.current.toLocaleString()}/{st.total.toLocaleString()}
                 </span>
+                {st.status === "progress" && st.lookups && (
+                  <Text className={s.note} size="small">
+                    Looking up songs on Spotify:{" "}
+                    <span className="num">
+                      {st.lookups.done.toLocaleString()}/
+                      {st.lookups.total.toLocaleString()}
+                    </span>
+                  </Text>
+                )}
                 {st.status === "waiting" && (
-                  <Text className={s.ratelimited} size="small">
+                  <Text className={s.note} size="small">
                     {st.rateLimitedUntil
                       ? `${st.budgetWait ? "Budget frees up around" : "Spotify blocks requests until"} ${DateFormatter.toDateTime(new Date(st.rateLimitedUntil))}, `
                       : ""}
