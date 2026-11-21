@@ -4,7 +4,9 @@ services:
     init: true
     restart: always
     ports:
-      - "8080:8080"
+      # Reachable from this machine only; remove 127.0.0.1: if your reverse
+      # proxy runs on another machine
+      - "127.0.0.1:8080:8080"
     depends_on:
       - mongo
     volumes:
@@ -31,7 +33,7 @@ services:
     init: true
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       API_ENDPOINT: http://127.0.0.1:8080
 
