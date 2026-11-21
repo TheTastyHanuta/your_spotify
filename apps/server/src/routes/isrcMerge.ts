@@ -71,8 +71,9 @@ router.post("/pause", logged, admin, async (_req, res) => {
 
 // Can take minutes on a large history, so it answers at once and the client
 // follows the applying flag
-router.post("/apply", logged, admin, async (_req, res) => {
-  const job = await claimIsrcMergeApply();
+router.post("/apply", logged, admin, async (req, res) => {
+  const { user } = req as LoggedRequest;
+  const job = await claimIsrcMergeApply(user._id);
   if (!job) {
     res.status(409).end();
     return;

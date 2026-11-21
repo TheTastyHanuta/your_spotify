@@ -324,7 +324,7 @@ export interface IsrcMergeState {
   job: {
     rateLimitedUntil?: string;
     budgetWait?: boolean;
-    stoppedReason?: "reauth" | "user-missing" | "paused";
+    stoppedReason?: "reauth" | "user-missing" | "paused" | "not-started";
     applying: boolean;
     lastApply?: { at: string; tracksMerged: number; listensRepointed: number };
   } | null;

@@ -51,7 +51,7 @@ function lookupStatus({
         )}
       </>
     ) : null;
-  if (!job) {
+  if (!job || job.stoppedReason === "not-started") {
     return "Not started";
   }
   if (job.stoppedReason === "reauth") {
@@ -238,10 +238,12 @@ export default function MergeDuplicates() {
   const canStart = !job || Boolean(job.stoppedReason);
   // Also while Spotify blocks requests, so the lookup does not go on after it
   const canPause = Boolean(job && !job.stoppedReason && progress.remaining > 0);
+  // A merge creates the job without starting the lookup
+  const started = Boolean(job && job.stoppedReason !== "not-started");
   let startLabel = "Start";
   if (job?.stoppedReason === "paused") {
     startLabel = "Resume";
-  } else if (job) {
+  } else if (started) {
     startLabel = "Restart";
   }
   const hasWork = plan.groups.length > 0 || plan.isrcsToStore > 0;
@@ -267,9 +269,11 @@ export default function MergeDuplicates() {
         the album, a single or a compilation, so the stats can count one song
         several times. The server asks Spotify for each older song&apos;s ISRC,
         the code of the recording itself, one song every few seconds in the
-        background. Merging then joins the versions of a recording into the one
-        with the most listens, for every user on this server. Album stats keep
-        the album each listen was played from.
+        background. An import of Spotify account data also looks up the songs
+        that aren&apos;t stored yet, so some songs can show up as found before
+        the lookup was started. Merging then joins the versions of a recording
+        into the one with the most listens, for every user on this server. Album
+        stats keep the album each listen was played from.
       </Text>
 
       <SettingLine
@@ -304,7 +308,7 @@ export default function MergeDuplicates() {
       <h3 className={s.title}>Preview</h3>
       {!hasWork && (
         <Text element="p" size="normal" className={s.none}>
-          {job
+          {started
             ? `No duplicate songs found${progress.remaining > 0 ? " so far" : ""}.`
             : "Start the lookup to find duplicate songs."}
         </Text>
