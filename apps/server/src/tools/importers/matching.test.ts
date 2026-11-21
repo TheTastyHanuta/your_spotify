@@ -305,6 +305,22 @@ describe("planImport", () => {
     ]);
   });
 
+  it("pairs every play of a song on repeat that Spotify listed hours late", () => {
+    // Each play's nearest 20 listens are the same ones
+    const plays = Array.from({ length: 40 }, (_, i) =>
+      play(
+        new Date(at("2025-08-01T12:00:00Z") + i * 180_000).toISOString(),
+        "loop",
+      ),
+    );
+    const listens = plays.map((p, i) =>
+      listen(`l${i}`, new Date(p.time + 6 * 3600_000).toISOString(), "loop"),
+    );
+    const plan = planImport(plays, listens, tracksOf([["loop", {}]]), NONE);
+    expect(plan.matched).toBe(40);
+    expect(plan.toImport.size).toBe(0);
+  });
+
   it("doesn't match an early listen with a next play another device didn't stop", () => {
     // Lost It All, 2025-10-08: a 3 s play on the computer, hours after the listen
     const plays = [

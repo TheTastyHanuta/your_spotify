@@ -309,30 +309,35 @@ export const planImport = (
     lo: number,
     hi: number,
   ) => {
-    const usedListens = new Set(paired.values());
-    const pairs = pairNearest(
-      // An offline play's listen is at the sync time, or where an earlier run
-      // of this import moved or stored it
-      plays.flatMap((play, i) =>
-        !paired.has(i) && selected(play)
-          ? [...new Set([play.time, stoppedAt(play)])].map((time) => ({
-              i,
-              key: playKeys[i]!,
-              time,
-            }))
-          : [],
-      ),
-      listens.flatMap((listen, i) =>
-        usedListens.has(i)
-          ? []
-          : [{ i, key: listenKeys[i]!, time: listen.time }],
-      ),
-      lo,
-      hi,
-    );
-    for (const [play, listen] of pairs) {
-      paired.set(play, listen);
-    }
+    // Again while it pairs: a play only looks at its nearest MAX_CANDIDATES
+    // listens, which plays of a song on repeat can all have taken
+    let pairs: Map<number, number>;
+    do {
+      const usedListens = new Set(paired.values());
+      pairs = pairNearest(
+        // An offline play's listen is at the sync time, or where an earlier run
+        // of this import moved or stored it
+        plays.flatMap((play, i) =>
+          !paired.has(i) && selected(play)
+            ? [...new Set([play.time, stoppedAt(play)])].map((time) => ({
+                i,
+                key: playKeys[i]!,
+                time,
+              }))
+            : [],
+        ),
+        listens.flatMap((listen, i) =>
+          usedListens.has(i)
+            ? []
+            : [{ i, key: listenKeys[i]!, time: listen.time }],
+        ),
+        lo,
+        hi,
+      );
+      for (const [play, listen] of pairs) {
+        paired.set(play, listen);
+      }
+    } while (pairs.size > 0);
   };
   run((play) => play.msPlayed >= MIN_PLAY_MS, -ON_TIME_MS, ON_TIME_MS);
   run((play) => play.msPlayed < MIN_PLAY_MS, -ON_TIME_MS, ON_TIME_MS);

@@ -361,6 +361,15 @@ export class FullPrivacyImporter implements HistoryImporter<"full-privacy"> {
         ...plays.map((play) => play.trackId),
       ]),
     ]);
+    // The ISRC merge stores the ISRCs it looked up only when it is applied
+    const withoutIsrc = [...tracks]
+      .filter(([, track]) => !track.isrc && !track.mergedInto)
+      .map(([id]) => id);
+    for (const [id, isrc] of await getIsrcLookups(withoutIsrc)) {
+      if (isrc) {
+        tracks.get(id)!.isrc = isrc;
+      }
+    }
     await this.addUnknownTracks(playsNearListens(plays, listens), tracks);
     const { matched, moves, toImport, unmatched } = planImport(
       plays,
