@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Guidance for coding agents (and humans) working in this repository. The workflow for branches, commits and pull requests is in [CONTRIBUTING.md](CONTRIBUTING.md). Branch names start with `feature/`, `fix/`, `refactor/` or `docs/`. Pull request descriptions use the headings of `.github/pull_request_template.md`; `gh pr create --body` or `--body-file` replaces the template, so write them out.
+Guidance for coding agents (and humans) working in this repository. The workflow for branches, commits and pull requests is in [CONTRIBUTING.md](CONTRIBUTING.md). Branch names start with `feature/`, `fix/`, `refactor/`, `docs/` or `chore/`. Pull request descriptions use the headings of `.github/pull_request_template.md`; `gh pr create --body` or `--body-file` replaces the template, so write them out.
 
 YourSpotify is a self-hosted Spotify stats dashboard: an Express server polls each user's recently played tracks into MongoDB, and a React client shows the stats. This is a fork of Yooooomi/your_spotify (default branch `master`).
 
