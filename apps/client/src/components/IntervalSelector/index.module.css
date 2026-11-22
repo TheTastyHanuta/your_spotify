@@ -2,5 +2,60 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
   overflow: hidden;
+}
+
+/* Same width for both bars, so the arrows stay put */
+.root {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kinds :global(.MuiToggleButton-root) {
+  flex: 1;
+}
+
+.bar {
+  display: flex;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.bar > * + * {
+  border-left: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.bar button:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+}
+
+.arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.range {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.icon {
+  font-size: 15px !important;
+  opacity: 0.75;
 }

@@ -1,8 +1,30 @@
-import { startOfDay, startOfMonth, startOfWeek, startOfYear } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  addWeeks,
+  addYears,
+  differenceInCalendarDays,
+  differenceInCalendarMonths,
+  differenceInCalendarWeeks,
+  differenceInCalendarYears,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  endOfYear,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  startOfYear,
+} from "date-fns";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 
-import { getAppropriateTimesplitFromRange, WeekStart } from "./date";
+import {
+  fromDay,
+  getAppropriateTimesplitFromRange,
+  toDay,
+  WeekStart,
+} from "./date";
 import { selectAccounts } from "./redux/modules/admin/selector";
 import { selectUser } from "./redux/modules/user/selector";
 import { getMinOfArray } from "./tools";
@@ -53,6 +75,8 @@ export interface PresetIntervalDetail {
   name: string;
   unit: string;
   interval: Interval;
+  // -1 is the period before the current one
+  offset?: number;
 }
 
 export interface CustomIntervalDetail {
@@ -77,6 +101,7 @@ export type RawIntervalDetail = {
   name: string;
   interval: Interval;
   unit: string;
+  offset?: number;
 };
 
 export const presetIntervals = [
@@ -134,6 +159,68 @@ export const userBasedIntervals: UserBasedIntervalDetails[] = [
 
 export const allIntervals = [...presetIntervals, ...userBasedIntervals];
 
+const weekOptions = () => ({ weekStartsOn: WeekStart.get() });
+
+const PERIODS: Record<
+  string,
+  {
+    add: (date: Date, amount: number) => Date;
+    end: (date: Date) => Date;
+    offset: (date: Date, now: Date) => number;
+  }
+> = {
+  day: { add: addDays, end: endOfDay, offset: differenceInCalendarDays },
+  week: {
+    add: addWeeks,
+    end: (date) => endOfWeek(date, weekOptions()),
+    offset: (date, now) => differenceInCalendarWeeks(date, now, weekOptions()),
+  },
+  month: {
+    add: addMonths,
+    end: endOfMonth,
+    offset: differenceInCalendarMonths,
+  },
+  year: { add: addYears, end: endOfYear, offset: differenceInCalendarYears },
+};
+
+// Cached so past periods keep their identity and aren't fetched again
+const pastPeriods = new Map<string, PresetIntervalDetail>();
+
+export function presetWithOffset(
+  index: number,
+  offset = 0,
+): PresetIntervalDetail {
+  const preset = presetIntervals[index] ?? presetIntervals[0];
+  if (offset >= 0 || Number.isNaN(offset)) {
+    return preset;
+  }
+  const current = preset.interval;
+  const key = `${preset.unit} ${offset} ${current.start.getTime()}`;
+  let detail = pastPeriods.get(key);
+  if (!detail) {
+    const period = PERIODS[preset.unit]!;
+    const start = period.add(current.start, offset);
+    const interval = {
+      timesplit: current.timesplit,
+      start,
+      end: period.end(start),
+    };
+    detail = { ...preset, offset, interval };
+    if (pastPeriods.size > 50) {
+      pastPeriods.clear();
+    }
+    pastPeriods.set(key, detail);
+  }
+  return detail;
+}
+
+// The preset's period holding date
+export function presetAt(index: number, date: Date) {
+  const preset = presetIntervals[index] ?? presetIntervals[0];
+  const offset = PERIODS[preset.unit]!.offset(date, new Date());
+  return presetWithOffset(index, Math.min(offset, 0));
+}
+
 export function getPresetIndexFromIntervalDetail(
   details: PresetIntervalDetail,
 ) {
@@ -166,6 +253,7 @@ export function getRawIntervalDetail(
       type: "preset",
       interval: detail.interval,
       unit: detail.unit,
+      offset: detail.offset,
     };
   }
   if (detail.type === "userbased") {
@@ -191,8 +279,14 @@ export function detailIntervalToQuery(
   if (interval.type === "custom") {
     return {
       [`${prefix}type`]: "custom",
-      [`${prefix}start`]: interval.interval.start.toString(),
-      [`${prefix}end`]: interval.interval.end.toString(),
+      [`${prefix}start`]: interval.interval.start.toISOString(),
+      [`${prefix}end`]: interval.interval.end.toISOString(),
+    };
+  }
+  if (interval.type === "preset" && interval.offset) {
+    return {
+      [`${prefix}name`]: interval.name,
+      [`${prefix}start`]: toDay(interval.interval.start),
     };
   }
   return { [`${prefix}name`]: interval.name };
@@ -222,6 +316,12 @@ export function queryToIntervalDetail(
     }
     if (name) {
       toReturn = optimisticGetIntervalDetailFromName(decodeURIComponent(name));
+      if (toReturn?.type === "preset" && start) {
+        toReturn = presetAt(
+          getPresetIndexFromIntervalDetail(toReturn),
+          fromDay(start),
+        );
+      }
     }
   } catch {
     // Do nothing

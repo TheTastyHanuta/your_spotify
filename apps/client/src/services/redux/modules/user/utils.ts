@@ -1,7 +1,9 @@
+import { fromDay, toDay } from "../../../date";
 import {
   getPresetIndexFromIntervalDetail,
   getUserBasedIndexFromIntervalDetail,
   IntervalDetail,
+  presetAt,
   presetIntervals,
   userBasedIntervals,
 } from "../../../intervals";
@@ -15,6 +17,9 @@ export function intervalDetailToRedux(
       return {
         type: "preset",
         index: getPresetIndexFromIntervalDetail(intervalDetail),
+        start: intervalDetail.offset
+          ? toDay(intervalDetail.interval.start)
+          : undefined,
       };
     }
     case "userbased": {
@@ -37,7 +42,8 @@ export function fromReduxIntervalDetail(
 ): IntervalDetail {
   switch (intervalDetail.type) {
     case "preset": {
-      return presetIntervals[intervalDetail.index]!;
+      const { index, start } = intervalDetail;
+      return start ? presetAt(index, fromDay(start)) : presetIntervals[index]!;
     }
     case "userbased": {
       return userBasedIntervals[intervalDetail.index]!;

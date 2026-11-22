@@ -9,12 +9,12 @@ import { formatHours, getLastPeriod } from "../../services/stats";
 
 // The period's totals, each compared with the period just before it
 export default function OverviewStats() {
-  const { interval, unit } = useSelector(selectRawIntervalDetail);
+  const { interval, unit, offset } = useSelector(selectRawIntervalDetail);
   const now = useAPI(api.getOverview, interval.start, interval.end);
   // Stable dates, or the request below starts again on every render
   const last = useMemo(
-    () => getLastPeriod(interval.start, interval.end, unit),
-    [interval.start, interval.end, unit],
+    () => getLastPeriod(interval.start, interval.end, unit, Boolean(offset)),
+    [interval.start, interval.end, unit, offset],
   );
   const old = useAPI(api.getOverview, last.start, last.end);
 
