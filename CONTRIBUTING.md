@@ -43,7 +43,7 @@ CI runs the same checks plus a build, and they must pass before merging. New log
 
 ## Branches and pull requests
 
-- Branch from an up-to-date `master` and name the branch after the kind of change: `feature/…`, `fix/…`, `refactor/…` or `docs/…`.
+- Branch from an up-to-date `master` and name the branch after the kind of change: `feature/…`, `fix/…`, `refactor/…`, `docs/…` or `chore/…` (releases, dependency updates and other upkeep).
 - One logical change per pull request. Unrelated fixes go in their own pull request.
 - Pull request titles are short lowercase one-liners that say what changes, for example `fix percent changes one point too low`. Pull requests are squash-merged, so the title becomes the commit message on `master`.
 - The description starts with one sentence on why, then one bullet per change a reader would notice. Always say what people running the app must do or will notice: config, env variables, compose, migrations, removed or renamed things, API changes, stored data. The pull request template has these headings.
